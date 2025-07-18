@@ -8,6 +8,8 @@ from anvil.tables import app_tables
 
 class StartupForm(StartupFormTemplate):
   def __init__(self, **properties):
+    # Run server-side dependency checks as the very first step.
+    anvil.server.call('initialize_server_environment')
     # Initialize components defined in the Designer.
     self.init_components(**properties)
 

@@ -638,6 +638,10 @@ runtime_options:
   server_spec: {base: python310-minimal}
   server_version: python3-sandbox
   version: 2
+secrets:
+  OPENAI_API_KEY:
+    type: secret
+    value: {JYDDKHKPSWZ5AZHX: wWU3QLaqiQkbun+0CUj9EDdEsvwNgUZVDsfv5u2UORgN+TK2372MyO/dkOTLA205ED4U+UNdgUGwmI/XSs5S3jOB+8i51NJhUuzyQz/Jp1naw/xHt+VKpVmHosWtmoeMmjNjpacdlNOsHAahc3izUya0ISdB9i6xtEDo8wNb2Eh8ou1Xw6UpnU9+PlK6Z928sSWIe+57T4ozNt9cVW5D9mhQ7apYDJPChWu3GcpflL6/o3SqESW6kcgz92gnJ+MTIVV81dm9uFLlOsGSM2MJiEUHx5g+HvTiXmXCsWSXFoPp6gLPuZjiVF/tltpkkrOvTkqgGpupvDAY8gxt+RZNPzXB5w==}
 services:
 - client_config: {}
   server_config: {}
@@ -645,5 +649,8 @@ services:
 - client_config: {allow_remember_me: true, allow_signup: true, confirm_email: false, enable_automatically: true, remember_me_days: 30, use_email: true}
   server_config: {user_table: users}
   source: /runtime/services/anvil/users.yml
+- client_config: {}
+  server_config: {}
+  source: /runtime/services/anvil/secrets.yml
 startup: {module: StartupForm, type: form}
 startup_form: null

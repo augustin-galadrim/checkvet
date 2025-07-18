@@ -38,9 +38,11 @@ def check_ffmpeg_dependency():
   try:
     from pydub import AudioSegment
     # Cette ligne simple va échouer si ffmpeg n'est pas trouvé
-    AudioSegment.silent(duration=10) 
+    AudioSegment.silent(duration=10)
+    print("SUCCESS: FFmpeg seems to be installed and accessible by pydub.")
     return "SUCCESS: FFmpeg seems to be installed and accessible by pydub."
   except Exception as e:
+    print(f"ERROR: FFmpeg dependency check failed. Details: {str(e)}")
     return f"ERROR: FFmpeg dependency check failed. Details: {str(e)}"
 
 ########################################### AUDIO SECTION ###################################################

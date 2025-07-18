@@ -25,6 +25,18 @@ class Admin(AdminTemplate):
     S'exécute après que le formulaire est visible.
     """
     print("Debug: Le formulaire Admin est maintenant visible.")
+    # --- BLOC AJOUTÉ/MODIFIÉ ICI ---
+    # Exécuter la vérification FFmpeg
+    try:
+      # Appeler la fonction serveur que vous avez placée dans le module AI
+      ffmpeg_status = anvil.server.call('check_ffmpeg_dependency')
+      # Appeler la fonction JS pour mettre à jour l'affichage
+      self.call_js('updateFfmpegStatus', ffmpeg_status)
+    except Exception as e:
+      # En cas d'erreur de communication avec le serveur
+      error_msg = f"ERREUR : Impossible d'appeler le serveur pour vérifier le statut de FFmpeg. Détails : {str(e)}"
+      self.call_js('updateFfmpegStatus', error_msg)
+    # --- FIN DU BLOC ---
     self.load_structures()
     self.load_users()
     self.load_templates()  # Added to load templates

@@ -1,3 +1,4 @@
+import anvil.secrets
 import base64
 import io
 import json
@@ -9,6 +10,7 @@ from datetime import datetime
 import anvil.tables as tables
 import anvil.tables.query as q
 import anvil.users
+import anvil
 import markdown
 import PyPDF2
 from anvil.tables import app_tables
@@ -19,8 +21,8 @@ from pydub import AudioSegment
 
 # Initialize OpenAI client with hardcoded key (for testing only)
 try:
-  openai_key = os.getenv("OPENAI_API_KEY")
-  client = OpenAI(api_key=OPENAI_API_KEY)
+  openai_key = anvil.secrets.get_secret("OPENAI_API_KEY")
+  client = OpenAI(api_key=openai_key)
   print("OpenAI API initialized successfully")
 except Exception as e:
   print(f"Error initializing OpenAI API: {str(e)}")

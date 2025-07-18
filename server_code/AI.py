@@ -10,7 +10,7 @@ from datetime import datetime
 import anvil.tables as tables
 import anvil.tables.query as q
 import anvil.users
-import anvil
+import anvil.server
 import markdown
 import PyPDF2
 from anvil.tables import app_tables
@@ -33,9 +33,15 @@ DEFAULT_MODEL = "chatgpt-4o-latest"
 DEFAULT_TEMPERATURE = 0.7
 DEFAULT_MAX_TOKENS = 1500
 
-
-########################################### CHUNK SECTION ###################################################
-
+@anvil.server.callable
+def check_ffmpeg_dependency():
+  try:
+    from pydub import AudioSegment
+    # Cette ligne simple va échouer si ffmpeg n'est pas trouvé
+    AudioSegment.silent(duration=10) 
+    return "SUCCESS: FFmpeg seems to be installed and accessible by pydub."
+  except Exception as e:
+    return f"ERROR: FFmpeg dependency check failed. Details: {str(e)}"
 
 ########################################### AUDIO SECTION ###################################################
 

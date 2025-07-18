@@ -638,6 +638,10 @@ runtime_options:
   server_spec: {base: python310-minimal}
   server_version: python3-sandbox
   version: 2
+secrets:
+  OPENAI_API_KEY:
+    type: secret
+    value: {JYDDKHKPSWZ5AZHX: ''}
 services:
 - client_config: {}
   server_config: {}

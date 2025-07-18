@@ -1,0 +1,675 @@
+components: []
+container:
+  properties:
+    html: |
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8" />
+        <!-- Viewport responsive -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gestionnaire audio – Édition Secrétariat (Revamped)</title>
+        <style>
+          /****************************************************
+           *  Basic Layout + Container
+           ****************************************************/
+          * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+          }
+          body {
+            background-color: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+          }
+          .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+
+          /****************************************************
+           *  "Retour" Bar
+           ****************************************************/
+          .retour-bar {
+            background: #e5e5e5;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            user-select: none;
+          }
+
+          /****************************************************
+           *  Scrollable Content
+           ****************************************************/
+          .scrollable-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 80px; /* space for bottom buttons */
+          }
+
+          /****************************************************
+           *  AUDIO SECTION
+           ****************************************************/
+          .audio-section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: relative;
+          }
+          #audioBar {
+            width: 100%;
+            background-color: #4caf50;
+            color: #fff;
+            text-align: center;
+            padding: 15px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            border-radius: 5px;
+          }
+
+          .recording-controls {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+          }
+          #circularProgress {
+            position: relative;
+            width: 200px;
+            height: 200px;
+          }
+          #progressRing {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#ddd 0deg, #ddd 0deg);
+          }
+          #centerHole {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 184px;
+            height: 184px;
+            background: #fff;
+            border-radius: 50%;
+            z-index: 1;
+          }
+          .control-button-group {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 30px;
+            z-index: 2;
+          }
+          .control-button {
+            width: 45px;
+            height: 45px;
+            border: 1px solid #666;
+            border-radius: 2px;
+            cursor: pointer;
+            background: #fff;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            padding: 0;
+          }
+          .control-button:hover {
+            background: #f5f5f5;
+            border-color: #333;
+            color: #333;
+          }
+
+          @keyframes recordingFlash {
+            0%   { background: conic-gradient(#ffe5e5 0deg, #ffe5e5 360deg); }
+            50%  { background: conic-gradient(#fff 0deg, #fff 360deg); }
+            100% { background: conic-gradient(#ffe5e5 0deg, #ffe5e5 360deg); }
+          }
+          .recording-flash {
+            animation: recordingFlash 1.5s infinite;
+          }
+          /* Hidden audio element */
+          #audioPlayback {
+            display: none;
+          }
+
+          /****************************************************
+           *  EDITOR SECTION
+           ****************************************************/
+          .editor-section {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+          }
+          #toolbar {
+            padding: 10px;
+            background: #f8f8f8;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-items: center;
+          }
+          .toolbar-button {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+          }
+          .toolbar-button:hover {
+            background: #f5f5f5;
+          }
+          #editor {
+            min-height: 300px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.5;
+          }
+
+          /****************************************************
+           *  BOTTOM BUTTONS
+           ****************************************************/
+          .bottom-buttons {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            max-width: 100%;
+            background: #fff;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            border-top: 1px solid #ddd;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+          }
+          .bottom-button {
+            padding: 10px 30px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+          }
+          .bottom-button:hover {
+            background: #f5f5f5;
+            border-color: #999;
+          }
+
+          /****************************************************
+           *  NOTIFICATION BANNERS
+           ****************************************************/
+          #bannerContainer {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+          }
+          .banner {
+            margin-bottom: 10px;
+            padding: 10px 20px;
+            border-radius: 4px;
+            color: #fff;
+            opacity: 0.9;
+            font-size: 14px;
+            min-width: 200px;
+            text-align: center;
+            transition: opacity 0.3s ease;
+          }
+          .banner-success {
+            background-color: #4caf50;
+          }
+          .banner-error {
+            background-color: #f44336;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <!-- Retour bar -->
+          <div class="retour-bar" id="retourBar">← Retour</div>
+
+          <!-- Scrollable content -->
+          <div class="scrollable-content">
+            <!-- AUDIO SECTION -->
+            <div class="audio-section">
+              <div id="audioBar">Relancer l'IA à partir de mon audio</div>
+              <div class="recording-controls">
+                <div id="circularProgress">
+                  <div id="progressRing"></div>
+                  <div id="centerHole"></div>
+                  <div class="control-button-group">
+                    <!-- Start/Pause -->
+                    <button id="playButton" class="control-button">
+                      <!-- microphone icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 11.5a2.5 2.5 0 0 0 2.5-2.5V4a2.5 2.5 0 1 0-5 0v5A2.5 2.5 0 0 0 8 11.5z"/>
+                        <path d="M10 5a.5.5 0 0 1 1 0v4a3 3 0 1 1-6 0V5a.5.5 0 0 1 1 0v4a2 2 0 0 0 4 0V5z"/>
+                        <path d="M8 13a4.5 4.5 0 0 0 4.5-4.5.5.5 0 0 1 1 0 5.5 5.5 0 0 1-11 0 .5.5 0 0 1 1 0A4.5 4.5 0 0 0 8 13z"/>
+                      </svg>
+                    </button>
+                    <!-- Stop -->
+                    <button id="stopButton" class="control-button">
+                      <!-- checkmark icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                        <path d="M4 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <audio id="audioPlayback"></audio>
+            </div>
+
+            <!-- EDITOR SECTION -->
+            <div class="editor-section">
+              <div id="toolbar">
+                <button onclick="formatDoc('bold')" class="toolbar-button"><b>B</b></button>
+                <button onclick="formatDoc('italic')" class="toolbar-button"><i>I</i></button>
+                <button onclick="formatDoc('underline')" class="toolbar-button"><u>U</u></button>
+                <button onclick="formatDoc('justifyleft')" class="toolbar-button">Gauche</button>
+                <button onclick="formatDoc('justifycenter')" class="toolbar-button">Centre</button>
+                <button onclick="formatDoc('justifyright')" class="toolbar-button">Droite</button>
+                <button onclick="insertImage()" class="toolbar-button">Image</button>
+                <span style="margin-left:auto;"></span>
+                <button onclick="copyEditorContent()" class="toolbar-button">Copier</button>
+              </div>
+              <div id="editor" contenteditable="true"></div>
+            </div>
+          </div>
+
+          <!-- Bottom buttons -->
+          <div class="bottom-buttons">
+            <button class="bottom-button" id="statutButton" data-click="statut">Statut</button>
+            <button class="bottom-button" id="archiverButton" data-click="update">Archiver</button>
+            <button class="bottom-button" id="partagerButton" data-click="partager">Partager</button>
+          </div>
+        </div>
+
+        <!-- Notification Banner Container -->
+        <div id="bannerContainer"></div>
+
+        <!-- PDF libs if needed -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+        <script>
+          /****************************************************
+           * 1) GLOBALS & UTILITIES
+           ****************************************************/
+          console.log("=== Loading revamped AudioManagerEditSecretariat HTML/JS ===");
+
+          // Make sure we only define these once
+          if (!window.__my_audio_manager_globals_secretariat) {
+            window.__my_audio_manager_globals_secretariat = true;
+
+            // Audio manager state
+            window.audioManagerData = {
+              mediaRecorder: null,
+              recordedChunks: [],
+              audioBlob: null,
+              stream: null,
+              isRecording: false
+            };
+
+            // Transcription progress
+            window.transcriptionProgressData = {
+              currentProgress: 0,
+              intervalId: null
+            };
+
+            // Convert blob -> base64
+            window.blobToBase64 = function(blob) {
+              return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const base64 = reader.result.split(",")[1];
+                  resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+            };
+
+            // Conic gradient ring
+            window.setRingPercentage = function(percentage) {
+              const ringElem = document.getElementById("progressRing");
+              if (!ringElem) return;
+              const clamped = Math.max(0, Math.min(100, percentage));
+              const angle = (clamped / 100) * 360;
+              ringElem.style.background = `conic-gradient(#4caf50 ${angle}deg, #ddd ${angle}deg)`;
+            };
+
+            // Animate from 0..90% while waiting
+            window.simulateTranscriptionProgress = function() {
+              const data = window.transcriptionProgressData;
+              data.currentProgress = 0;
+              window.setRingPercentage(0);
+              data.intervalId = setInterval(() => {
+                if (data.currentProgress < 90) {
+                  data.currentProgress += 2;
+                  window.setRingPercentage(data.currentProgress);
+                } else {
+                  clearInterval(data.intervalId);
+                }
+              }, 300);
+            };
+
+            window.finishTranscriptionProgress = function() {
+              const data = window.transcriptionProgressData;
+              clearInterval(data.intervalId);
+              data.currentProgress = 100;
+              window.setRingPercentage(100);
+            };
+
+            // Flash ring while recording
+            window.startRecordingFlash = function() {
+              const ringElem = document.getElementById("progressRing");
+              if (ringElem) ringElem.classList.add("recording-flash");
+            };
+            window.stopRecordingFlash = function() {
+              const ringElem = document.getElementById("progressRing");
+              if (ringElem) ringElem.classList.remove("recording-flash");
+            };
+
+            // Exec commands on the editor
+            window.formatDoc = function(cmd) {
+              document.execCommand(cmd, false, null);
+            };
+
+            // Insert image
+            window.insertImage = function() {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                  const img = document.createElement("img");
+                  img.src = evt.target.result;
+                  img.style.maxWidth = "100%";
+                  img.dataset.referenceId = "img_" + Date.now();
+                  const editorEl = document.getElementById("editor");
+                  if (editorEl) editorEl.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+              };
+              input.click();
+            };
+
+            // Copy all editor content
+            window.copyEditorContent = function() {
+              const editor = document.getElementById("editor");
+              if (!editor) return;
+              const range = document.createRange();
+              range.selectNodeContents(editor);
+              const sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(range);
+              try {
+                document.execCommand("copy");
+                displayBanner("Contenu copié !", "success");
+              } catch (err) {
+                console.error("Erreur lors de la copie =>", err);
+              }
+              sel.removeAllRanges();
+            };
+
+            // Display banner
+            window.displayBanner = function(message, type) {
+              const container = document.getElementById("bannerContainer");
+              if (!container) return;
+              const banner = document.createElement("div");
+              banner.className = "banner " + (type === "success" ? "banner-success" : "banner-error");
+              banner.textContent = message;
+              container.appendChild(banner);
+
+              setTimeout(() => {
+                banner.style.opacity = "0";
+                setTimeout(() => {
+                  if (banner.parentNode) banner.parentNode.removeChild(banner);
+                }, 300);
+              }, 3000);
+            };
+
+            // Editor getters for python bridging
+            window.getEditorContent = function() {
+              const editor = document.getElementById("editor");
+              return editor ? editor.innerHTML : "";
+            };
+            window.setEditorContent = function(value) {
+              const editor = document.getElementById("editor");
+              if (editor) editor.innerHTML = value || "";
+            };
+
+            // Send audio to python function
+            window.processRecording = async function(blob) {
+              try {
+                window.simulateTranscriptionProgress();
+                const base64Audio = await window.blobToBase64(blob);
+                const stopBtn = document.getElementById("stopButton");
+                anvil.call(stopBtn, "process_recording", base64Audio)
+                  .then(() => {
+                    window.finishTranscriptionProgress();
+                    window.audioManagerData.audioBlob = blob;
+                    window.lastAudioBlob = blob;
+                  })
+                  .catch(error => {
+                    console.error("Erreur process_recording =>", error);
+                    alert("Erreur lors du traitement de l'enregistrement.");
+                    window.finishTranscriptionProgress();
+                  });
+              } catch (e) {
+                console.error("Exception converting blob =>", e);
+                alert("Erreur lors de la conversion du blob en base64.");
+                window.finishTranscriptionProgress();
+              }
+            };
+          }
+
+          /****************************************************
+           * 2) ATTACH EVENT LISTENERS
+           ****************************************************/
+          window.__attachAudioManagerEvents = function() {
+            console.log("=== Attaching event listeners for AudioManagerEditSecretariat (revamped) ===");
+            const data = window.audioManagerData;
+
+            // "Retour" bar
+            const retourBar = document.getElementById("retourBar");
+            if (retourBar) {
+              // remove old listener by re-cloning
+              retourBar.replaceWith(retourBar.cloneNode(true));
+              const newRetourBar = document.getElementById("retourBar");
+              newRetourBar.addEventListener("click", e => {
+                anvil.call(e.target, "retour_clicked");
+              });
+            }
+
+            // "Relancer l'IA" bar
+            const audioBar = document.getElementById("audioBar");
+            if (audioBar) {
+              audioBar.replaceWith(audioBar.cloneNode(true));
+              const newAudioBar = document.getElementById("audioBar");
+              newAudioBar.addEventListener("click", e => {
+                anvil.call(e.target, "relaunch_ai");
+              });
+            }
+
+            // Start/Pause button
+            const playButton = document.getElementById("playButton");
+            if (playButton) {
+              playButton.replaceWith(playButton.cloneNode(true));
+            }
+            const newPlayButton = document.getElementById("playButton");
+
+            // Stop button
+            const stopButton = document.getElementById("stopButton");
+            if (stopButton) {
+              stopButton.replaceWith(stopButton.cloneNode(true));
+            }
+            const newStopButton = document.getElementById("stopButton");
+
+            // Icons
+            window.micIconHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 11.5a2.5 2.5 0 0 0 2.5-2.5V4a2.5 2.5 0 1 0-5 0v5A2.5 2.5 0 0 0 8 11.5z"/>
+                <path d="M10 5a.5.5 0 0 1 1 0v4a3 3 0 1 1-6 0V5a.5.5 0 0 1 1 0v4a2 2 0 0 0 4 0V5z"/>
+                <path d="M8 13a4.5 4.5 0 0 0 4.5-4.5.5.5 0 0 1 1 0 5.5 5.5 0 0 1-11 0 .5.5 0 0 1 1 0A4.5 4.5 0 0 0 8 13z"/>
+              </svg>
+            `;
+            window.pauseIconHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                <rect x="9" y="2" width="6" height="12" rx="3" fill="currentColor"/>
+                <path d="M6 12a6 6 0 0 0 12 0M12 18v4M8 22h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            `;
+
+            if (newPlayButton) {
+              newPlayButton.addEventListener("click", async evt => {
+                // if not recording => start or resume
+                if (!data.isRecording) {
+                  if (data.mediaRecorder && data.mediaRecorder.state === "inactive") {
+                    data.mediaRecorder = null;
+                  }
+                  if (!data.mediaRecorder) {
+                    try {
+                      data.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                      data.mediaRecorder = new MediaRecorder(data.stream);
+                      data.recordedChunks = [];
+                      data.mediaRecorder.ondataavailable = e => data.recordedChunks.push(e.data);
+                      data.mediaRecorder.start();
+                      data.isRecording = true;
+                      newPlayButton.innerHTML = window.pauseIconHTML;
+                      anvil.call(evt.target, "start_recording");
+                      window.startRecordingFlash();
+                    } catch (err) {
+                      console.error("Erreur micro:", err);
+                      anvil.call(evt.target, "show_error", "Accès micro refusé ou indisponible.");
+                    }
+                  } else if (data.mediaRecorder.state === "paused") {
+                    data.mediaRecorder.resume();
+                    data.isRecording = true;
+                    newPlayButton.innerHTML = window.pauseIconHTML;
+                    anvil.call(evt.target, "start_recording");
+                  }
+                } else {
+                  // if recording => pause
+                  if (data.mediaRecorder && data.mediaRecorder.state === "recording") {
+                    data.mediaRecorder.pause();
+                    data.isRecording = false;
+                    newPlayButton.innerHTML = window.micIconHTML;
+                    anvil.call(evt.target, "pause_recording");
+                  }
+                }
+              });
+            }
+
+            if (newStopButton) {
+              newStopButton.addEventListener("click", evt => {
+                if (data.mediaRecorder && data.mediaRecorder.state !== "inactive") {
+                  data.mediaRecorder.onstop = () => {
+                    data.audioBlob = new Blob(data.recordedChunks, { type: "audio/webm" });
+                    const audioPlayback = document.getElementById("audioPlayback");
+                    if (audioPlayback) {
+                      const audioURL = URL.createObjectURL(data.audioBlob);
+                      audioPlayback.src = audioURL;
+                      audioPlayback.load();
+                    }
+                    window.processRecording(data.audioBlob);
+                    anvil.call(evt.target, "stop_recording");
+                    window.stopRecordingFlash();
+                  };
+                  data.mediaRecorder.stop();
+                  data.isRecording = false;
+                  if (newPlayButton) newPlayButton.innerHTML = window.micIconHTML;
+                }
+              });
+            }
+
+            // Bottom buttons (Statut, Archiver, Partager)
+            const bottomButtons = document.querySelectorAll(".bottom-button");
+            bottomButtons.forEach(btn => {
+              btn.removeEventListener("click", btn.__listener);
+              const newListener = function(e) {
+                const action = e.currentTarget.dataset.click;
+                if (action === "statut") {
+                  anvil.call(e.currentTarget, "on_statut_clicked").then(chosenStatut => {
+                    if (chosenStatut) {
+                      e.currentTarget.textContent = chosenStatut;
+                    }
+                  });
+                } else if (action === "update") {
+                  // Archiver => call update_report
+                  const contentJSON = JSON.stringify({ content: window.getEditorContent() });
+                  const images = Array.from(document.querySelectorAll("#editor img")).map(img => ({
+                    media: img.src,
+                    reference_id: img.dataset.referenceId || ("img_" + Date.now()),
+                    position: img.offsetTop.toString()
+                  }));
+                  anvil.call(e.currentTarget, "update_report", e.currentTarget.textContent, contentJSON, images);
+                } else if (action === "partager") {
+                  // Future dev
+                  displayBanner("fonctionnalité en cours de développement (Secrétariat)", "success");
+                }
+              };
+              btn.__listener = newListener;
+              btn.addEventListener("click", newListener);
+            });
+
+            console.log("=== Done attaching event listeners for Secretariat form ===");
+          };
+
+          /****************************************************
+           * 3) INIT ON LOAD
+           ****************************************************/
+          console.log("Calling __attachAudioManagerEvents() for Secretariat now...");
+          window.__attachAudioManagerEvents();
+
+          // Handle session refresh on visibility or online changes
+          if (!window.__session_handlers_initialized_secretariat) {
+            window.__session_handlers_initialized_secretariat = true;
+            document.addEventListener("visibilitychange", () => {
+              if (document.visibilityState === "visible") {
+                anvil.call(document.body, "refresh_session_relay");
+              }
+            });
+            window.addEventListener("online", () => {
+              anvil.call(document.body, "refresh_session_relay");
+            });
+          }
+
+          console.log("=== AudioManagerEditSecretariat (Revamped) HTML/JS fully loaded ===");
+        </script>
+      </body>
+      </html>
+  type: HtmlTemplate
+is_package: true

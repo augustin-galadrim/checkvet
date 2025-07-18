@@ -1,0 +1,649 @@
+allow_embedding: false
+correct_dependency_ids: {}
+db_schema:
+  animals:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: type
+      type: string
+    - admin_ui: {order: -1, width: 200}
+      name: name
+      type: string
+    - admin_ui: {order: 2, width: 200}
+      name: unique_id
+      type: number
+    - admin_ui: {order: 3, width: 200}
+      name: vet
+      target: users
+      type: link_single
+    - admin_ui: {order: 4, width: 200}
+      name: proprietaire
+      type: string
+    server: full
+    title: Animals
+  audio:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: owner
+      target: users
+      type: link_single
+    - admin_ui: {order: 1, width: 200}
+      name: audio
+      type: media
+    - admin_ui: {order: 2, width: 200}
+      name: report_id
+      target: reports
+      type: link_single
+    server: full
+    title: Audio
+  base_templates:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: template_name
+      type: string
+    - admin_ui: {order: 1, width: 200}
+      name: prompt
+      type: string
+    - admin_ui: {order: 2, width: 200}
+      name: prompt_fr
+      type: string
+    - admin_ui: {order: 3, width: 200}
+      name: prompt_en
+      type: string
+    server: full
+    title: Base_templates
+  custom_templates:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: template_name
+      type: string
+    - admin_ui: {order: 1, width: 200}
+      name: owner
+      target: users
+      type: link_single
+    - admin_ui: {order: 2, width: 200}
+      name: prompt
+      type: string
+    - admin_ui: {order: 3, width: 200}
+      name: human_readable
+      type: simpleObject
+    - admin_ui: {order: 4, width: 200}
+      name: priority
+      type: number
+    - admin_ui: {order: 5, width: 200}
+      name: prompt_fr
+      type: string
+    - admin_ui: {order: 6, width: 200}
+      name: prompt_en
+      type: string
+    - admin_ui: {order: 7, width: 200}
+      name: base_template
+      target: base_templates
+      type: link_single
+    - admin_ui: {order: 8, width: 200}
+      name: display_template
+      type: bool
+    - admin_ui: {order: 9, width: 200}
+      name: text_to_display
+      type: string
+    server: full
+    title: Custom_templates
+  embedded_images:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: owner
+      target: users
+      type: link_single
+    - admin_ui: {order: 1, width: 200}
+      name: media
+      type: media
+    - admin_ui: {order: 2, width: 200}
+      name: report_id
+      target: reports
+      type: link_single
+    - admin_ui: {order: 3, width: 200}
+      name: reference_id
+      type: string
+    server: full
+    title: Embedded_images
+  favorites:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: vet
+      target: users
+      type: link_single
+    - admin_ui: {order: 1, width: 200}
+      name: favorite_1
+      target: custom_templates
+      type: link_single
+    - admin_ui: {order: 2, width: 200}
+      name: favorite_2
+      target: custom_templates
+      type: link_single
+    - admin_ui: {order: 3, width: 200}
+      name: favorite_3
+      target: custom_templates
+      type: link_single
+    server: full
+    title: Favorites
+  microphone_tests:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: user
+      target: users
+      type: link_single
+    - admin_ui: {order: 1, width: 200}
+      name: test
+      type: string
+    - admin_ui: {order: 2, width: 200}
+      name: date
+      type: datetime
+    server: full
+    title: microphone_tests
+  reports:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: file_name
+      type: string
+    - admin_ui: {order: 1, width: 200}
+      name: animal
+      target: animals
+      type: link_single
+    - admin_ui: {order: 2, width: 200}
+      name: vet
+      target: users
+      type: link_single
+    - admin_ui: {order: 3, width: 200}
+      name: last_modified
+      type: date
+    - admin_ui: {order: 4, width: 200}
+      name: report_rich
+      type: simpleObject
+    - admin_ui: {order: 5, width: 200}
+      name: statut
+      type: string
+    - admin_ui: {order: 6, width: 200}
+      name: transcript
+      type: string
+    server: full
+    title: Reports
+  structures:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: name
+      type: string
+    - admin_ui: {order: 1, width: 200}
+      name: phone
+      type: string
+    - admin_ui: {order: 2, width: 200}
+      name: email
+      type: string
+    - admin_ui: {order: 3, width: 200}
+      name: address
+      type: string
+    - admin_ui: {order: 4, width: 200}
+      name: affiliated_vets
+      target: users
+      type: link_multiple
+    - admin_ui: {order: 5, width: 200}
+      name: owner
+      target: users
+      type: link_single
+    - admin_ui: {order: 6, width: 200}
+      name: authorized_vets
+      target: users
+      type: link_multiple
+    server: full
+    title: Structures
+  users:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: email
+      type: string
+    - admin_ui: {order: 1, width: 200}
+      name: enabled
+      type: bool
+    - admin_ui: {order: 2, width: 200}
+      name: last_login
+      type: datetime
+    - admin_ui: {order: 3, width: 200}
+      name: password_hash
+      type: string
+    - admin_ui: {order: 4, width: 200}
+      name: n_password_failures
+      type: number
+    - admin_ui: {order: 5, width: 200}
+      name: confirmed_email
+      type: bool
+    - admin_ui: {order: 6, width: 200}
+      name: signed_up
+      type: datetime
+    - admin_ui: {order: 7, width: 200}
+      name: name
+      type: string
+    - admin_ui: {order: 8, width: 200}
+      name: phone
+      type: string
+    - admin_ui: {order: 9, width: 200}
+      name: additional_info
+      type: bool
+    - admin_ui: {order: 10, width: 200}
+      name: signature_image
+      type: media
+    - admin_ui: {order: 11, width: 200}
+      name: report_header_image
+      type: media
+    - admin_ui: {order: 12, width: 200}
+      name: report_footer_image
+      type: media
+    - admin_ui: {order: 13, width: 200}
+      name: structure
+      target: structures
+      type: link_single
+    - admin_ui: {order: 14, width: 200}
+      name: supervisor
+      type: bool
+    - admin_ui: {order: 15, width: 200}
+      name: specialite
+      type: string
+    - admin_ui: {order: 16, width: 200}
+      name: remembered_logins
+      type: simpleObject
+    - admin_ui: {order: 17, width: 200}
+      name: favorite_language
+      type: string
+    - admin_ui: {order: 18, width: 200}
+      name: mobile_installation
+      type: bool
+    server: full
+    title: Users
+exported_table_schema:
+- client: none
+  columns:
+    1KUyDYsiAtU=:
+      admin_ui: {order: 6, width: 200}
+      name: signed_up
+      type: datetime
+    8iWeR3R_jM4=:
+      admin_ui: {order: 13, width: 200}
+      backend: anvil.tables.Row
+      name: structure
+      table_id: 905283
+      type: liveObject
+    CGleFV80p6k=:
+      admin_ui: {order: 5, width: 200}
+      name: confirmed_email
+      type: bool
+    DzgI4gb+51s=:
+      admin_ui: {order: 11, width: 200}
+      name: report_header_image
+      type: media
+    LcASb_G1VIs=:
+      admin_ui: {order: 8, width: 200}
+      name: phone
+      type: string
+    T7zkiXz2puQ=:
+      admin_ui: {order: 2, width: 200}
+      name: last_login
+      type: datetime
+    UeXcV8xXzfY=:
+      admin_ui: {order: 15, width: 200}
+      name: specialite
+      type: string
+    XZf7lThAV+c=:
+      admin_ui: {order: 17, width: 200}
+      name: favorite_language
+      type: string
+    _sCM6MnMe4k=:
+      admin_ui: {order: 4, width: 200}
+      name: n_password_failures
+      type: number
+    bKAQ3Vz1gqk=:
+      admin_ui: {order: 9, width: 200}
+      name: additional_info
+      type: bool
+    dZe8Hm8KkPc=:
+      admin_ui: {order: 12, width: 200}
+      name: report_footer_image
+      type: media
+    de+pwp6OsUg=:
+      admin_ui: {order: 16, width: 200}
+      name: remembered_logins
+      type: simpleObject
+    iXwgreSjoSY=:
+      admin_ui: {order: 7, width: 200}
+      name: name
+      type: string
+    kUH8Y1nywaM=:
+      admin_ui: {order: 14, width: 200}
+      name: supervisor
+      type: bool
+    m+BwomMkfGs=:
+      admin_ui: {order: 0, width: 200}
+      name: email
+      type: string
+    oeUMa2VbZPg=:
+      admin_ui: {order: 10, width: 200}
+      name: signature_image
+      type: media
+    oqLhIvx89lo=:
+      admin_ui: {order: 18, width: 200}
+      name: mobile_installation
+      type: bool
+    tZrzmsHWpDQ=:
+      admin_ui: {order: 3, width: 200}
+      name: password_hash
+      type: string
+    zmzS8Ja0eHI=:
+      admin_ui: {order: 1, width: 200}
+      name: enabled
+      type: bool
+  id: 905282
+  name: Users
+  python_name: users
+  server: full
+- client: none
+  columns:
+    DVO1XEpuWek=:
+      admin_ui: {order: 6, width: 200}
+      backend: anvil.tables.Row
+      name: authorized_vets
+      table_id: 905282
+      type: liveObjectArray
+    QFd9Sjy3X1I=:
+      admin_ui: {order: 3, width: 200}
+      name: address
+      type: string
+    XFPrZckIntA=:
+      admin_ui: {order: 1, width: 200}
+      name: phone
+      type: string
+    epdGwbURD9Y=:
+      admin_ui: {order: 2, width: 200}
+      name: email
+      type: string
+    gkddU3Z4pUg=:
+      admin_ui: {order: 0, width: 200}
+      name: name
+      type: string
+    pD4hEVE5kYQ=:
+      admin_ui: {order: 4, width: 200}
+      backend: anvil.tables.Row
+      name: affiliated_vets
+      table_id: 905282
+      type: liveObjectArray
+    sIDPWVwsy2M=:
+      admin_ui: {order: 5, width: 200}
+      backend: anvil.tables.Row
+      name: owner
+      table_id: 905282
+      type: liveObject
+  id: 905283
+  name: Structures
+  python_name: structures
+  server: full
+- client: none
+  columns:
+    7grshOIR4mw=:
+      admin_ui: {order: 5, width: 200}
+      name: statut
+      type: string
+    9x6eWPlmLA0=:
+      admin_ui: {order: 0, width: 200}
+      name: file_name
+      type: string
+    L64dM2WNie4=:
+      admin_ui: {order: 3, width: 200}
+      name: last_modified
+      type: date
+    Mj5mp4Xh7ew=:
+      admin_ui: {order: 1, width: 200}
+      backend: anvil.tables.Row
+      name: animal
+      table_id: 905290
+      type: liveObject
+    U_mobQ4QVz4=:
+      admin_ui: {order: 2, width: 200}
+      backend: anvil.tables.Row
+      name: vet
+      table_id: 905282
+      type: liveObject
+    Xt2+Z4n2QfM=:
+      admin_ui: {order: 4, width: 200}
+      name: report_rich
+      type: simpleObject
+    jRshDcpDhdo=:
+      admin_ui: {order: 6, width: 200}
+      name: transcript
+      type: string
+  id: 905289
+  name: Reports
+  python_name: reports
+  server: full
+- client: none
+  columns:
+    B5h2V2k7cCE=:
+      admin_ui: {order: 2, width: 200}
+      name: unique_id
+      type: number
+    DtRU8GnoIqM=:
+      admin_ui: {order: 4, width: 200}
+      name: proprietaire
+      type: string
+    Jw54BEtKxzU=:
+      admin_ui: {order: 0, width: 200}
+      name: type
+      type: string
+    KN9PJX6NiWw=:
+      admin_ui: {order: 3, width: 200}
+      backend: anvil.tables.Row
+      name: vet
+      table_id: 905282
+      type: liveObject
+    algyygDvUww=:
+      admin_ui: {order: -1, width: 200}
+      name: name
+      type: string
+  id: 905290
+  name: Animals
+  python_name: animals
+  server: full
+- client: none
+  columns:
+    Z3hD_m2nmDU=:
+      admin_ui: {order: 1, width: 200}
+      name: audio
+      type: media
+    mKys2UiQJzc=:
+      admin_ui: {order: 0, width: 200}
+      backend: anvil.tables.Row
+      name: owner
+      table_id: 905282
+      type: liveObject
+    ojmQcLJh4E4=:
+      admin_ui: {order: 2, width: 200}
+      backend: anvil.tables.Row
+      name: report_id
+      table_id: 905289
+      type: liveObject
+  id: 905295
+  name: Audio
+  python_name: audio
+  server: full
+- client: none
+  columns:
+    89wTY2jC9zI=:
+      admin_ui: {order: 8, width: 200}
+      name: display_template
+      type: bool
+    DwQwvXckb3A=:
+      admin_ui: {order: 4, width: 200}
+      name: priority
+      type: number
+    EEE+27YHXyc=:
+      admin_ui: {order: 2, width: 200}
+      name: prompt
+      type: string
+    FR1a3cuIC18=:
+      admin_ui: {order: 0, width: 200}
+      name: template_name
+      type: string
+    NHWYft8zRUg=:
+      admin_ui: {order: 5, width: 200}
+      name: prompt_fr
+      type: string
+    POiHItVwzSw=:
+      admin_ui: {order: 3, width: 200}
+      name: human_readable
+      type: simpleObject
+    hCMCTTAbju8=:
+      admin_ui: {order: 6, width: 200}
+      name: prompt_en
+      type: string
+    kOEqxNyuxsM=:
+      admin_ui: {order: 1, width: 200}
+      backend: anvil.tables.Row
+      name: owner
+      table_id: 905282
+      type: liveObject
+    nyZgxYNoQ4s=:
+      admin_ui: {order: 7, width: 200}
+      backend: anvil.tables.Row
+      name: base_template
+      table_id: 930164
+      type: liveObject
+    ryIaH7XKsBk=:
+      admin_ui: {order: 9, width: 200}
+      name: text_to_display
+      type: string
+  id: 905305
+  name: Custom_templates
+  python_name: custom_templates
+  server: full
+- client: none
+  columns:
+    0Ci3psDCjWI=:
+      admin_ui: {order: 2, width: 200}
+      backend: anvil.tables.Row
+      name: report_id
+      table_id: 905289
+      type: liveObject
+    F_cYAI_r_6M=:
+      admin_ui: {order: 1, width: 200}
+      name: media
+      type: media
+    QSm265XE+Xo=:
+      admin_ui: {order: 3, width: 200}
+      name: reference_id
+      type: string
+    Rny022qoFZI=:
+      admin_ui: {order: 0, width: 200}
+      backend: anvil.tables.Row
+      name: owner
+      table_id: 905282
+      type: liveObject
+  id: 905306
+  name: Embedded_images
+  python_name: embedded_images
+  server: full
+- client: none
+  columns:
+    6XVgblwUXAw=:
+      admin_ui: {order: 0, width: 200}
+      backend: anvil.tables.Row
+      name: user
+      table_id: 905282
+      type: liveObject
+    awA5MFkuHUg=:
+      admin_ui: {order: 1, width: 200}
+      name: test
+      type: string
+    l9dwjuT5fOQ=:
+      admin_ui: {order: 2, width: 200}
+      name: date
+      type: datetime
+  id: 912876
+  name: microphone_tests
+  python_name: microphone_tests
+  server: full
+- client: none
+  columns:
+    QzyUDZm0qc8=:
+      admin_ui: {order: 3, width: 200}
+      backend: anvil.tables.Row
+      name: favorite_3
+      table_id: 905305
+      type: liveObject
+    bO05UTc1heQ=:
+      admin_ui: {order: 2, width: 200}
+      backend: anvil.tables.Row
+      name: favorite_2
+      table_id: 905305
+      type: liveObject
+    ede0tzXAqA8=:
+      admin_ui: {order: 1, width: 200}
+      backend: anvil.tables.Row
+      name: favorite_1
+      table_id: 905305
+      type: liveObject
+    wzOYp1rbhS8=:
+      admin_ui: {order: 0, width: 200}
+      backend: anvil.tables.Row
+      name: vet
+      table_id: 905282
+      type: liveObject
+  id: 925961
+  name: Favorites
+  python_name: favorites
+  server: full
+- client: none
+  columns:
+    ATZbCCpemQs=:
+      admin_ui: {order: 3, width: 200}
+      name: prompt_en
+      type: string
+    BGz1u7xSS+E=:
+      admin_ui: {order: 0, width: 200}
+      name: template_name
+      type: string
+    Qg0BKk+bNpQ=:
+      admin_ui: {order: 1, width: 200}
+      name: prompt
+      type: string
+    vOLyLLUWAow=:
+      admin_ui: {order: 2, width: 200}
+      name: prompt_fr
+      type: string
+  id: 930164
+  name: Base_templates
+  python_name: base_templates
+  server: full
+metadata: {logo_img: 'asset:Plan de travail 1 copie 5.png'}
+name: checkvet
+native_deps: {head_html: '<script src="https://cdnjs.cloudflare.com/ajax/libs/NoSleep.js/0.12.0/NoSleep.min.js"></script>'}
+package_name: checkvet
+runtime_options:
+  client_version: '3'
+  server_persist: true
+  server_spec: {base: python310-minimal}
+  server_version: python3-sandbox
+  version: 2
+services:
+- client_config: {}
+  server_config: {}
+  source: /runtime/services/tables.yml
+- client_config: {allow_remember_me: true, allow_signup: true, confirm_email: false, enable_automatically: true, remember_me_days: 30, use_email: true}
+  server_config: {user_table: users}
+  source: /runtime/services/anvil/users.yml
+startup: {module: StartupForm, type: form}
+startup_form: null

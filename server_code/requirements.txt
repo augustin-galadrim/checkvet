@@ -1,0 +1,5 @@
+pydub
+openai
+PyPDF2
+weasyprint
+Markdown

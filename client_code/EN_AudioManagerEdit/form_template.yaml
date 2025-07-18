@@ -1,0 +1,690 @@
+components: []
+container:
+  properties:
+    html: |
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <!-- Viewport responsive -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Audio Manager – Office Edit (Renamed)</title>
+        <style>
+          /**************************************************
+           * Basic Layout & Container
+           **************************************************/
+          * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+          }
+          body {
+            background-color: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+          }
+          .container-renamed {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+
+          /**************************************************
+           * "Back" Bar
+           **************************************************/
+          .retour-bar-renamed {
+            background: #e5e5e5;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            user-select: none;
+          }
+
+          /**************************************************
+           * Scrollable Content
+           **************************************************/
+          .scrollable-content-renamed {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 80px; /* space for bottom buttons */
+          }
+
+          /**************************************************
+           * AUDIO SECTION
+           **************************************************/
+          .audio-section-renamed {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: relative;
+          }
+          #audioBarRenamed {
+            width: 100%;
+            background-color: #4caf50;
+            color: #fff;
+            text-align: center;
+            padding: 15px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            border-radius: 5px;
+          }
+
+          /* The circular recording progress ring */
+          .recording-controls-renamed {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+          }
+          #circularProgressRenamed {
+            position: relative;
+            width: 200px;
+            height: 200px;
+          }
+          #progressRingRenamed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#ddd 0deg, #ddd 0deg);
+          }
+          #centerHoleRenamed {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 184px;
+            height: 184px;
+            background: #fff;
+            border-radius: 50%;
+            z-index: 1;
+          }
+          .control-button-group-renamed {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 30px;
+            z-index: 2;
+          }
+          .control-button-renamed {
+            width: 45px;
+            height: 45px;
+            border: 1px solid #666;
+            border-radius: 2px;
+            cursor: pointer;
+            background: #fff;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            padding: 0;
+          }
+          .control-button-renamed:hover {
+            background: #f5f5f5;
+            border-color: #333;
+            color: #333;
+          }
+
+          @keyframes recordingFlashRenamed {
+            0% { background: conic-gradient(#ffe5e5 0deg, #ffe5e5 360deg); }
+            50% { background: conic-gradient(#fff 0deg, #fff 360deg); }
+            100% { background: conic-gradient(#ffe5e5 0deg, #ffe5e5 360deg); }
+          }
+          .recording-flash-renamed {
+            animation: recordingFlashRenamed 1.5s infinite;
+          }
+
+          /* Hide the audio tag (we only reference it) */
+          #audioPlaybackRenamed {
+            display: none;
+          }
+
+          /**************************************************
+           * EDITOR SECTION
+           **************************************************/
+          .editor-section-renamed {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+          }
+          #toolbarRenamed {
+            padding: 10px;
+            background: #f8f8f8;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-items: center;
+          }
+          .toolbar-button-renamed {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+          }
+          .toolbar-button-renamed:hover {
+            background: #f5f5f5;
+          }
+          #editorRenamed {
+            min-height: 300px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.5;
+          }
+
+          /**************************************************
+           * BOTTOM BUTTONS
+           **************************************************/
+          .bottom-buttons-renamed {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            max-width: 100%;
+            background: #fff;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            border-top: 1px solid #ddd;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+          }
+          .bottom-button-renamed {
+            padding: 10px 30px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+          }
+          .bottom-button-renamed:hover {
+            background: #f5f5f5;
+            border-color: #999;
+          }
+
+          /**************************************************
+           * NOTIFICATION BANNERS
+           **************************************************/
+          #bannerContainerRenamed {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+          }
+          .banner-renamed {
+            margin-bottom: 10px;
+            padding: 10px 20px;
+            border-radius: 4px;
+            color: #fff;
+            opacity: 0.9;
+            font-size: 14px;
+            min-width: 200px;
+            text-align: center;
+            transition: opacity 0.3s ease;
+          }
+          .banner-success-renamed {
+            background-color: #4caf50;
+          }
+          .banner-error-renamed {
+            background-color: #f44336;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="container-renamed">
+          <!-- "Back" bar -->
+          <div class="retour-bar-renamed" id="retourBarRenamed">← Back</div>
+
+          <!-- Scrollable content area -->
+          <div class="scrollable-content-renamed">
+            <!-- AUDIO SECTION -->
+            <div class="audio-section-renamed">
+              <div id="audioBarRenamed">Relaunch AI (Renamed)</div>
+              <div class="recording-controls-renamed">
+                <div id="circularProgressRenamed">
+                  <div id="progressRingRenamed"></div>
+                  <div id="centerHoleRenamed"></div>
+                  <div class="control-button-group-renamed">
+                    <!-- Start/Pause -->
+                    <button id="playButtonRenamed" class="control-button-renamed">
+                      <!-- Microphone icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 11.5a2.5 2.5 0 0 0 2.5-2.5V4a2.5 2.5 0 1 0-5 0v5A2.5 2.5 0 0 0 8 11.5z"/>
+                        <path d="M10 5a.5.5 0 0 1 1 0v4a3 3 0 1 1-6 0V5a.5.5 0 0 1 1 0v4a2 2 0 0 0 4 0V5z"/>
+                        <path d="M8 13a4.5 4.5 0 0 0 4.5-4.5.5.5 0 0 1 1 0 5.5 5.5 0 0 1-11 0 .5.5 0 0 1 1 0A4.5 4.5 0 0 0 8 13z"/>
+                      </svg>
+                    </button>
+                    <!-- Stop -->
+                    <button id="stopButtonRenamed" class="control-button-renamed">
+                      <!-- checkmark icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                        <path d="M4 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <audio id="audioPlaybackRenamed"></audio>
+            </div>
+
+            <!-- EDITOR SECTION -->
+            <div class="editor-section-renamed">
+              <div id="toolbarRenamed">
+                <button class="toolbar-button-renamed" onclick="formatDocRenamed('bold')"><b>B</b></button>
+                <button class="toolbar-button-renamed" onclick="formatDocRenamed('italic')"><i>I</i></button>
+                <button class="toolbar-button-renamed" onclick="formatDocRenamed('underline')"><u>U</u></button>
+                <button class="toolbar-button-renamed" onclick="formatDocRenamed('justifyleft')">Left</button>
+                <button class="toolbar-button-renamed" onclick="formatDocRenamed('justifycenter')">Center</button>
+                <button class="toolbar-button-renamed" onclick="formatDocRenamed('justifyright')">Right</button>
+                <button class="toolbar-button-renamed" onclick="insertImageRenamed()">Image</button>
+                <span style="margin-left:auto;"></span>
+                <button class="toolbar-button-renamed" onclick="copyEditorContentRenamed()">Copy</button>
+              </div>
+              <div id="editorRenamed" contenteditable="true"></div>
+            </div>
+          </div>
+
+          <!-- Bottom Buttons -->
+          <div class="bottom-buttons-renamed">
+            <button class="bottom-button-renamed" id="statutButtonRenamed" data-click="statut">Status</button>
+            <button class="bottom-button-renamed" id="archiverButtonRenamed" data-click="update">Archive</button>
+            <button class="bottom-button-renamed" id="partagerButtonRenamed" data-click="partager">Share</button>
+          </div>
+        </div>
+
+        <!-- Notification banners -->
+        <div id="bannerContainerRenamed"></div>
+
+        <!-- For optional PDF generation (same as first form) -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+        <script>
+          /****************************************************
+           * 1) GLOBALS & HELPER FUNCTIONS (Renamed)
+           ****************************************************/
+          console.log("===== Loading Renamed HTML/JS for EN_AudioManagerEdit =====");
+
+          if (!window.__my_audio_manager_globals_renamed) {
+            window.__my_audio_manager_globals_renamed = true;
+
+            // Basic state
+            window.audioManagerDataRenamed = {
+              mediaRecorder: null,
+              recordedChunks: [],
+              audioBlob: null,
+              stream: null,
+              isRecording: false
+            };
+            window.transcriptionProgressDataRenamed = {
+              currentProgress: 0,
+              intervalId: null
+            };
+
+            /***********************************************
+             * Editor content get/set
+             ***********************************************/
+            window.getEditorContent = function() {
+              console.log("getEditorContent() (Renamed) => returning #editorRenamed HTML");
+              const editor = document.getElementById("editorRenamed");
+              if (!editor) return "";
+              return editor.innerHTML;
+            };
+            window.setEditorContent = function(value) {
+              console.log("setEditorContent() (Renamed) => setting #editorRenamed HTML");
+              const editor = document.getElementById("editorRenamed");
+              if (editor) {
+                editor.innerHTML = value || "";
+              }
+            };
+
+            /***********************************************
+             * Banner
+             ***********************************************/
+            window.displayBanner = function(message, type) {
+              console.log("displayBanner() =>", message, type);
+              const container = document.getElementById("bannerContainerRenamed");
+              if (!container) return;
+              const banner = document.createElement("div");
+              banner.className = "banner-renamed " + (type === "success" ? "banner-success-renamed" : "banner-error-renamed");
+              banner.textContent = message;
+              container.appendChild(banner);
+              // Auto-hide
+              setTimeout(() => {
+                banner.style.opacity = "0";
+                setTimeout(() => {
+                  if (banner.parentNode) {
+                    banner.parentNode.removeChild(banner);
+                  }
+                }, 300);
+              }, 3000);
+            };
+
+            /***********************************************
+             * Audio recording & transcription progress
+             ***********************************************/
+            window.blobToBase64Renamed = function(blob) {
+              return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const base64 = reader.result.split(",")[1];
+                  resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+            };
+            window.setRingPercentageRenamed = function(percentage) {
+              const ringElem = document.getElementById("progressRingRenamed");
+              if (!ringElem) return;
+              const clamped = Math.max(0, Math.min(percentage, 100));
+              const angle = (clamped / 100) * 360;
+              ringElem.style.background = `conic-gradient(#4caf50 ${angle}deg, #ddd ${angle}deg)`;
+            };
+            window.simulateTranscriptionProgressRenamed = function() {
+              const data = window.transcriptionProgressDataRenamed;
+              data.currentProgress = 0;
+              window.setRingPercentageRenamed(0);
+              data.intervalId = setInterval(() => {
+                if (data.currentProgress < 90) {
+                  data.currentProgress += 2;
+                  window.setRingPercentageRenamed(data.currentProgress);
+                } else {
+                  clearInterval(data.intervalId);
+                }
+              }, 300);
+            };
+            window.finishTranscriptionProgressRenamed = function() {
+              const data = window.transcriptionProgressDataRenamed;
+              clearInterval(data.intervalId);
+              data.currentProgress = 100;
+              window.setRingPercentageRenamed(100);
+            };
+
+            window.startRecordingFlashRenamed = function() {
+              const ring = document.getElementById("progressRingRenamed");
+              if (ring) ring.classList.add("recording-flash-renamed");
+            };
+            window.stopRecordingFlashRenamed = function() {
+              const ring = document.getElementById("progressRingRenamed");
+              if (ring) ring.classList.remove("recording-flash-renamed");
+            };
+
+            window.processRecordingRenamed = async function(blob) {
+              console.log("processRecordingRenamed => start");
+              try {
+                window.simulateTranscriptionProgressRenamed();
+                const base64Audio = await window.blobToBase64Renamed(blob);
+                // We'll call the python "process_recording" method
+                const stopBtn = document.getElementById("stopButtonRenamed");
+                if (!stopBtn) return;
+                anvil.call(stopBtn, "process_recording", base64Audio)
+                  .then(result => {
+                    console.log("process_recording responded =>", result);
+                    window.finishTranscriptionProgressRenamed();
+                    window.audioManagerDataRenamed.audioBlob = blob;
+                  })
+                  .catch(err => {
+                    console.error("Error in process_recording =>", err);
+                    alert("Error processing the recording (Renamed).");
+                    window.finishTranscriptionProgressRenamed();
+                  });
+              } catch (error) {
+                console.error("Exception in processRecordingRenamed =>", error);
+                alert("Error converting audio blob to base64 (Renamed).");
+                window.finishTranscriptionProgressRenamed();
+              }
+            };
+
+            /***********************************************
+             * Rich text formatting
+             ***********************************************/
+            window.formatDocRenamed = function(cmd) {
+              document.execCommand(cmd, false, null);
+            };
+            window.insertImageRenamed = function() {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                  const img = document.createElement("img");
+                  img.src = evt.target.result;
+                  img.style.maxWidth = "100%";
+                  img.dataset.referenceId = "img_" + Date.now();
+                  document.getElementById("editorRenamed").appendChild(img);
+                };
+                reader.readAsDataURL(file);
+              };
+              input.click();
+            };
+            window.copyEditorContentRenamed = function() {
+              const editor = document.getElementById("editorRenamed");
+              if (!editor) return;
+              const range = document.createRange();
+              range.selectNodeContents(editor);
+              const sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(range);
+              try {
+                document.execCommand("copy");
+                displayBanner("Content copied!", "success");
+              } catch (err) {
+                console.error("Error copying content:", err);
+              }
+              sel.removeAllRanges();
+            };
+
+            /***********************************************
+             * Icon toggles
+             ***********************************************/
+            window.micIconHTMLRenamed = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 11.5a2.5 2.5 0 0 0 2.5-2.5V4a2.5 2.5 0 1 0-5 0v5A2.5 2.5 0 0 0 8 11.5z"/>
+                <path d="M10 5a.5.5 0 0 1 1 0v4a3 3 0 1 1-6 0V5a.5.5 0 0 1 1 0v4a2 2 0 0 0 4 0V5z"/>
+                <path d="M8 13a4.5 4.5 0 0 0 4.5-4.5.5.5 0 0 1 1 0 5.5 5.5 0 0 1-11 0 .5.5 0 0 1 1 0A4.5 4.5 0 0 0 8 13z"/>
+              </svg>
+            `;
+            window.pauseIconHTMLRenamed = `
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                <rect x="9" y="2" width="6" height="12" rx="3" fill="currentColor"/>
+                <path d="M6 12a6 6 0 0 0 12 0M12 18v4M8 22h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            `;
+          }
+
+          /****************************************************
+           * 2) ATTACH EVENT LISTENERS (Renamed)
+           ****************************************************/
+          window.__attachAudioManagerEventsRenamed = function() {
+            console.log("Attaching event listeners for EN_AudioManagerEdit (Renamed).");
+
+            const data = window.audioManagerDataRenamed;
+
+            // "Back" bar
+            const retourBar = document.getElementById("retourBarRenamed");
+            if (retourBar) {
+              retourBar.replaceWith(retourBar.cloneNode(true));
+              const newRetourBar = document.getElementById("retourBarRenamed");
+              newRetourBar.addEventListener("click", e => {
+                console.log("[Renamed] 'Back' clicked => calling retour_clicked in Python");
+                anvil.call(e.target, "retour_clicked");
+              });
+            }
+
+            // "Relaunch AI" bar
+            const audioBar = document.getElementById("audioBarRenamed");
+            if (audioBar) {
+              audioBar.replaceWith(audioBar.cloneNode(true));
+              const newAudioBar = document.getElementById("audioBarRenamed");
+              newAudioBar.addEventListener("click", e => {
+                console.log("[Renamed] 'audioBarRenamed' clicked => call relaunch_ai in Python");
+                anvil.call(e.target, "relaunch_ai");
+              });
+            }
+
+            // Start/Pause
+            const playButton = document.getElementById("playButtonRenamed");
+            if (playButton) {
+              playButton.replaceWith(playButton.cloneNode(true));
+            }
+            const newPlayButton = document.getElementById("playButtonRenamed");
+
+            // Stop
+            const stopButton = document.getElementById("stopButtonRenamed");
+            if (stopButton) {
+              stopButton.replaceWith(stopButton.cloneNode(true));
+            }
+            const newStopButton = document.getElementById("stopButtonRenamed");
+
+            // Start/Pause logic
+            if (newPlayButton) {
+              newPlayButton.addEventListener("click", async evt => {
+                console.log("[Renamed] Start/Pause clicked => isRecording?", data.isRecording);
+                if (!data.isRecording) {
+                  // Start or Resume
+                  if (data.mediaRecorder && data.mediaRecorder.state === "inactive") {
+                    data.mediaRecorder = null;
+                  }
+                  if (!data.mediaRecorder) {
+                    try {
+                      data.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                      data.mediaRecorder = new MediaRecorder(data.stream);
+                      data.recordedChunks = [];
+                      data.mediaRecorder.ondataavailable = ev => data.recordedChunks.push(ev.data);
+                      data.mediaRecorder.start();
+                      data.isRecording = true;
+                      newPlayButton.innerHTML = window.pauseIconHTMLRenamed;
+                      anvil.call(evt.target, "start_recording");
+                      window.startRecordingFlashRenamed();
+                    } catch (err) {
+                      console.error("Microphone access error:", err);
+                      anvil.call(evt.target, "show_error", "Microphone access denied/unavailable.");
+                    }
+                  } else if (data.mediaRecorder.state === "paused") {
+                    data.mediaRecorder.resume();
+                    data.isRecording = true;
+                    newPlayButton.innerHTML = window.pauseIconHTMLRenamed;
+                    anvil.call(evt.target, "start_recording");
+                  }
+                } else {
+                  // Pause
+                  if (data.mediaRecorder && data.mediaRecorder.state === "recording") {
+                    data.mediaRecorder.pause();
+                    data.isRecording = false;
+                    newPlayButton.innerHTML = window.micIconHTMLRenamed;
+                    anvil.call(evt.target, "pause_recording");
+                  }
+                }
+              });
+            }
+
+            // Stop logic
+            if (newStopButton) {
+              newStopButton.addEventListener("click", evt => {
+                if (data.mediaRecorder && data.mediaRecorder.state !== "inactive") {
+                  data.mediaRecorder.onstop = () => {
+                    data.audioBlob = new Blob(data.recordedChunks, { type: "audio/webm" });
+                    const audioPlayback = document.getElementById("audioPlaybackRenamed");
+                    if (audioPlayback) {
+                      const audioURL = URL.createObjectURL(data.audioBlob);
+                      audioPlayback.src = audioURL;
+                      audioPlayback.load();
+                    }
+                    window.processRecordingRenamed(data.audioBlob);
+                    anvil.call(evt.target, "stop_recording");
+                    window.stopRecordingFlashRenamed();
+                  };
+                  data.mediaRecorder.stop();
+                  data.isRecording = false;
+                  newPlayButton.innerHTML = window.micIconHTMLRenamed;
+                }
+              });
+            }
+
+            // Bottom buttons
+            const bottomButtons = document.querySelectorAll(".bottom-button-renamed");
+            bottomButtons.forEach(btn => {
+              btn.removeEventListener("click", btn.__listener);
+              const newListener = function(e) {
+                const action = e.currentTarget.dataset.click;
+                console.log("[Renamed] bottom-button =>", action);
+
+                if (action === "statut") {
+                  anvil.call(e.currentTarget, "on_statut_clicked").then(chosenStatut => {
+                    if (chosenStatut) {
+                      e.currentTarget.textContent = chosenStatut;
+                    }
+                  });
+                } else if (action === "update") {
+                  console.log("Update => calling update_report in Python");
+                  const contentJSON = JSON.stringify({ content: window.getEditorContent() });
+                  const images = Array.from(document.querySelectorAll("#editorRenamed img")).map(img => ({
+                    media: img.src,
+                    reference_id: img.dataset.referenceId || ("img_" + Date.now()),
+                    position: img.offsetTop.toString()
+                  }));
+                  anvil.call(e.currentTarget, "update_report", e.currentTarget.textContent, contentJSON, images);
+                } else if (action === "partager") {
+                  // "Share" => in dev
+                  displayBanner("Functionality under development by the Checkvet team", "success");
+                }
+              };
+              btn.__listener = newListener;
+              btn.addEventListener("click", newListener);
+            });
+
+            console.log("===== Done attaching event listeners (Renamed) for EN_AudioManagerEdit =====");
+          };
+
+          /****************************************************
+           * 3) INIT ON LOAD
+           ****************************************************/
+          console.log("Calling __attachAudioManagerEventsRenamed() now...");
+          window.__attachAudioManagerEventsRenamed();
+
+          // Refresh session on visibility changes
+          if (!window.__session_handlers_initialized_renamed) {
+            window.__session_handlers_initialized_renamed = true;
+            document.addEventListener("visibilitychange", () => {
+              if (document.visibilityState === "visible") {
+                anvil.call(document.body, "refresh_session_relay");
+              }
+            });
+            window.addEventListener("online", () => {
+              anvil.call(document.body, "refresh_session_relay");
+            });
+          }
+          console.log("===== Renamed HTML/JS fully loaded for EN_AudioManagerEdit =====");
+        </script>
+      </body>
+      </html>
+  type: HtmlTemplate
+is_package: true

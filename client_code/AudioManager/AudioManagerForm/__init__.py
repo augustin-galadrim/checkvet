@@ -90,6 +90,10 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     # Toolbar
     self.call_js("setElementText", "toolbar_image", t.t('toolbar_image'))
+    self.call_js("setElementText", "leftAlignBtn", t.t('left_align_button'))
+    self.call_js("setElementText", "centerAlignBtn", t.t('center_align_button'))
+    self.call_js("setElementText", "rightAlignBtn", t.t('right_align_button'))
+    self.call_js("setElementText", "insertImageBtn", t.t('insert_image_button'))
     self.call_js("setElementText", "toolbar_copy", t.t('toolbar_copy'))
 
     # Bottom Buttons

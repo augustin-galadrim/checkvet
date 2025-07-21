@@ -1,4 +1,4 @@
-from ._anvil_designer import AudioManagerBackupTemplate
+from ._anvil_designer import _AudioManagerBackupTemplate
 from anvil import *
 import anvil.server
 import anvil.tables as tables
@@ -20,7 +20,7 @@ def safe_value(item, key, default_value):
   return default_value if val is None else val
 
 
-class AudioManagerBackup(AudioManagerBackupTemplate):
+class _AudioManagerBackup(_AudioManagerBackupTemplate):
   def __init__(
     self,
     clicked_value=None,

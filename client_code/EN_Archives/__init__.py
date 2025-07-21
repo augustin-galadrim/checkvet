@@ -68,7 +68,7 @@ class EN_Archives(EN_ArchivesTemplate):
 
   def open_production_form(self, **event_args):
     print("open_production_form() called.")
-    open_form("EN_AudioManager")
+    open_form("AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     print("open_templates_form() called.")
@@ -80,7 +80,7 @@ class EN_Archives(EN_ArchivesTemplate):
 
   def open_create_form(self, **event_args):
     print("open_create_form() called.")
-    open_form("EN_AudioManager")
+    open_form("AudioManagerForm")
 
   def filter_reports_client(self, filter_val, **event_args):
     print(f"Filtering reports by status = '{filter_val}'")

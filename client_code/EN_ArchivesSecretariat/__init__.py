@@ -105,7 +105,7 @@ class EN_ArchivesSecretariat(EN_ArchivesSecretariatTemplate):
       open_form("EN_ArchivesSecretariat")
 
   def open_production_form(self, **event_args):
-    open_form("EN_AudioManager")
+    open_form("AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     open_form("EN_Templates")
@@ -114,7 +114,7 @@ class EN_ArchivesSecretariat(EN_ArchivesSecretariatTemplate):
     open_form("EN_Settings")
 
   def open_create_form(self, **event_args):
-    open_form("EN_AudioManager")
+    open_form("AudioManagerForm")
 
   def filter_reports_client(self, filter_val, **event_args):
     """Called from JS when a status filter is selected."""

@@ -684,7 +684,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
   # -------------------------
   def open_production_form(self, **event_args):
     print("[DEBUG] Opening EN_Production form")
-    open_form("EN_AudioManager")
+    open_form("AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     print("[DEBUG] Opening EN_Templates form")

@@ -1,4 +1,4 @@
-from ._anvil_designer import EN_AudioManagerTemplate
+from ._anvil_designer import _EN_AudioManagerTemplate
 from anvil import *
 import anvil.server
 import anvil.tables as tables
@@ -20,7 +20,7 @@ def safe_value(item, key, default_value):
   return default_value if val is None else val
 
 
-class EN_AudioManager(EN_AudioManagerTemplate):
+class _EN_AudioManager(_EN_AudioManagerTemplate):
   def __init__(
     self,
     clicked_value=None,
@@ -642,7 +642,7 @@ class EN_AudioManager(EN_AudioManagerTemplate):
   # -------------------------
   def open_production_form(self, **event_args):
     print("[DEBUG] Opening EN_Production form")
-    open_form("EN_AudioManager")
+    open_form("AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     print("[DEBUG] Opening EN_Templates form")

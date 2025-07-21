@@ -1,4 +1,4 @@
-from ._anvil_designer import AudioManager_copyTemplate
+from ._anvil_designer import _AudioManagerTemplate
 from anvil import *
 import anvil.server
 import anvil.tables as tables
@@ -20,7 +20,7 @@ def safe_value(item, key, default_value):
   return default_value if val is None else val
 
 
-class AudioManager_copy(AudioManager_copyTemplate):
+class _AudioManager(_AudioManagerTemplate):
   def __init__(
     self,
     clicked_value=None,
@@ -200,99 +200,151 @@ class AudioManager_copy(AudioManager_copyTemplate):
       return "FR"
 
   def process_recording(self, audio_blob, **event_args):
-    # Nombre maximum de tentatives en cas de « Server code took too long »
+    # ------------------------------------------------------------------
+    # Retry settings for server calls that may time-out
+    # ------------------------------------------------------------------
     RETRY_LIMIT = 3
-    BACKOFF_SEC = 2  # base du back-off exponentiel : 1×, 2×, 4× …
-    """
-      Traite un enregistrement audio et génère un rapport.
-      Ajoute une logique de RETRY pour chaque appel serveur susceptible
-      de lever anvil.server.TimeoutError (« server code took too long »).
-      """
+    BACKOFF_SEC = 2        # 1 s, 2 s, 4 s …
 
-    # ------------------------------------------------------------
-    # Helper : appel serveur avec reprises
-    # ------------------------------------------------------------
     def call_with_retry(fn_name, *args):
+      """anvil.server.call_s with exponential back-off."""
       for attempt in range(RETRY_LIMIT):
         try:
           return anvil.server.call_s(fn_name, *args)
         except anvil.server.TimeoutError as e:
           if attempt < RETRY_LIMIT - 1:
-            wait = BACKOFF_SEC**attempt
-            print(
-              f"[WARN] {fn_name} timeout ; retry {attempt + 1}/{RETRY_LIMIT} "
-              f"after {wait}s"
-            )
-            time.sleep(wait)  # Skulpt dispose de time.sleep
+            wait = BACKOFF_SEC ** attempt
+            print(f"[WARN] {fn_name} timeout ; retry {attempt+1}/{RETRY_LIMIT} after {wait}s")
+            time.sleep(wait)
           else:
-            raise e  # toutes les tentatives ont échoué
+            raise e
 
-    # ------------------------------------------------------------
-    # 0. normaliser l’entrée
-    # ------------------------------------------------------------
-    MAX_DIRECT_PAYLOAD = 3_800_000  # 3.8 MB ≃ 4 MB sérialisé
-    if isinstance(audio_blob, str):
+    # ------------------------------------------------------------------
+    # 0. normaliser l'entrée  (Base-64 → BlobMedia, JS Blob → BlobMedia…)
+    # ------------------------------------------------------------------
+    MAX_DIRECT_PAYLOAD = 3_800_000          # 3.8 MB ≃ 4 MB sérialisé
+
+    if isinstance(audio_blob, str):                       # chaîne Base-64
       if len(audio_blob) > MAX_DIRECT_PAYLOAD:
         raw = base64.b64decode(audio_blob)
         audio_blob = anvil.BlobMedia(
           content=raw, content_type="audio/webm", name="recording.webm"
         )
-        print(f"[DEBUG] Base-64 >4 MB → BlobMedia ({len(raw) / 1024:.1f} kB)")
-    elif isinstance(audio_blob, anvil.BlobMedia):
-      pass
-    else:  # JsProxy Blob
-      audio_blob = anvil.js.to_media(audio_blob, name="recording.webm")
-      print("[DEBUG] Js Blob → BlobMedia")
+        print(f"[DEBUG] Base-64 >4 MB → BlobMedia ({len(raw)/1024:.1f} kB)")
+      # sinon (< 4 MB) on laisse la str telle quelle – le serveur la gérera
 
-    # ------------------------------------------------------------
-    # 1. sélection du modèle
-    # ------------------------------------------------------------
-    tmpl_raw = self.call_js("getDropdownSelectedValue", "templateSelectBtn")
-    selected_template = tmpl_raw.split(" [")[0]
-    if not selected_template or selected_template.startswith("Sélection"):
+    elif isinstance(audio_blob, anvil.BlobMedia):
+      pass                                                # déjà BlobMedia
+
+    elif (hasattr(audio_blob, "constructor") and          # JsProxy Blob/File
+          audio_blob.constructor and
+          audio_blob.constructor.name in ("Blob", "File")):
+      audio_blob = anvil.js.to_media(audio_blob, name="recording.webm")
+      print("[DEBUG] Js Blob/File → BlobMedia")
+
+    elif isinstance(audio_blob, (bytes, bytearray)):      # flux Python brut
+      audio_blob = anvil.BlobMedia(
+        content=audio_blob, content_type="audio/webm", name="recording.webm"
+      )
+      print(f"[DEBUG] bytes → BlobMedia ({len(audio_blob)/1024:.1f} kB)")
+
+    else:
+      alert("Type d'objet audio non reconnu. Impossible de traiter l'enregistrement.")
+      return
+
+    # ------------------------------------------------------------------
+    # 1. sélection du modèle de prompt
+    # ------------------------------------------------------------------
+    tmpl_raw          = self.call_js("getDropdownSelectedValue", "templateSelectBtn")
+    selected_template_name = tmpl_raw.split(" [")[0]
+    if not selected_template_name or selected_template_name.startswith(("Select", "Sélection")):
       alert("Aucun modèle sélectionné. Veuillez en choisir un.")
       return
 
-    lang = self.get_selected_language()
-    prompt_col = "prompt_fr" if lang == "FR" else "prompt_en"
-    prompt = call_with_retry(
-      "pick_template", selected_template, prompt_col
-    ) or call_with_retry("pick_template", selected_template, "prompt")
-    if not prompt:
-      alert(f"Aucun prompt pour « {selected_template} »")
-      return
-    self.template_name, self.prompt = selected_template, prompt
+    # Récupérer tous les détails du template sélectionné pour vérifier display_template
+    all_templates = anvil.server.call("read_templates")
+    selected_template = None
+    for template in all_templates:
+      if template.get("template_name") == selected_template_name:
+        selected_template = template
+        break
 
-    # ------------------------------------------------------------
-    # 2. transcription Whisper
-    # ------------------------------------------------------------
+    if not selected_template:
+      alert(f"Template '{selected_template_name}' non trouvé dans la base de données.")
+      return
+
+    # Vérifier si display_template est True
+    display_template = selected_template.get("display_template", False)
+    print(f"[DEBUG] Template '{selected_template_name}' - display_template: {display_template}")
+
+    lang       = self.get_selected_language()
+    prompt_col = "prompt_fr" if lang == "FR" else "prompt_en"
+    prompt     = (call_with_retry("pick_template", selected_template_name, prompt_col)
+                  or call_with_retry("pick_template", selected_template_name, "prompt"))
+    if not prompt:
+      alert(f"Aucun prompt pour « {selected_template_name} »")
+      return
+
+    # Si display_template est True, on concatène le contenu de l'éditeur au prompt
+    if display_template:
+      editor_content = self.editor_content or ""
+      print(f"[DEBUG] display_template=True, concaténation du prompt avec le contenu de l'éditeur ({len(editor_content)} caractères)")
+
+      # Concaténer le prompt avec le contenu de l'éditeur
+      prompt = f"{prompt}\n\nContenu de l'éditeur:\n{editor_content}"
+      print(f"[DEBUG] Nouveau prompt combiné créé ({len(prompt)} caractères)")
+
+    self.template_name, self.prompt = selected_template_name, prompt
+
+    # ------------------------------------------------------------------
+    # 2. transcription Whisper  →  lance une tâche de fond
+    #     (server returns the Task object itself)
+    # ------------------------------------------------------------------
     whisper_fn = "EN_process_audio_whisper" if lang == "EN" else "process_audio_whisper"
-    transcription = call_with_retry(whisper_fn, audio_blob)
+    print("[DEBUG] about to launch Whisper task, type:", type(audio_blob))
+
+    task       = call_with_retry(whisper_fn, audio_blob)      # Task object
+
+    # --- poll jusqu'à complétion / échec ------------------------------
+    WAIT_STEP    = 0.7          # secondes entre polls
+    MAX_WAIT_SEC = 240          # abandon après 4 min
+    elapsed      = 0.0
+
+    while not task.is_completed() and elapsed < MAX_WAIT_SEC:
+      time.sleep(WAIT_STEP)
+      elapsed += WAIT_STEP
+
+    if task.is_completed():
+      transcription = task.get_return_value()                 # vraie transcription
+    else:
+      alert("La transcription prend trop de temps. Veuillez réessayer.")
+      return
+
     if isinstance(transcription, dict) and "error" in transcription:
       alert(transcription["error"])
       return
     self.raw_transcription = transcription
 
-    # ------------------------------------------------------------
+    # ------------------------------------------------------------------
     # 3. génération GPT-4
-    # ------------------------------------------------------------
+    # ------------------------------------------------------------------
     report = call_with_retry("generate_report", prompt, transcription)
     if isinstance(report, dict) and "error" in report:
       alert(report["error"])
       return
 
-    # ------------------------------------------------------------
+    # ------------------------------------------------------------------
     # 4. formatage
-    # ------------------------------------------------------------
-    formatter = "EN_format_report" if lang == "EN" else "format_report"
+    # ------------------------------------------------------------------
+    formatter    = "EN_format_report" if lang == "EN" else "format_report"
     report_final = call_with_retry(formatter, report)
     if isinstance(report_final, dict) and "error" in report_final:
       alert(report_final["error"])
       return
 
-    # ------------------------------------------------------------
+    # ------------------------------------------------------------------
     # 5. affichage
-    # ------------------------------------------------------------
+    # ------------------------------------------------------------------
     self.editor_content = report_final
     print("[DEBUG] process_recording terminé ✓")
     return "OK"

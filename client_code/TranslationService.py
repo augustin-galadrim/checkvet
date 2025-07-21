@@ -1,10 +1,9 @@
 import anvil.server
 
 TRANSLATIONS = {}
-CURRENT_LANG = 'en' # Default language
+CURRENT_LANG = 'en'
 
 def load_language(lang_code='en'):
-  """Loads a language into the global TRANSLATIONS dictionary."""
   global TRANSLATIONS, CURRENT_LANG
   try:
     lang_code = lang_code.lower()
@@ -18,6 +17,5 @@ def load_language(lang_code='en'):
       load_language('en')
 
 def t(key, **kwargs):
-  """The main translation function. Gets a translation by its key."""
   template = TRANSLATIONS.get(key, f"<{key}>")
   return template.format(**kwargs)

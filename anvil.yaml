@@ -674,3 +674,4 @@ services:
   source: /runtime/services/anvil/secrets.yml
 startup: {module: StartupForm, type: form}
 startup_form: null
+uplink_visible: true

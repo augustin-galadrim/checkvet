@@ -671,5 +671,6 @@ container:
         </script>
       </body>
       </html>
+    visible: true
   type: HtmlTemplate
 is_package: true

@@ -59,28 +59,28 @@ class EN_Archives(EN_ArchivesTemplate):
         'name': safe_value(report, 'name', "(None)")
       }
       print("Safe report constructed:", safe_report)
-      open_form("EN_AudioManagerEdit", report=safe_report)
+      open_form("AudioManager.EN_AudioManagerEdit", report=safe_report)
       print("EN_AudioManagerEdit form opened successfully.")
     except Exception as e:
       print("Error in open_audio_manager_form:", e)
       alert("Error opening report. Redirecting to EN_Archives.")
-      open_form("EN_Archives")
+      open_form("Archives.EN_Archives")
 
   def open_production_form(self, **event_args):
     print("open_production_form() called.")
-    open_form("AudioManagerForm")
+    open_form("AudioManager.AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     print("open_templates_form() called.")
-    open_form("EN_Templates")
+    open_form("Templates.EN_Templates")
 
   def open_settings_form(self, **event_args):
     print("open_settings_form() called.")
-    open_form("EN_Settings")
+    open_form("Settings.EN_Settings")
 
   def open_create_form(self, **event_args):
     print("open_create_form() called.")
-    open_form("AudioManagerForm")
+    open_form("AudioManager.AudioManagerForm")
 
   def filter_reports_client(self, filter_val, **event_args):
     print(f"Filtering reports by status = '{filter_val}'")

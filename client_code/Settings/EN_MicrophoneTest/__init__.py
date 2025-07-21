@@ -37,7 +37,7 @@ class EN_MicrophoneTest(EN_MicrophoneTestTemplate):
     try:
       transcription = anvil.server.call("process_and_log_test", audio_blob)
       print("Returned transcription:", transcription)
-      open_form("EN_Settings")
+      open_form("Settings.EN_Settings")
       return transcription
     except Exception as e:
       alert("Error processing the test recording: " + str(e))

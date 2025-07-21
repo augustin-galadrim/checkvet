@@ -48,7 +48,7 @@ class MobileInstallationFlow(MobileInstallationFlowTemplate):
       if success:
         alert("Installation recorded successfully!")
         self.call_js("hideModal", "modal-step3")
-        open_form("AudioManager")
+        open_form("AudioManager.AudioManagerForm")
       else:
         alert("Failed to record installation. Please try again.")
     except Exception as e:

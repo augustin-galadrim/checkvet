@@ -45,7 +45,7 @@ class AudioManagerEditSecretariat(AudioManagerEditSecretariatTemplate):
         }
       else:
         alert("Aucun rapport fourni. Redirection vers Archives.")
-        open_form("ArchivesSecretariat")
+        open_form("Archives.ArchivesSecretariat")
         return
 
     # Utiliser safe_value pour s'assurer que chaque champ est défini.
@@ -197,7 +197,7 @@ class AudioManagerEditSecretariat(AudioManagerEditSecretariatTemplate):
       )
       if result:
         self.call_js("displayBanner", "Rapport mis à jour avec succès", "success")
-        open_form("ArchivesSecretariat")
+        open_form("Archives.ArchivesSecretariat")
       else:
         alert("Échec de la mise à jour du rapport. Veuillez réessayer.")
     except Exception as e:
@@ -222,4 +222,4 @@ class AudioManagerEditSecretariat(AudioManagerEditSecretariatTemplate):
   # --------------------------
   def retour_clicked(self, **event_args):
     """Retourner à la page Archives sans confirmation."""
-    open_form("ArchivesSecretariat")
+    open_form("Archives.ArchivesSecretariat")

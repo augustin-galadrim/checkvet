@@ -218,7 +218,7 @@ class Settings(SettingsTemplate):
     """
     Appelé lorsque l'utilisateur clique sur "Annuler".
     """
-    open_form("AudioManager")
+    open_form("AudioManager.AudioManagerForm")
 
   def logout_click(self, **event_args):
     """
@@ -246,19 +246,19 @@ class Settings(SettingsTemplate):
 
   def openProduction(self, **event_args):
     """Appelé depuis l'onglet supérieur 'Production'"""
-    open_form("AudioManager")
+    open_form("AudioManager.AudioManagerForm")
 
   def openTemplates(self, **event_args):
     """Appelé depuis l'onglet supérieur 'Modèles/IA'"""
-    open_form("Templates")
+    open_form("Templates.Templates")
 
   def openArchives(self, **event_args):
     """Appelé depuis l'onglet supérieur 'Archives'"""
     current_user = anvil.users.get_user()
     if current_user['supervisor']:
-      open_form("ArchivesSecretariat")
+      open_form("Archives.EN_ArchivesSecretariat")
     else:
-      open_form("Archives")
+      open_form("Archives.Archives")
 
   def openMicrophoneTest(self, **event_args):
     """Appelé lorsque l'utilisateur clique sur 'Tester mon micro'."""

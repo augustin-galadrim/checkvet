@@ -10,7 +10,7 @@ import base64
 import anvil.media
 import anvil.js
 import time
-from .. import TranslationService as t
+from ... import TranslationService as t
 
 
 def safe_value(item, key, default_value):
@@ -105,7 +105,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.call_js("setPlaceholderById", "templateSearchInput", t.t('search_template_placeholder'))
 
   def form_show(self, **event_args):
-    print("[DEBUG] Starting form_show in EN_AudioManager")
+    print("[DEBUG] Starting form_show in AudioManagerForm")
     self.update_ui_texts()
     # Check if user has provided additional info
     additional_info = anvil.server.call("pick_user_info", "additional_info")
@@ -684,23 +684,23 @@ class AudioManagerForm(AudioManagerFormTemplate):
   # -------------------------
   def open_production_form(self, **event_args):
     print("[DEBUG] Opening EN_Production form")
-    open_form("AudioManagerForm")
+    open_form("AudioManager.AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     print("[DEBUG] Opening EN_Templates form")
-    open_form("EN_Templates")
+    open_form("Templates.EN_Templates")
 
   def open_archives_form(self, **event_args):
     print("[DEBUG] Opening EN_Archives form")
     current_user = anvil.users.get_user()
     if current_user["supervisor"]:
-      open_form("EN_ArchivesSecretariat")
+      open_form("Archives.EN_ArchivesSecretariat")
     else:
-      open_form("EN_Archives")
+      open_form("Archives.EN_Archives")
 
   def open_settings_form(self, **event_args):
     print("[DEBUG] Opening EN_Settings form")
-    open_form("EN_Settings")
+    open_form("Settings.EN_Settings")
 
   # -------------------------
   # Front-end relay for patient search

@@ -112,7 +112,7 @@ class TemplateEditor(TemplateEditorTemplate):
 
       if result:
         self.call_js("displayBanner", "Template saved successfully", "success")
-        open_form("Templates")  # Go back to templates list
+        open_form("Templates.Templates")  # Go back to templates list
       else:
         alert("Failed to save template. Please try again.")
     except Exception as e:
@@ -125,4 +125,4 @@ class TemplateEditor(TemplateEditorTemplate):
   # ----------------------------------------------------------
   def return_clicked(self, **event_args):
     """Return to the Templates page without confirmation."""
-    open_form("Templates")
+    open_form("Templates.Templates")

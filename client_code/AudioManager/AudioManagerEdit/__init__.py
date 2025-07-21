@@ -51,7 +51,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
         }
       else:
         alert("Aucun rapport fourni. Redirection vers Archives.")
-        open_form("Archives")
+        open_form("Archives.Archives")
         return
 
     # Utiliser safe_value pour s'assurer que chaque champ est défini.
@@ -205,7 +205,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
 
       if result:
         self.call_js("displayBanner", "Rapport mis à jour avec succès", "success")
-        open_form("Archives")
+        open_form("Archives.Archives")
       else:
         alert("Échec de la mise à jour du rapport. Veuillez réessayer.")
     except Exception as e:
@@ -230,4 +230,4 @@ class AudioManagerEdit(AudioManagerEditTemplate):
   # ----------------------------------------------------------
   def retour_clicked(self, **event_args):
     """Retourner à la page Archives sans confirmation."""
-    open_form("Archives")
+    open_form("Archives.Archives")

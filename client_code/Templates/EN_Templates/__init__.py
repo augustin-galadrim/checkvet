@@ -37,19 +37,19 @@ class EN_Templates(EN_TemplatesTemplate):
   # ----------------------
   def open_production_form(self, **event_args):
     """Open the EN_AudioManager form from the 'Production' tab."""
-    open_form("AudioManagerForm")
+    open_form("AudioManager.AudioManagerForm")
 
   def open_archives_form(self, **event_args):
     """Open the Archives form from the 'Archives' tab."""
     current_user = anvil.users.get_user()
     if current_user['supervisor']:
-      open_form("EN_ArchivesSecretariat")
+      open_form("Archives.EN_ArchivesSecretariat")
     else:
-      open_form("EN_Archives")
+      open_form("Archives.EN_Archives")
 
   def open_settings_form(self, **event_args):
     """Open the EN_Settings form from the 'Settings' tab."""
-    open_form("EN_Settings")
+    open_form("Settings.EN_Settings")
 
   def open_create_form(self, **event_args):
     """
@@ -57,7 +57,7 @@ class EN_Templates(EN_TemplatesTemplate):
     now replaced by our custom modal.
     (Kept here for reference.)
     """
-    open_form("AudioManagerForm")
+    open_form("AudioManager.AudioManagerForm")
 
   # --------------------------------------
   # Logic for PDF to template conversion modal

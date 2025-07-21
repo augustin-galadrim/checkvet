@@ -217,7 +217,7 @@ class EN_Settings(EN_SettingsTemplate):
     """
     Called when the user clicks "Cancel".
     """
-    open_form("AudioManagerForm")
+    open_form("AudioManager.AudioManagerForm")
 
   def logout_click(self, **event_args):
     """
@@ -245,19 +245,19 @@ class EN_Settings(EN_SettingsTemplate):
 
   def openProduction(self, **event_args):
     """Called from the top tab 'Production'"""
-    open_form("AudioManagerForm")
+    open_form("AudioManager.AudioManagerForm")
 
   def openTemplates(self, **event_args):
     """Called from the top tab 'Templates/AI'"""
-    open_form("EN_Templates")
+    open_form("Templates.EN_Templates")
 
   def openArchives(self, **event_args):
     """Called from the top tab 'Archives'"""
     current_user = anvil.users.get_user()
     if current_user['supervisor']:
-      open_form("EN_ArchivesSecretariat")
+      open_form("Archives.EN_ArchivesSecretariat")
     else:
-      open_form("EN_Archives")
+      open_form("Archives.EN_Archives")
 
   def openMicrophoneTest(self, **event_args):
     """Called when user clicks 'Test my microphone'."""

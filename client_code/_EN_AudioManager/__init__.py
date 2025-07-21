@@ -642,23 +642,23 @@ class _EN_AudioManager(_EN_AudioManagerTemplate):
   # -------------------------
   def open_production_form(self, **event_args):
     print("[DEBUG] Opening EN_Production form")
-    open_form("AudioManagerForm")
+    open_form("AudioManager.AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     print("[DEBUG] Opening EN_Templates form")
-    open_form("EN_Templates")
+    open_form("Templates.EN_Templates")
 
   def open_archives_form(self, **event_args):
     print("[DEBUG] Opening EN_Archives form")
     current_user = anvil.users.get_user()
     if current_user["supervisor"]:
-      open_form("EN_ArchivesSecretariat")
+      open_form("Archives.EN_ArchivesSecretariat")
     else:
-      open_form("EN_Archives")
+      open_form("Archives.EN_Archives")
 
   def open_settings_form(self, **event_args):
     print("[DEBUG] Opening EN_Settings form")
-    open_form("EN_Settings")
+    open_form("Settings.EN_Settings")
 
   # -------------------------
   # Front-end relay for patient search

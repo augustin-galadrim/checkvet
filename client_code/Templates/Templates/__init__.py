@@ -38,19 +38,19 @@ class Templates(TemplatesTemplate):
   # ----------------------
   def open_production_form(self, **event_args):
     """Ouvrir le formulaire AudioManager depuis l'onglet 'Production'."""
-    open_form("AudioManager")
+    open_form("AudioManager.AudioManagerForm")
 
   def open_archives_form(self, **event_args):
     """Ouvrir le formulaire Archives depuis l'onglet 'Archives'."""
     current_user = anvil.users.get_user()
     if current_user['supervisor']:
-      open_form("ArchivesSecretariat")
+      open_form("Archives.ArchivesSecretariat")
     else:
-      open_form("Archives")
+      open_form("Archives.Archives")
 
   def open_settings_form(self, **event_args):
     """Ouvrir le formulaire Settings depuis l'onglet 'Paramètres'."""
-    open_form("Settings")
+    open_form("Settings.Settings")
 
   def open_create_form(self, **event_args):
     """
@@ -58,7 +58,7 @@ class Templates(TemplatesTemplate):
     mais nous ne l'utiliserons plus maintenant que nous avons un modal personnalisé.
     (Conservée à titre de référence.)
     """
-    open_form("AudioManager")
+    open_form("AudioManager.AudioManagerForm")
 
   # --------------------
   # Ouverture de l'éditeur de template
@@ -89,11 +89,11 @@ class Templates(TemplatesTemplate):
         return
 
       print(f"Ouverture de l'éditeur de template pour éditer: {found_template['template_name']}")
-      open_form("TemplateEditor", template=found_template)
+      open_form("Templates.TemplateEditor", template=found_template)
     else:
       # Mode création
       print("Ouverture de l'éditeur de template pour créer un nouveau template")
-      open_form("TemplateEditor")
+      open_form("Templates.TemplateEditor")
 
   # --------------------------------------
   # Logique du modal pour "Créer" => Transformation PDF en template

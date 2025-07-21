@@ -43,7 +43,7 @@ class EN_AudioManagerEditSecretariat(EN_AudioManagerEditSecretariatTemplate):
         }
       else:
         alert("No report provided. Redirecting to EN_Archives.")
-        open_form("EN_Archives")
+        open_form("Archives.EN_Archives")
         return
 
     # Use safe_value to ensure each field is defined.
@@ -186,7 +186,7 @@ class EN_AudioManagerEditSecretariat(EN_AudioManagerEditSecretariatTemplate):
 
       if result:
         self.call_js("displayBanner", "Report updated successfully", "success")
-        open_form("EN_ArchivesSecretariat")
+        open_form("Archives.EN_ArchivesSecretariat")
       else:
         alert("Failed to update report. Please try again.")
     except Exception as e:
@@ -211,4 +211,4 @@ class EN_AudioManagerEditSecretariat(EN_AudioManagerEditSecretariatTemplate):
   # --------------------------
   def retour_clicked(self, **event_args):
     """Return to the EN_ArchivesSecretariat page without confirmation."""
-    open_form("EN_ArchivesSecretariat")
+    open_form("Archives.EN_ArchivesSecretariat")

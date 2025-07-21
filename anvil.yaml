@@ -204,6 +204,26 @@ db_schema:
       type: link_multiple
     server: full
     title: Structures
+  translations:
+    client: search
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: key
+      type: string
+    - admin_ui: {order: 1, width: 200}
+      name: en
+      type: string
+    - admin_ui: {order: 2, width: 200}
+      name: fr
+      type: string
+    - admin_ui: {order: 3, width: 200}
+      name: es
+      type: string
+    - admin_ui: {order: 4, width: 200}
+      name: de
+      type: string
+    server: search
+    title: Translations
   users:
     client: none
     columns:

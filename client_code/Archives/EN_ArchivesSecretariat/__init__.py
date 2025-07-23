@@ -98,14 +98,14 @@ class EN_ArchivesSecretariat(EN_ArchivesSecretariatTemplate):
         'name': safe_value(report, 'name', "")
       }
       # Pass the entire report (as safe_report) to preserve all keys
-      open_form("AudioManager.EN_AudioManagerEditSecretariat", report=safe_report)
+      open_form("Archives.EN_AudioManagerEditSecretariat", report=safe_report)
     except Exception as e:
       print("Error opening audio manager form:", e)
       alert("Error opening the report. Redirecting to EN_ArchivesSecretariat.")
       open_form("Archives.EN_ArchivesSecretariat")
 
   def open_production_form(self, **event_args):
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     open_form("Templates.EN_Templates")
@@ -114,7 +114,7 @@ class EN_ArchivesSecretariat(EN_ArchivesSecretariatTemplate):
     open_form("Settings.EN_Settings")
 
   def open_create_form(self, **event_args):
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def filter_reports_client(self, filter_val, **event_args):
     """Called from JS when a status filter is selected."""

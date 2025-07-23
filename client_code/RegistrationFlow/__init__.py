@@ -97,7 +97,7 @@ class RegistrationFlow(RegistrationFlowTemplate):
         # Hide any active modals before navigating away
         self.call_js("hideModal", "modal-step2")
         self.call_js("hideModal", "modal-step1")
-        open_form("AudioManager.AudioManagerForm")
+        open_form("Production.AudioManagerForm")
       else:
         alert("Registration failed. Please try again.")
     except Exception as e:
@@ -112,4 +112,4 @@ class RegistrationFlow(RegistrationFlowTemplate):
     # Hide any active modals and overlay before navigation
     self.call_js("hideModal", "modal-step1")
     self.call_js("hideModal", "modal-step2")
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")

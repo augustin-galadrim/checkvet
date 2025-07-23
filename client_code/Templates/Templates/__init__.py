@@ -38,7 +38,7 @@ class Templates(TemplatesTemplate):
   # ----------------------
   def open_production_form(self, **event_args):
     """Ouvrir le formulaire AudioManager depuis l'onglet 'Production'."""
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def open_archives_form(self, **event_args):
     """Ouvrir le formulaire Archives depuis l'onglet 'Archives'."""
@@ -58,7 +58,7 @@ class Templates(TemplatesTemplate):
     mais nous ne l'utiliserons plus maintenant que nous avons un modal personnalisé.
     (Conservée à titre de référence.)
     """
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   # --------------------
   # Ouverture de l'éditeur de template

@@ -218,7 +218,7 @@ class Settings(SettingsTemplate):
     """
     Appelé lorsque l'utilisateur clique sur "Annuler".
     """
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def logout_click(self, **event_args):
     """
@@ -246,7 +246,7 @@ class Settings(SettingsTemplate):
 
   def openProduction(self, **event_args):
     """Appelé depuis l'onglet supérieur 'Production'"""
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def openTemplates(self, **event_args):
     """Appelé depuis l'onglet supérieur 'Modèles/IA'"""

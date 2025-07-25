@@ -94,14 +94,14 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
         'statut': safe_value(report, 'statut', "Non spécifié"),
         'name': safe_value(report, 'name', "")
       }
-      open_form("AudioManager.AudioManagerEditSecretariat", report=safe_report)
+      open_form("Archives.AudioManagerEditSecretariat", report=safe_report)
     except Exception as e:
       print("Erreur lors de l'ouverture du formulaire de gestion audio :", e)
       alert("Erreur lors de l'ouverture du rapport. Redirection vers ArchivesSecretariat.")
       open_form("Archives.ArchivesSecretariat")
 
   def open_production_form(self, **event_args):
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     open_form("Templates.Templates")
@@ -110,7 +110,7 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
     open_form("Settings.Settings")
 
   def open_create_form(self, **event_args):
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def filter_reports_client(self, filter_val, **event_args):
     self.current_status_filter = filter_val

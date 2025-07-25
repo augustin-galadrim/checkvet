@@ -59,7 +59,7 @@ class EN_Archives(EN_ArchivesTemplate):
         'name': safe_value(report, 'name', "(None)")
       }
       print("Safe report constructed:", safe_report)
-      open_form("AudioManager.EN_AudioManagerEdit", report=safe_report)
+      open_form("Archives.EN_AudioManagerEdit", report=safe_report)
       print("EN_AudioManagerEdit form opened successfully.")
     except Exception as e:
       print("Error in open_audio_manager_form:", e)
@@ -68,7 +68,7 @@ class EN_Archives(EN_ArchivesTemplate):
 
   def open_production_form(self, **event_args):
     print("open_production_form() called.")
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def open_templates_form(self, **event_args):
     print("open_templates_form() called.")
@@ -80,7 +80,7 @@ class EN_Archives(EN_ArchivesTemplate):
 
   def open_create_form(self, **event_args):
     print("open_create_form() called.")
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def filter_reports_client(self, filter_val, **event_args):
     print(f"Filtering reports by status = '{filter_val}'")

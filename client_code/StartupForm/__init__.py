@@ -35,13 +35,13 @@ class StartupForm(StartupFormTemplate):
         if structure_name == "Test":
           open_form("TEST_AudioManagerUltimate35")
         else:
-          open_form("AudioManager.AudioManagerForm")
+          open_form("Production.AudioManagerForm")
 
       except Exception as e:
         print(f"ERROR during startup sequence: {e}")
         try:
           t.load_language('en')
-          open_form("AudioManager.AudioManagerForm")
+          open_form("Production.AudioManagerForm")
         except Exception as final_e:
           print(f"CRITICAL ERROR: Could not open fallback form. {final_e}")
           alert("A critical error occurred while starting the application. Please contact support.")

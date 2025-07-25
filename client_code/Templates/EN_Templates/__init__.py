@@ -37,7 +37,7 @@ class EN_Templates(EN_TemplatesTemplate):
   # ----------------------
   def open_production_form(self, **event_args):
     """Open the EN_AudioManager form from the 'Production' tab."""
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def open_archives_form(self, **event_args):
     """Open the Archives form from the 'Archives' tab."""
@@ -57,7 +57,7 @@ class EN_Templates(EN_TemplatesTemplate):
     now replaced by our custom modal.
     (Kept here for reference.)
     """
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   # --------------------------------------
   # Logic for PDF to template conversion modal

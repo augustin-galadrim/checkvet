@@ -217,7 +217,7 @@ class EN_Settings(EN_SettingsTemplate):
     """
     Called when the user clicks "Cancel".
     """
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def logout_click(self, **event_args):
     """
@@ -245,7 +245,7 @@ class EN_Settings(EN_SettingsTemplate):
 
   def openProduction(self, **event_args):
     """Called from the top tab 'Production'"""
-    open_form("AudioManager.AudioManagerForm")
+    open_form("Production.AudioManagerForm")
 
   def openTemplates(self, **event_args):
     """Called from the top tab 'Templates/AI'"""

@@ -252,7 +252,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       """
     print("[DEBUG] Online processing initiated with Base64 data.")
     try:
-      # --- START NEW LOGIC ---
       # Step 1: Decode the Base64 string from the client back into raw bytes.
       print(f"[DEBUG] Decoding Base64 string of length {len(audio_b64_string)}.")
       audio_bytes = base64.b64decode(audio_b64_string)
@@ -265,15 +264,24 @@ class AudioManagerForm(AudioManagerFormTemplate):
         content_type=metadata.get('content_type', 'application/octet-stream'),
         name=metadata.get('name', 'recording.dat')
       )
-      # --- END NEW LOGIC ---
 
-      # Now, 'processed_media' is a guaranteed serializable object.
+      # --- START CORRECTION ---
+      # Step 3: Get the ACTUAL selected template and language from the UI, not hardcoded values.
+      selected_template_name = self.call_js("getDropdownSelectedValue", "templateSelectBtn")
+      selected_language = self.get_selected_language()
 
-      # Get Template & Language Info (using placeholders for now)
-      selected_template_name = "Horse"
-      selected_language = "EN"
+      print(f"[DEBUG] Using selected template: '{selected_template_name}' and language: '{selected_language}' for processing.")
 
-      # Call the next server function with the correctly created media object.
+      # Step 4: Validate that a template has actually been selected.
+      if not selected_template_name or selected_template_name == "Select a template":
+        # This error message is for the server logs.
+        print("[ERROR] Processing halted: No template was selected by the user.")
+        # This raises an exception that the JavaScript .catch() block will handle,
+        # allowing it to show a user-friendly error message.
+        raise ValueError("Please select a template before processing the audio.")
+      # --- END CORRECTION ---
+
+      # Step 5: Call the backend server function with the correct, validated parameters.
       final_html = anvil.server.call(
         'transcribe_generate_and_format', 
         processed_media, 
@@ -288,7 +296,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       import traceback
       print(f"[ERROR] Online processing failed: {e}")
       print(traceback.format_exc()) # Print full error for better debugging
-      # This exception will be caught by the JS .catch() block.
+      # Re-raise the exception so it propagates back to the JavaScript client.
       raise e
 
   # --- NEW FUNCTION ---

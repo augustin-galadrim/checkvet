@@ -247,56 +247,71 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def process_recording(self, audio_b64_string, metadata, **event_args):
     """
-      Handles online processing. This function now receives a Base64 string
-      and metadata from the client to bypass proxy object issues.
-      """
+    Handles the complete, multi-step online processing workflow by correctly
+    chaining the server calls as they are defined in the server module.
+    """
     print("[DEBUG] Online processing initiated with Base64 data.")
     try:
-      # Step 1: Decode the Base64 string from the client back into raw bytes.
-      print(f"[DEBUG] Decoding Base64 string of length {len(audio_b64_string)}.")
+      # --- SETUP: Prepare Media and Parameters ---
       audio_bytes = base64.b64decode(audio_b64_string)
-
-      # Step 2: Use the decoded bytes and metadata to create a new, valid
-      # anvil.BlobMedia object on the server.
-      print(f"[DEBUG] Creating anvil.BlobMedia with metadata: {metadata}")
       processed_media = anvil.BlobMedia(
         content=audio_bytes,
         content_type=metadata.get('content_type', 'application/octet-stream'),
         name=metadata.get('name', 'recording.dat')
       )
-
-      # --- START CORRECTION ---
-      # Step 3: Get the ACTUAL selected template and language from the UI, not hardcoded values.
       selected_template_name = self.call_js("getDropdownSelectedValue", "templateSelectBtn")
       selected_language = self.get_selected_language()
 
-      print(f"[DEBUG] Using selected template: '{selected_template_name}' and language: '{selected_language}' for processing.")
-
-      # Step 4: Validate that a template has actually been selected.
       if not selected_template_name or selected_template_name == "Select a template":
-        # This error message is for the server logs.
-        print("[ERROR] Processing halted: No template was selected by the user.")
-        # This raises an exception that the JavaScript .catch() block will handle,
-        # allowing it to show a user-friendly error message.
         raise ValueError("Please select a template before processing the audio.")
-      # --- END CORRECTION ---
 
-      # Step 5: Call the backend server function with the correct, validated parameters.
-      final_html = anvil.server.call(
-        'transcribe_generate_and_format', 
-        processed_media, 
-        selected_template_name, 
-        selected_language
-      )
+      print(f"[DEBUG] Workflow started for template: '{selected_template_name}', language: '{selected_language}'.")
 
-      print("[DEBUG] Online processing successful. Returning HTML content.")
+      # --- STEP 1: Transcribe Audio (Handling the Background Task Correctly) ---
+      print("[DEBUG] Calling transcription background task...")
+      if selected_language == 'EN':
+        transcription_task = anvil.server.call('EN_process_audio_whisper', processed_media)
+      else:
+        transcription_task = anvil.server.call('process_audio_whisper', processed_media)
+
+      # Wait for the background task to complete and get its result
+      transcription = transcription_task.get_return_value()
+
+      if isinstance(transcription, dict) and 'error' in transcription:
+        raise Exception(f"Transcription failed: {transcription['error']}")
+
+      print(f"[DEBUG] Transcription successful. Length: {len(transcription)} chars.")
+      self.raw_transcription = transcription # Store for saving later
+
+      # --- STEP 2: Get Template Prompt from Database ---
+      print("[DEBUG] Fetching prompt for template:", selected_template_name)
+      template_row = app_tables.custom_templates.get(template_name=selected_template_name)
+      if not template_row:
+        raise Exception(f"Template '{selected_template_name}' not found in the database.")
+      prompt = template_row['prompt']
+      if not prompt:
+        raise Exception(f"Template '{selected_template_name}' is empty.")
+
+      # --- STEP 3: Generate Report Content ---
+      print("[DEBUG] Generating report content...")
+      report_content = anvil.server.call('generate_report', prompt, transcription)
+      print(f"[DEBUG] Report generation successful. Length: {len(report_content)} chars.")
+
+      # --- STEP 4: Format Final HTML ---
+      print("[DEBUG] Formatting final report HTML...")
+      if selected_language == 'EN':
+        final_html = anvil.server.call('EN_format_report', report_content)
+      else:
+        final_html = anvil.server.call('format_report', report_content)
+
+      print("[DEBUG] Online processing workflow completed successfully.")
       return final_html
 
     except Exception as e:
       import traceback
-      print(f"[ERROR] Online processing failed: {e}")
-      print(traceback.format_exc()) # Print full error for better debugging
-      # Re-raise the exception so it propagates back to the JavaScript client.
+      print(f"[ERROR] The online processing workflow failed: {e}")
+      print(traceback.format_exc())
+      # Re-raise the exception to be caught by the JavaScript .catch() block
       raise e
 
   # --- NEW FUNCTION ---

@@ -53,7 +53,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     self.audio_chunks = []
 
-   
+
 
     def silent_error_handler(err):
       print(f"[DEBUG] Silent error handler: {err}")
@@ -245,155 +245,69 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Error getting selected language: {e}")
       return "EN"
 
-  def process_recording(self, audio_blob, **event_args):
-    # ------------------------------------------------------------------
-    # Retry settings for server calls that may time-out
-    # ------------------------------------------------------------------
-    RETRY_LIMIT = 3
-    BACKOFF_SEC = 2        # 1 s, 2 s, 4 s …
+  def process_recording(self, audio_b64_string, metadata, **event_args):
+    """
+      Handles online processing. This function now receives a Base64 string
+      and metadata from the client to bypass proxy object issues.
+      """
+    print("[DEBUG] Online processing initiated with Base64 data.")
+    try:
+      # --- START NEW LOGIC ---
+      # Step 1: Decode the Base64 string from the client back into raw bytes.
+      print(f"[DEBUG] Decoding Base64 string of length {len(audio_b64_string)}.")
+      audio_bytes = base64.b64decode(audio_b64_string)
 
-    def call_with_retry(fn_name, *args):
-      """anvil.server.call_s with exponential back-off."""
-      for attempt in range(RETRY_LIMIT):
-        try:
-          return anvil.server.call_s(fn_name, *args)
-        except anvil.server.TimeoutError as e:
-          if attempt < RETRY_LIMIT - 1:
-            wait = BACKOFF_SEC ** attempt
-            print(f"[WARN] {fn_name} timeout ; retry {attempt+1}/{RETRY_LIMIT} after {wait}s")
-            time.sleep(wait)
-          else:
-            raise e
-
-    # ------------------------------------------------------------------
-    # 0. normaliser l'entrée  (Base-64 → BlobMedia, JS Blob → BlobMedia…)
-    # ------------------------------------------------------------------
-    MAX_DIRECT_PAYLOAD = 3_800_000          # 3.8 MB ≃ 4 MB sérialisé
-
-    if isinstance(audio_blob, str):                       # chaîne Base-64
-      if len(audio_blob) > MAX_DIRECT_PAYLOAD:
-        raw = base64.b64decode(audio_blob)
-        audio_blob = anvil.BlobMedia(
-          content=raw, content_type="audio/webm", name="recording.webm"
-        )
-        print(f"[DEBUG] Base-64 >4 MB → BlobMedia ({len(raw)/1024:.1f} kB)")
-      # sinon (< 4 MB) on laisse la str telle quelle – le serveur la gérera
-
-    elif isinstance(audio_blob, anvil.BlobMedia):
-      pass                                                # déjà BlobMedia
-
-    elif (hasattr(audio_blob, "constructor") and          # JsProxy Blob/File
-          audio_blob.constructor and
-          audio_blob.constructor.name in ("Blob", "File")):
-      audio_blob = anvil.js.to_media(audio_blob, name="recording.webm")
-      print("[DEBUG] Js Blob/File → BlobMedia")
-
-    elif isinstance(audio_blob, (bytes, bytearray)):      # flux Python brut
-      audio_blob = anvil.BlobMedia(
-        content=audio_blob, content_type="audio/webm", name="recording.webm"
+      # Step 2: Use the decoded bytes and metadata to create a new, valid
+      # anvil.BlobMedia object on the server.
+      print(f"[DEBUG] Creating anvil.BlobMedia with metadata: {metadata}")
+      processed_media = anvil.BlobMedia(
+        content=audio_bytes,
+        content_type=metadata.get('content_type', 'application/octet-stream'),
+        name=metadata.get('name', 'recording.dat')
       )
-      print(f"[DEBUG] bytes → BlobMedia ({len(audio_blob)/1024:.1f} kB)")
+      # --- END NEW LOGIC ---
 
-    else:
-      alert("Type d'objet audio non reconnu. Impossible de traiter l'enregistrement.")
-      return
+      # Now, 'processed_media' is a guaranteed serializable object.
 
-    # ------------------------------------------------------------------
-    # 1. sélection du modèle de prompt
-    # ------------------------------------------------------------------
-    tmpl_raw = self.call_js("getDropdownSelectedValue", "templateSelectBtn")
-    selected_template_name = tmpl_raw.split(" [")[0]
-    if not selected_template_name or selected_template_name.startswith(("Select", "Sélection")):
-      alert("No template selected. Please choose one.")
-      return
+      # Get Template & Language Info (using placeholders for now)
+      selected_template_name = "Horse"
+      selected_language = "EN"
 
-    # Retrieve all template details to check display_template
-    all_templates = anvil.server.call("read_templates")
-    selected_template = None
-    for template in all_templates:
-      if template.get("template_name") == selected_template_name:
-        selected_template = template
-        break
+      # Call the next server function with the correctly created media object.
+      final_html = anvil.server.call(
+        'transcribe_generate_and_format', 
+        processed_media, 
+        selected_template_name, 
+        selected_language
+      )
 
-    if not selected_template:
-      alert(f"Template '{selected_template_name}' not found in database.")
-      return
+      print("[DEBUG] Online processing successful. Returning HTML content.")
+      return final_html
 
-    # Check if display_template is True
-    display_template = selected_template.get("display_template", False)
-    print(f"[DEBUG] Template '{selected_template_name}' - display_template: {display_template}")
+    except Exception as e:
+      import traceback
+      print(f"[ERROR] Online processing failed: {e}")
+      print(traceback.format_exc()) # Print full error for better debugging
+      # This exception will be caught by the JS .catch() block.
+      raise e
 
-    lang = self.get_selected_language()
-    prompt_col = "prompt_fr" if lang == "FR" else "prompt_en"
-    prompt = (call_with_retry("pick_template", selected_template_name, prompt_col)
-              or call_with_retry("pick_template", selected_template_name, "prompt"))
-    if not prompt:
-      alert(f"No prompt for '{selected_template_name}'")
-      return
-
-    # If display_template is True, concatenate editor content to prompt
-    if display_template:
-      editor_content = self.editor_content or ""
-      print(f"[DEBUG] display_template=True, concatenating prompt with editor content ({len(editor_content)} characters)")
-
-      # Concatenate prompt with editor content
-      prompt = f"{prompt}\n\nEditor content:\n{editor_content}"
-      print(f"[DEBUG] New combined prompt created ({len(prompt)} characters)")
-
-    self.template_name, self.prompt = selected_template_name, prompt
-
-    # ------------------------------------------------------------------
-    # 2. transcription Whisper  →  lance une tâche de fond
-    #     (server returns the Task object itself)
-    # ------------------------------------------------------------------
-    whisper_fn = "EN_process_audio_whisper" if lang == "EN" else "process_audio_whisper"
-    print("[DEBUG] about to launch Whisper task, type:", type(audio_blob))
-
-    task = call_with_retry(whisper_fn, audio_blob)      # Task object
-
-    # --- poll jusqu'à complétion / échec ------------------------------
-    WAIT_STEP    = 0.7          # secondes entre polls
-    MAX_WAIT_SEC = 240          # abandon après 4 min
-    elapsed      = 0.0
-
-    while not task.is_completed() and elapsed < MAX_WAIT_SEC:
-      time.sleep(WAIT_STEP)
-      elapsed += WAIT_STEP
-
-    if task.is_completed():
-      transcription = task.get_return_value()                 # vraie transcription
-    else:
-      alert("La transcription prend trop de temps. Veuillez réessayer.")
-      return
-
-    if isinstance(transcription, dict) and "error" in transcription:
-      alert(transcription["error"])
-      return
-    self.raw_transcription = transcription
-
-    # ------------------------------------------------------------------
-    # 3. génération GPT-4
-    # ------------------------------------------------------------------
-    report = call_with_retry("generate_report", prompt, transcription)
-    if isinstance(report, dict) and "error" in report:
-      alert(report["error"])
-      return
-
-    # ------------------------------------------------------------------
-    # 4. formatage
-    # ------------------------------------------------------------------
-    formatter    = "EN_format_report" if lang == "EN" else "format_report"
-    report_final = call_with_retry(formatter, report)
-    if isinstance(report_final, dict) and "error" in report_final:
-      alert(report_final["error"])
-      return
-
-    # ------------------------------------------------------------------
-    # 5. affichage
-    # ------------------------------------------------------------------
-    self.editor_content = report_final
-    print("[DEBUG] process_recording terminé ✓")
-    return "OK"
+  # --- NEW FUNCTION ---
+  def process_queued_item(self, item_id, audio_blob, title):
+    """
+      Relay function to process a single item from the offline queue.
+      """
+    print(f"[DEBUG] Processing queued item: ID={item_id}, Title='{title}'")
+    try:
+      # Call the new dedicated server function
+      success = anvil.server.call(
+        'process_and_archive_offline_recording',
+        audio_blob,
+        title
+      )
+      return {'success': success}
+    except Exception as e:
+      print(f"[ERROR] Failed to process queued item {item_id}: {e}")
+      return {'success': False, 'error': str(e)}
 
   # 1) called for each chunk
   def receive_audio_chunk(self, b64_chunk, index, total, **event_args):

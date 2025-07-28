@@ -28,14 +28,7 @@ class StartupForm(StartupFormTemplate):
         print(f"User's preferred language is: {lang_code}")
 
         t.load_language(lang_code)
-
-        structure_name = anvil.server.call("pick_user_structure")
-        print(f"User's structure is: {structure_name}")
-
-        if structure_name == "Test":
-          open_form("TEST_AudioManagerUltimate35")
-        else:
-          open_form("Production.AudioManagerForm")
+        open_form("Production.AudioManagerForm")
 
       except Exception as e:
         print(f"ERROR during startup sequence: {e}")

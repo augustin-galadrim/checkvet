@@ -245,73 +245,80 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Error getting selected language: {e}")
       return "EN"
 
-  def process_recording(self, audio_b64_string, metadata, **event_args):
+  def _js_process_audio_blob(self, js_blob_proxy):
     """
-    Handles the complete, multi-step online processing workflow by correctly
-    chaining the server calls as they are defined in the server module.
-    """
-    print("[DEBUG] Online processing initiated with Base64 data.")
+      This is the NEW "bridge" method called directly by JavaScript.
+      Its only job is to convert the JS object into a proper Anvil object.
+      """
+    print("PYTHON CLIENT: _js_process_audio_blob received a JS Proxy Object.")
+  
+    # --- THIS IS THE CRITICAL FIX ---
+    # Explicitly convert the JS Blob ProxyObject to an Anvil Media Object
     try:
-      # --- SETUP: Prepare Media and Parameters ---
-      audio_bytes = base64.b64decode(audio_b64_string)
-      processed_media = anvil.BlobMedia(
-        content=audio_bytes,
-        content_type=metadata.get('content_type', 'application/octet-stream'),
-        name=metadata.get('name', 'recording.dat')
-      )
+      media_obj = anvil.js.to_media(js_blob_proxy)
+      print(f"PYTHON CLIENT: Conversion to Anvil Media Object successful. Type: {media_obj.content_type}, Size: {media_obj.length}")
+    except Exception as e:
+      print(f"PYTHON CLIENT ERROR: anvil.js.to_media() failed: {e}")
+      # Raise the error to send it back to the JS .catch() block
+      raise
+  
+      # Now that we have a proper Anvil object, call our main workflow
+    return self.initiate_processing_workflow(media_obj)
+  
+  
+  def initiate_processing_workflow(self, audio_media_object):
+    """
+      This method contains the actual application logic and expects a proper
+      Anvil Media Object. It is no longer called directly from JavaScript.
+      """
+    print("PYTHON CLIENT: initiate_processing_workflow started.")
+    try:
+      # --- SETUP: Prepare Parameters ---
       selected_template_name = self.call_js("getDropdownSelectedValue", "templateSelectBtn")
       selected_language = self.get_selected_language()
-
+  
       if not selected_template_name or selected_template_name == "Select a template":
         raise ValueError("Please select a template before processing the audio.")
-
-      print(f"[DEBUG] Workflow started for template: '{selected_template_name}', language: '{selected_language}'.")
-
-      # --- STEP 1: Transcribe Audio (Handling the Background Task Correctly) ---
-      print("[DEBUG] Calling transcription background task...")
+  
+      print(f"PYTHON CLIENT: Parameters collected. Template: '{selected_template_name}', Language: '{selected_language}'.")
+  
+      # --- STEP 1: Transcribe Audio ---
+      print("PYTHON CLIENT: Calling server background task...")
       if selected_language == 'EN':
-        transcription_task = anvil.server.call('EN_process_audio_whisper', processed_media)
+        task = anvil.server.call('EN_process_audio_whisper', audio_media_object)
       else:
-        transcription_task = anvil.server.call('process_audio_whisper', processed_media)
-
-      # Wait for the background task to complete and get its result
-      transcription = transcription_task.get_return_value()
-
+        task = anvil.server.call('process_audio_whisper', audio_media_object)
+  
+      print(f"PYTHON CLIENT: Background task launched. Waiting for result...")
+      transcription = task.get_return_value()
+  
       if isinstance(transcription, dict) and 'error' in transcription:
-        raise Exception(f"Transcription failed: {transcription['error']}")
-
-      print(f"[DEBUG] Transcription successful. Length: {len(transcription)} chars.")
-      self.raw_transcription = transcription # Store for saving later
-
-      # --- STEP 2: Get Template Prompt from Database ---
-      print("[DEBUG] Fetching prompt for template:", selected_template_name)
+        raise Exception(f"Transcription failed on server: {transcription['error']}")
+  
+      self.raw_transcription = transcription
+      print("PYTHON CLIENT: Transcription successful.")
+  
+      # --- STEPS 2, 3, 4 (No changes needed here) ---
       template_row = app_tables.custom_templates.get(template_name=selected_template_name)
-      if not template_row:
-        raise Exception(f"Template '{selected_template_name}' not found in the database.")
+      if not template_row or not template_row['prompt']:
+        raise Exception(f"Template '{selected_template_name}' is missing or empty.")
       prompt = template_row['prompt']
-      if not prompt:
-        raise Exception(f"Template '{selected_template_name}' is empty.")
-
-      # --- STEP 3: Generate Report Content ---
-      print("[DEBUG] Generating report content...")
+  
       report_content = anvil.server.call('generate_report', prompt, transcription)
-      print(f"[DEBUG] Report generation successful. Length: {len(report_content)} chars.")
-
-      # --- STEP 4: Format Final HTML ---
-      print("[DEBUG] Formatting final report HTML...")
+  
       if selected_language == 'EN':
         final_html = anvil.server.call('EN_format_report', report_content)
       else:
         final_html = anvil.server.call('format_report', report_content)
-
-      print("[DEBUG] Online processing workflow completed successfully.")
+  
+      print("PYTHON CLIENT: Workflow completed successfully.")
       return final_html
-
+  
     except Exception as e:
       import traceback
-      print(f"[ERROR] The online processing workflow failed: {e}")
-      print(traceback.format_exc())
-      # Re-raise the exception to be caught by the JavaScript .catch() block
+      print("--- PYTHON CLIENT: EXCEPTION CAUGHT IN initiate_processing_workflow ---")
+      traceback.print_exc()
+      print("----------------------------------------------------------------------")
       raise e
 
   # --- NEW FUNCTION ---

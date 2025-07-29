@@ -75,6 +75,10 @@ def EN_process_audio_whisper(audio_blob):
 
 @anvil.server.background_task
 def bg_process_audio_whisper(audio_blob):
+  # --- DEBUG LOG ---
+  print("PYTHON SERVER (bg_process_audio_whisper): Task started.")
+  print(f"PYTHON SERVER: Received Media object. Type: '{audio_blob.content_type}', Size: {audio_blob.length} bytes.")
+  # --- END DEBUG LOG ---
   # --- Helper for Whisper API call ---
   def whisper_call(seg):
     buf = io.BytesIO()
@@ -160,6 +164,8 @@ def bg_process_audio_whisper(audio_blob):
 ################ EN
 @anvil.server.background_task
 def EN_bg_process_audio_whisper(audio_blob):
+  print("PYTHON SERVER (bg_process_audio_whisper): Task started.")
+  print(f"PYTHON SERVER: Received Media object. Type: '{audio_blob.content_type}', Size: {audio_blob.length} bytes.")
   # --- Helper for Whisper API call ---
   def whisper_call(seg):
     buf = io.BytesIO()

@@ -245,81 +245,93 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Error getting selected language: {e}")
       return "EN"
 
-  def _js_process_audio_blob(self, js_blob_proxy):
+  def process_recording(self, audio_blob, **event_args):
     """
-      This is the NEW "bridge" method called directly by JavaScript.
-      Its only job is to convert the JS object into a proper Anvil object.
+      This is the restored, working version of the processing method,
+      now wrapped with offline error handling.
       """
-    print("PYTHON CLIENT: _js_process_audio_blob received a JS Proxy Object.")
-  
-    # --- THIS IS THE CRITICAL FIX ---
-    # Explicitly convert the JS Blob ProxyObject to an Anvil Media Object
+    print("[DEBUG] process_recording initiated.")
     try:
-      media_obj = anvil.js.to_media(js_blob_proxy)
-      print(f"PYTHON CLIENT: Conversion to Anvil Media Object successful. Type: {media_obj.content_type}, Size: {media_obj.length}")
-    except Exception as e:
-      print(f"PYTHON CLIENT ERROR: anvil.js.to_media() failed: {e}")
-      # Raise the error to send it back to the JS .catch() block
-      raise
+      # --- PART 1: RESTORED LOGIC FROM YOUR PREVIOUS WORKING CODE ---
   
-      # Now that we have a proper Anvil object, call our main workflow
-    return self.initiate_processing_workflow(media_obj)
+      # Helper for retries
+      def call_with_retry(fn_name, *args):
+        for attempt in range(3):
+          try:
+            return anvil.server.call_s(fn_name, *args)
+          except anvil.server.TimeoutError as e:
+            if attempt < 2:
+              time.sleep(2 ** attempt)
+            else:
+              raise e
   
+          # CRITICAL: Input Normalization Block
+      if isinstance(audio_blob, str): # Handles Base64 if ever needed
+        raw = base64.b64decode(audio_blob)
+        audio_blob = anvil.BlobMedia(content=raw, content_type="audio/webm", name="recording.webm")
+      elif (hasattr(audio_blob, "constructor") and
+            audio_blob.constructor and
+            audio_blob.constructor.name in ("Blob", "File")):
+        print("[DEBUG] Detected JS Proxy Object, converting with to_media()...")
+        audio_blob = anvil.js.to_media(audio_blob, name="recording.webm") # This is the key conversion
   
-  def initiate_processing_workflow(self, audio_media_object):
-    """
-      This method contains the actual application logic and expects a proper
-      Anvil Media Object. It is no longer called directly from JavaScript.
-      """
-    print("PYTHON CLIENT: initiate_processing_workflow started.")
-    try:
-      # --- SETUP: Prepare Parameters ---
+        # Ensure it's a Media object now
+      if not isinstance(audio_blob, anvil.Media):
+        alert("Unrecognized audio object type. Cannot process.")
+        return
+  
+        # Get template and language
       selected_template_name = self.call_js("getDropdownSelectedValue", "templateSelectBtn")
-      selected_language = self.get_selected_language()
+      if not selected_template_name or selected_template_name.startswith("Select"):
+        alert("Please select a template before processing.")
+        return
+      lang = self.get_selected_language()
   
-      if not selected_template_name or selected_template_name == "Select a template":
-        raise ValueError("Please select a template before processing the audio.")
+      # Launch background task
+      whisper_fn = "EN_process_audio_whisper" if lang == "EN" else "process_audio_whisper"
+      print(f"[DEBUG] Launching background task '{whisper_fn}'...")
+      task = call_with_retry(whisper_fn, audio_blob)
   
-      print(f"PYTHON CLIENT: Parameters collected. Template: '{selected_template_name}', Language: '{selected_language}'.")
+      # Blocking wait for the task to finish (as it worked before)
+      elapsed = 0.0
+      while not task.is_completed() and elapsed < 240: # 4 minute timeout
+        time.sleep(1)
+        elapsed += 1
   
-      # --- STEP 1: Transcribe Audio ---
-      print("PYTHON CLIENT: Calling server background task...")
-      if selected_language == 'EN':
-        task = anvil.server.call('EN_process_audio_whisper', audio_media_object)
-      else:
-        task = anvil.server.call('process_audio_whisper', audio_media_object)
+      if not task.is_completed():
+        alert("The transcription is taking too long to complete. Please try again.")
+        return
   
-      print(f"PYTHON CLIENT: Background task launched. Waiting for result...")
       transcription = task.get_return_value()
-  
-      if isinstance(transcription, dict) and 'error' in transcription:
-        raise Exception(f"Transcription failed on server: {transcription['error']}")
-  
+      if isinstance(transcription, dict) and "error" in transcription:
+        alert(f"Transcription failed: {transcription['error']}")
+        return
       self.raw_transcription = transcription
-      print("PYTHON CLIENT: Transcription successful.")
+      print("[DEBUG] Transcription received successfully.")
   
-      # --- STEPS 2, 3, 4 (No changes needed here) ---
-      template_row = app_tables.custom_templates.get(template_name=selected_template_name)
-      if not template_row or not template_row['prompt']:
-        raise Exception(f"Template '{selected_template_name}' is missing or empty.")
-      prompt = template_row['prompt']
+      # Continue with the rest of the workflow
+      prompt_row = app_tables.custom_templates.get(template_name=selected_template_name)
+      prompt = prompt_row['prompt']
   
-      report_content = anvil.server.call('generate_report', prompt, transcription)
+      report_content = call_with_retry("generate_report", prompt, transcription)
   
-      if selected_language == 'EN':
-        final_html = anvil.server.call('EN_format_report', report_content)
-      else:
-        final_html = anvil.server.call('format_report', report_content)
+      formatter_fn = "EN_format_report" if lang == "EN" else "format_report"
+      final_html = call_with_retry(formatter_fn, report_content)
   
-      print("PYTHON CLIENT: Workflow completed successfully.")
-      return final_html
+      self.editor_content = final_html
+      print("[DEBUG] process_recording completed successfully.")
+      return "OK" # Return a simple success message to JS
+  
+    except anvil.server.AppOfflineError:
+      # --- PART 2: THE NEW OFFLINE LOGIC ---
+      # This block is only triggered if the VERY FIRST server call fails
+      print("[DEBUG] AppOfflineError caught. Initiating offline save.")
+      self.call_js('handleOfflineSave') # We'll create this small JS helper
   
     except Exception as e:
-      import traceback
-      print("--- PYTHON CLIENT: EXCEPTION CAUGHT IN initiate_processing_workflow ---")
-      traceback.print_exc()
-      print("----------------------------------------------------------------------")
-      raise e
+      print(f"[ERROR] An exception occurred in process_recording: {e}")
+      # Re-raise it so the JS .catch() block can display the banner
+      raise
 
   # --- NEW FUNCTION ---
   def process_queued_item(self, item_id, audio_blob, title):

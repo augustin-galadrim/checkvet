@@ -3,3 +3,13 @@
 __pycache__
 .anvil-data
 .env
+
+secrets.yaml
+venv
+context_for_anvil.txt
+digest.txt
+documentation_anvil.txt
+llm_guide_for_anvil.md
+.python-version
+
+.DS_Store

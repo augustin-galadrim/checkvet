@@ -118,4 +118,11 @@ container:
         </body>
       </html>
   type: HtmlTemplate
+custom_component: true
+events:
+- default_event: true
+  name: recording_complete
+  parameters:
+  - {name: audio_blob}
 is_package: true
+properties: []

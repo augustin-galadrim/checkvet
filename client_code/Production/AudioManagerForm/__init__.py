@@ -53,8 +53,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     self.audio_chunks = []
 
-
-
     def silent_error_handler(err):
       print(f"[DEBUG] Silent error handler: {err}")
       # Optional: Add logging here
@@ -69,44 +67,54 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def update_ui_texts(self):
     """Sets all text on the form using the TranslationService."""
     # Navigation
-    self.call_js("setElementText", "nav_production", t.t('nav_production'))
-    self.call_js("setElementText", "nav_templates", t.t('nav_templates'))
-    self.call_js("setElementText", "nav_archives", t.t('nav_archives'))
-    self.call_js("setElementText", "nav_settings", t.t('nav_settings'))
+    self.call_js("setElementText", "nav_production", t.t("nav_production"))
+    self.call_js("setElementText", "nav_templates", t.t("nav_templates"))
+    self.call_js("setElementText", "nav_archives", t.t("nav_archives"))
+    self.call_js("setElementText", "nav_settings", t.t("nav_settings"))
 
     # Mode Toggles
-    self.call_js("setElementText", "recordButton", t.t('record_button'))
-    self.call_js("setElementText", "uploadButton", t.t('upload_button'))
+    self.call_js("setElementText", "recordButton", t.t("record_button"))
+    self.call_js("setElementText", "uploadButton", t.t("upload_button"))
 
     # Upload Section
-    self.call_js("setElementText", "upload_text_drop", t.t('upload_text_drop'))
-    self.call_js("setElementText", "upload_description_select", t.t('upload_description_select'))
-    self.call_js("setElementText", "upload_button_select", t.t('upload_button_select'))
+    self.call_js("setElementText", "upload_text_drop", t.t("upload_text_drop"))
+    self.call_js(
+      "setElementText", "upload_description_select", t.t("upload_description_select")
+    )
+    self.call_js("setElementText", "upload_button_select", t.t("upload_button_select"))
 
     # Parameters
-    self.call_js("setElementText", "label_template", t.t('label_template'))
-    self.call_js("setElementText", "label_language", t.t('label_language'))
-    self.call_js("setElementText", "select_template_placeholder", t.t('select_template_placeholder'))
+    self.call_js("setElementText", "label_template", t.t("label_template"))
+    self.call_js("setElementText", "label_language", t.t("label_language"))
+    self.call_js(
+      "setElementText",
+      "select_template_placeholder",
+      t.t("select_template_placeholder"),
+    )
 
     # Toolbar
-    self.call_js("setElementText", "toolbar_image", t.t('toolbar_image'))
-    self.call_js("setElementText", "leftAlignBtn", t.t('left_align_button'))
-    self.call_js("setElementText", "centerAlignBtn", t.t('center_align_button'))
-    self.call_js("setElementText", "rightAlignBtn", t.t('right_align_button'))
-    self.call_js("setElementText", "insertImageBtn", t.t('insert_image_button'))
-    self.call_js("setElementText", "toolbar_copy", t.t('toolbar_copy'))
+    self.call_js("setElementText", "toolbar_image", t.t("toolbar_image"))
+    self.call_js("setElementText", "leftAlignBtn", t.t("left_align_button"))
+    self.call_js("setElementText", "centerAlignBtn", t.t("center_align_button"))
+    self.call_js("setElementText", "rightAlignBtn", t.t("right_align_button"))
+    self.call_js("setElementText", "insertImageBtn", t.t("insert_image_button"))
+    self.call_js("setElementText", "toolbar_copy", t.t("toolbar_copy"))
 
     # Bottom Buttons
-    self.call_js("setElementText", "button_status", t.t('button_status'))
-    self.call_js("setElementText", "button_archive", t.t('button_archive'))
-    self.call_js("setElementText", "button_share", t.t('button_share'))
+    self.call_js("setElementText", "button_status", t.t("button_status"))
+    self.call_js("setElementText", "button_archive", t.t("button_archive"))
+    self.call_js("setElementText", "button_share", t.t("button_share"))
 
     # Modals
-    self.call_js("setElementText", "select_patient_title", t.t('select_patient_title'))
-    self.call_js("setElementText", "newPatientBtn", t.t('new_patient_button'))
-    self.call_js("setElementText", "select_template_title", t.t('select_template_title'))
-    self.call_js("setPlaceholderById", "searchInput", t.t('search_patient_placeholder'))
-    self.call_js("setPlaceholderById", "templateSearchInput", t.t('search_template_placeholder'))
+    self.call_js("setElementText", "select_patient_title", t.t("select_patient_title"))
+    self.call_js("setElementText", "newPatientBtn", t.t("new_patient_button"))
+    self.call_js(
+      "setElementText", "select_template_title", t.t("select_template_title")
+    )
+    self.call_js("setPlaceholderById", "searchInput", t.t("search_patient_placeholder"))
+    self.call_js(
+      "setPlaceholderById", "templateSearchInput", t.t("search_template_placeholder")
+    )
 
   def form_show(self, **event_args):
     print("[DEBUG] Starting form_show in AudioManagerForm")
@@ -131,9 +139,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       return
 
     # Load templates from database and filter on favorites (priority 1 or 2)
-    templates = anvil.server.call(
-      "read_templates"
-    )  # returns a list of dictionaries
+    templates = anvil.server.call("read_templates")  # returns a list of dictionaries
     filtered_templates = [t for t in templates if t.get("priority") in (1, 2)]
     self.call_js("populateTemplateModal", filtered_templates)
 
@@ -161,9 +167,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       return False
 
   def load_report_content(self):
-    print(
-      f"[DEBUG] Loading report content for clicked_value: {self.clicked_value}"
-    )
+    print(f"[DEBUG] Loading report content for clicked_value: {self.clicked_value}")
     try:
       content, error = anvil.server.call("load_report_content", self.clicked_value)
       print(
@@ -183,21 +187,15 @@ class AudioManagerForm(AudioManagerFormTemplate):
   # -------------------------
   def start_recording(self, **event_args):
     self.recording_state = "recording"
-    print(
-      "[DEBUG] start_recording() called. Recording state set to 'recording'."
-    )
+    print("[DEBUG] start_recording() called. Recording state set to 'recording'.")
 
   def pause_recording(self, **event_args):
     self.recording_state = "paused"
-    print(
-      "[DEBUG] pause_recording() called. Recording state set to 'paused'."
-    )
+    print("[DEBUG] pause_recording() called. Recording state set to 'paused'.")
 
   def stop_recording(self, **event_args):
     self.recording_state = "stopped"
-    print(
-      "[DEBUG] stop_recording() called. Recording state set to 'stopped'."
-    )
+    print("[DEBUG] stop_recording() called. Recording state set to 'stopped'.")
 
   def show_error(self, error_message, **event_args):
     print(f"[DEBUG] show_error() called with message: {error_message}")
@@ -237,23 +235,27 @@ class AudioManagerForm(AudioManagerFormTemplate):
         return "EN"
       else:
         # Default to EN if unknown
-        print(
-          f"[DEBUG] Unknown language emoji: {language_emoji}, defaulting to EN"
-        )
+        print(f"[DEBUG] Unknown language emoji: {language_emoji}, defaulting to EN")
         return "EN"
     except Exception as e:
       print(f"[ERROR] Error getting selected language: {e}")
       return "EN"
 
+  # In client_code/Production/AudioManagerForm/__init__.py
+
+  # ... (keep all other methods as they are) ...
+
   def process_recording(self, audio_blob, **event_args):
     """
-      This is the restored, working version of the processing method,
-      now wrapped with offline error handling.
-      """
-    print("[DEBUG] process_recording initiated.")
+    This is the primary processing method for online users.
+    It attempts a direct server call, but falls back to the offline queue if the connection is lost.
+    """
+    print("[DEBUG] AudioManagerForm: process_recording initiated.")
     try:
-      # --- PART 1: RESTORED LOGIC FROM YOUR PREVIOUS WORKING CODE ---
-  
+      # --- ONLINE ATTEMPT ---
+      # This is the original "happy path" logic. It will only succeed if the
+      # connection is stable throughout the entire server call.
+
       # Helper for retries
       def call_with_retry(fn_name, *args):
         for attempt in range(3):
@@ -261,95 +263,103 @@ class AudioManagerForm(AudioManagerFormTemplate):
             return anvil.server.call_s(fn_name, *args)
           except anvil.server.TimeoutError as e:
             if attempt < 2:
-              time.sleep(2 ** attempt)
+              time.sleep(2**attempt)
             else:
               raise e
-  
-          # CRITICAL: Input Normalization Block
-      if isinstance(audio_blob, str): # Handles Base64 if ever needed
+
+      # Input Normalization
+      if isinstance(audio_blob, str):
         raw = base64.b64decode(audio_blob)
-        audio_blob = anvil.BlobMedia(content=raw, content_type="audio/webm", name="recording.webm")
-      elif (hasattr(audio_blob, "constructor") and
-            audio_blob.constructor and
-            audio_blob.constructor.name in ("Blob", "File")):
-        print("[DEBUG] Detected JS Proxy Object, converting with to_media()...")
-        audio_blob = anvil.js.to_media(audio_blob, name="recording.webm") # This is the key conversion
-  
-        # Ensure it's a Media object now
+        audio_blob = anvil.BlobMedia(
+          content=raw, content_type="audio/webm", name="recording.webm"
+        )
+      elif (
+        hasattr(audio_blob, "constructor")
+        and audio_blob.constructor
+        and audio_blob.constructor.name in ("Blob", "File")
+      ):
+        audio_blob = anvil.js.to_media(audio_blob, name="recording.webm")
+
       if not isinstance(audio_blob, anvil.Media):
         alert("Unrecognized audio object type. Cannot process.")
         return
-  
-        # Get template and language
-      selected_template_name = self.call_js("getDropdownSelectedValue", "templateSelectBtn")
+
+      selected_template_name = self.call_js(
+        "getDropdownSelectedValue", "templateSelectBtn"
+      )
       if not selected_template_name or selected_template_name.startswith("Select"):
         alert("Please select a template before processing.")
         return
       lang = self.get_selected_language()
-  
-      # Launch background task
-      whisper_fn = "EN_process_audio_whisper" if lang == "EN" else "process_audio_whisper"
-      print(f"[DEBUG] Launching background task '{whisper_fn}'...")
+
+      whisper_fn = (
+        "EN_process_audio_whisper" if lang == "EN" else "process_audio_whisper"
+      )
       task = call_with_retry(whisper_fn, audio_blob)
-  
-      # Blocking wait for the task to finish (as it worked before)
+
       elapsed = 0.0
-      while not task.is_completed() and elapsed < 240: # 4 minute timeout
+      while not task.is_completed() and elapsed < 240:
         time.sleep(1)
         elapsed += 1
-  
+
       if not task.is_completed():
-        alert("The transcription is taking too long to complete. Please try again.")
-        return
-  
+        raise anvil.server.AppOfflineError(
+          "The transcription is taking too long to complete, possibly due to a connection issue."
+        )
+
       transcription = task.get_return_value()
       if isinstance(transcription, dict) and "error" in transcription:
-        alert(f"Transcription failed: {transcription['error']}")
-        return
+        raise Exception(f"Transcription failed: {transcription['error']}")
+
       self.raw_transcription = transcription
-      print("[DEBUG] Transcription received successfully.")
-  
-      # Continue with the rest of the workflow
+
       prompt_row = app_tables.custom_templates.get(template_name=selected_template_name)
-      prompt = prompt_row['prompt']
-  
+      prompt = prompt_row["prompt"]
+
       report_content = call_with_retry("generate_report", prompt, transcription)
-  
       formatter_fn = "EN_format_report" if lang == "EN" else "format_report"
       final_html = call_with_retry(formatter_fn, report_content)
-  
+
       self.editor_content = final_html
-      print("[DEBUG] process_recording completed successfully.")
-      return "OK" # Return a simple success message to JS
-  
+      print("[DEBUG] process_recording completed successfully (ONLINE).")
+      return "OK"
+
     except anvil.server.AppOfflineError:
-      # --- PART 2: THE NEW OFFLINE LOGIC ---
-      # This block is only triggered if the VERY FIRST server call fails
-      print("[DEBUG] AppOfflineError caught. Initiating offline save.")
-      self.call_js('handleOfflineSave') # We'll create this small JS helper
-  
+      # --- OFFLINE FALLBACK ---
+      # This block is triggered if the connection is lost during any of the server calls above.
+      print(
+        "[DEBUG] AppOfflineError caught in AudioManagerForm. Saving to offline queue."
+      )
+      alert(
+        "Connection lost. Your recording has been saved to the offline queue and will be processed when you reconnect."
+      )
+      # We call the JavaScript function that handles the queuing process.
+      self.call_js("handleOfflineSave")
+
     except Exception as e:
       print(f"[ERROR] An exception occurred in process_recording: {e}")
-      # Re-raise it so the JS .catch() block can display the banner
-      raise
+      self.call_js("displayBanner", f"Error: {e}", "error")
+      # Also offer to save to queue on other unexpected errors
+      if confirm(
+        "An unexpected error occurred. Would you like to save this recording to the offline queue to try again later?"
+      ):
+        self.call_js("handleOfflineSave")
 
   # --- NEW FUNCTION ---
   def process_queued_item(self, item_id, audio_blob, title):
     """
-      Relay function to process a single item from the offline queue.
-      """
+    Relay function to process a single item from the offline queue.
+    """
     print(f"[DEBUG] Processing queued item: ID={item_id}, Title='{title}'")
     try:
       # Call the new dedicated server function
       success = anvil.server.call(
-        'process_and_archive_offline_recording',
-        audio_blob,
-        title
+        "process_and_archive_offline_recording", audio_blob, title
       )
-      return {'success': success}
+      return {"success": success}
     except Exception as e:
       print(f"[ERROR] Failed to process queued item {item_id}: {e}")
-      return {'success': False, 'error': str(e)}
+      return {"success": False, "error": str(e)}
 
   # 1) called for each chunk
   def receive_audio_chunk(self, b64_chunk, index, total, **event_args):
@@ -455,14 +465,14 @@ class AudioManagerForm(AudioManagerFormTemplate):
       # Update editor
       self.editor_content = report_final
 
-      print("[DEBUG] process_toolbar_recording() completed successfully (toolbar flow).")
+      print(
+        "[DEBUG] process_toolbar_recording() completed successfully (toolbar flow)."
+      )
       return "OK"
 
     except Exception as e:
       print(f"[ERROR] Exception in process_toolbar_recording (toolbar flow): {e}")
-      alert(
-        f"Error processing toolbar recording: {str(e)}"
-      )
+      alert(f"Error processing toolbar recording: {str(e)}")
       return None
 
   # -------------------------
@@ -477,7 +487,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
         self.call_js("displayBanner", "No content to send", "error")
         return False
       # HERE: sending logic (email, etc.)
-      self.call_js("displayBanner", "Content validated and sent successfully!", "success")
+      self.call_js(
+        "displayBanner", "Content validated and sent successfully!", "success"
+      )
       return True
 
     except Exception as e:
@@ -538,9 +550,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
           selected_patient = matches[0]
           print(f"[DEBUG] Patient found: {selected_patient}")
         elif len(matches) > 1:
-          alert(
-            "Multiple patients found. Please select one from the list."
-          )
+          alert("Multiple patients found. Please select one from the list.")
           return
         else:
           alert("No patient found with this name.")

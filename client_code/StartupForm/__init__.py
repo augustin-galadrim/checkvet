@@ -2,42 +2,42 @@ from ._anvil_designer import StartupFormTemplate
 from anvil import *
 import anvil.server
 import anvil.users
-import anvil.tables as tables
-import anvil.tables.query as q
-from anvil.tables import app_tables
 from .. import TranslationService as t
+
 
 class StartupForm(StartupFormTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
 
-    user = anvil.users.get_user(allow_remembered=True)
-    if not user:
-      user = anvil.users.login_with_form()
+    try:
+      # This is the "Online Path"
+      # Anvil will attempt to connect to the server here. If it fails, it raises AppOfflineError.
+      user = anvil.users.get_user(allow_remembered=True)
+      if not user:
+        user = anvil.users.login_with_form()
 
-    if user:
-
-      try:
+      if user:
+        # If online and logged in, proceed with the normal flow.
         anvil.server.call("ensure_persistent_session")
-      except anvil.server.SessionExpiredError:
-        anvil.server.reset_session()
-        anvil.server.call("ensure_persistent_session")
-
-      try:
-        lang_code = anvil.server.call("pick_user_favorite_language") or 'en'
-        print(f"User's preferred language is: {lang_code}")
-
+        lang_code = anvil.server.call("pick_user_favorite_language") or "en"
         t.load_language(lang_code)
+
+        # Open the main production form for online users
         open_form("Production.AudioManagerForm")
+      else:
+        # If online but the user cancelled the login, they can still proceed to the offline form.
+        alert("Login cancelled. Proceeding with offline capabilities.")
+        open_form("Production.OfflineAudioManagerForm")
 
-      except Exception as e:
-        print(f"ERROR during startup sequence: {e}")
-        try:
-          t.load_language('en')
-          open_form("Production.AudioManagerForm")
-        except Exception as final_e:
-          print(f"CRITICAL ERROR: Could not open fallback form. {final_e}")
-          alert("A critical error occurred while starting the application. Please contact support.")
-
-    else:
-      print("User login failed or was cancelled.")
+    except anvil.server.AppOfflineError:
+      # This is the "Offline Path"
+      # This block executes if any server call in the 'try' block fails due to being offline.
+      print("App is offline. Loading offline-first audio manager.")
+      # Open the form specifically designed for offline use. No login is required.
+      open_form("Production.OfflineAudioManagerForm")
+    except Exception as e:
+      # Catch any other unexpected errors during startup
+      print(f"An unexpected error occurred during startup: {e}")
+      alert("An error occurred while starting the app. You can try the offline mode.")
+      # As a fallback, still try to open the offline form.
+      open_form("Production.OfflineAudioManagerForm")

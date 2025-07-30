@@ -1,4 +1,4 @@
-from ._anvil_designer import TEST_OfflineAudioManagerTemplate
+from ._anvil_designer import OfflineAudioManagerFormTemplate
 from anvil import *
 import anvil.server
 import anvil.tables as tables
@@ -9,7 +9,7 @@ import json
 import uuid
 import time
 
-class TEST_OfflineAudioManager(TEST_OfflineAudioManagerTemplate):
+class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
   def __init__(self, **properties):
     print("[DEBUG] Initializing OfflineAudioManager form...")
     # Initialize form components

@@ -35,6 +35,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
       f"[DEBUG] __init__ parameters: clicked_value={clicked_value}, template_name={template_name}, initial_content={initial_content}, prompt={prompt}"
     )
     self.init_components(**properties)
+    self.recording_widget.set_event_handler(
+      "recording_complete", self.handle_new_recording
+    )
 
     # Store user-provided parameters
     self.clicked_value = clicked_value
@@ -185,17 +188,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
   # -------------------------
   # Recording methods
   # -------------------------
-  def start_recording(self, **event_args):
-    self.recording_state = "recording"
-    print("[DEBUG] start_recording() called. Recording state set to 'recording'.")
-
-  def pause_recording(self, **event_args):
-    self.recording_state = "paused"
-    print("[DEBUG] pause_recording() called. Recording state set to 'paused'.")
-
-  def stop_recording(self, **event_args):
-    self.recording_state = "stopped"
-    print("[DEBUG] stop_recording() called. Recording state set to 'stopped'.")
 
   def show_error(self, error_message, **event_args):
     print(f"[DEBUG] show_error() called with message: {error_message}")
@@ -241,9 +233,10 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Error getting selected language: {e}")
       return "EN"
 
-  # In client_code/Production/AudioManagerForm/__init__.py
-
-  # ... (keep all other methods as they are) ...
+  def handle_new_recording(self, audio_blob, **event_args):
+    """This is called when the RecordingWidget has a new recording for us."""
+    print("AudioManagerForm: Received audio from widget. Processing...")
+    self.process_recording(audio_blob)
 
   def process_recording(self, audio_blob, **event_args):
     """

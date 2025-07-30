@@ -9,6 +9,7 @@ import json
 import uuid
 import time
 
+
 class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
   def __init__(self, **properties):
     print("[DEBUG] Initializing OfflineAudioManager form...")
@@ -90,21 +91,6 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
     print("[DEBUG] App went offline, updating status")
     self.call_js("updateConnectionStatusIndicator", False)
 
-  def start_recording(self, **event_args):
-    """Called when recording starts"""
-    self.recording_state = "recording"
-    print("[DEBUG] Recording started")
-
-  def pause_recording(self, **event_args):
-    """Called when recording is paused"""
-    self.recording_state = "paused"
-    print("[DEBUG] Recording paused")
-
-  def stop_recording(self, **event_args):
-    """Called when recording stops"""
-    self.recording_state = "stopped"
-    print("[DEBUG] Recording stopped")
-
   def process_recording(self, audio_blob, **event_args):
     """Process a recording - either directly or by queueing"""
     print("[DEBUG] process_recording called")
@@ -157,12 +143,12 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
       patient_data = {
         "name": title,  # Use title as the patient name
         "type": "Unknown",
-        "proprietaire": "Unknown"
+        "proprietaire": "Unknown",
       }
 
       template_info = {
         "template": "Horse",  # Default template
-        "language": "EN"      # Default language
+        "language": "EN",  # Default language
       }
 
       # Check if we're online
@@ -179,11 +165,15 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
       if is_online:
         # Process directly
         print("[DEBUG] Online - processing recording directly with provided title")
-        return self._process_audio_with_info(self.current_audio_blob, patient_data, template_info)
+        return self._process_audio_with_info(
+          self.current_audio_blob, patient_data, template_info
+        )
       else:
         # Queue with title
         print("[DEBUG] Offline - queueing recording with provided title")
-        recording_id = self.save_audio_to_queue(self.current_audio_blob, patient_data, template_info, title)
+        recording_id = self.save_audio_to_queue(
+          self.current_audio_blob, patient_data, template_info, title
+        )
         self.call_js("displayBanner", "Recording saved to offline queue", "success")
         return "QUEUED"
 
@@ -227,7 +217,9 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
         return None
 
       # 3. Generate report using GPT-4
-      report_content = anvil.server.call("generate_report", template_prompt, transcription)
+      report_content = anvil.server.call(
+        "generate_report", template_prompt, transcription
+      )
 
       # 4. Format report based on language
       if language == "FR":
@@ -244,10 +236,12 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
       if not unique_id:
         animal_type = patient_data.get("type", "Unknown")
         proprietaire = patient_data.get("proprietaire", "Unknown")
-        unique_id = anvil.server.call("write_animal_first_time",
-                                       animal_name,
-                                       type=animal_type,
-                                       proprietaire=proprietaire)
+        unique_id = anvil.server.call(
+          "write_animal_first_time",
+          animal_name,
+          type=animal_type,
+          proprietaire=proprietaire,
+        )
 
       # Save the report with the generated content
       result = anvil.server.call(
@@ -256,11 +250,13 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
         report_rich=report_final,
         statut="transcribed",
         unique_id=unique_id,
-        transcript=transcription
+        transcript=transcription,
       )
 
       if result:
-        self.call_js("displayBanner", "Recording processed and archived successfully", "success")
+        self.call_js(
+          "displayBanner", "Recording processed and archived successfully", "success"
+        )
         # Make sure to show the transcription container
         self.call_js("showTranscriptionContainer")
         self.call_js("updateTranscriptionDisplay", transcription)
@@ -273,22 +269,24 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
       self.call_js("displayBanner", f"Error: {str(e)}", "error")
       return None
 
-  def save_audio_to_queue(self, audio_blob, patient_data=None, template_info=None, title=None):
+  def save_audio_to_queue(
+    self, audio_blob, patient_data=None, template_info=None, title=None
+  ):
     """Save audio to local queue when offline with patient and template info"""
     print("[DEBUG] Saving audio to queue with metadata")
     try:
-        # Generate a unique ID for this recording
+      # Generate a unique ID for this recording
       recording_id = str(uuid.uuid4())
 
       # Create metadata for the recording, including patient and template info
       metadata = {
-          "id": recording_id,
-          "timestamp": time.time(),
-          "status": "pending",
-          "type": "audio_processing",  # Mark this as audio processing task
-          "patient_data": patient_data,
-          "template_info": template_info,
-          "title": title or patient_data.get("name", "Untitled Recording")
+        "id": recording_id,
+        "timestamp": time.time(),
+        "status": "pending",
+        "type": "audio_processing",  # Mark this as audio processing task
+        "patient_data": patient_data,
+        "template_info": template_info,
+        "title": title or patient_data.get("name", "Untitled Recording"),
       }
 
       # Call JavaScript to store the audio blob and metadata
@@ -315,7 +313,9 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
     print(f"[DEBUG] Processing queued audio item {item_id}")
     try:
       # Log the type of audio_data for debugging
-      print(f"[DEBUG] Audio data type: {type(audio_data)}, length: {len(audio_data) if hasattr(audio_data, '__len__') else 'unknown'}")
+      print(
+        f"[DEBUG] Audio data type: {type(audio_data)}, length: {len(audio_data) if hasattr(audio_data, '__len__') else 'unknown'}"
+      )
 
       # Extract title, patient and template info from metadata
       title = item_metadata.get("title", "Untitled Recording")
@@ -324,26 +324,22 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
 
       # If patient_data is missing, create it from the title
       if not patient_data:
-        patient_data = {
-            "name": title,
-            "type": "Unknown",
-            "proprietaire": "Unknown"
-        }
+        patient_data = {"name": title, "type": "Unknown", "proprietaire": "Unknown"}
 
       # If template_info is missing, use default Horse template
       if not template_info:
-        template_info = {
-            "template": "Horse",
-            "language": "EN"
-        }
+        template_info = {"template": "Horse", "language": "EN"}
 
       # Convert to bytes - always use direct conversion
       audio_bytes = bytes(audio_data)
-      print(f"[DEBUG] Successfully converted audio data to bytes, size: {len(audio_bytes)}")
+      print(
+        f"[DEBUG] Successfully converted audio data to bytes, size: {len(audio_bytes)}"
+      )
 
       # Convert bytes to base64 string which the server function can handle
       import base64
-      base64_audio = base64.b64encode(audio_bytes).decode('utf-8')
+
+      base64_audio = base64.b64encode(audio_bytes).decode("utf-8")
       print(f"[DEBUG] Converted to base64 string, length: {len(base64_audio)}")
 
       # 1. Transcribe the audio
@@ -379,7 +375,9 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
       print(f"[DEBUG] Got template prompt: {template_prompt[:50]}...")
 
       # 3. Generate report using GPT-4
-      report_content = anvil.server.call("generate_report", template_prompt, transcription)
+      report_content = anvil.server.call(
+        "generate_report", template_prompt, transcription
+      )
 
       if not report_content:
         print("[ERROR] Failed to generate report")
@@ -411,10 +409,12 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
         animal_type = patient_data.get("type", "Unknown")
         proprietaire = patient_data.get("proprietaire", "Unknown")
         try:
-          unique_id = anvil.server.call("write_animal_first_time",
-                                     animal_name,
-                                     type=animal_type,
-                                     proprietaire=proprietaire)
+          unique_id = anvil.server.call(
+            "write_animal_first_time",
+            animal_name,
+            type=animal_type,
+            proprietaire=proprietaire,
+          )
           print(f"[DEBUG] Created new patient with unique_id: {unique_id}")
         except Exception as e:
           print(f"[ERROR] Failed to create new patient: {str(e)}")
@@ -424,12 +424,12 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
       # Save the report with the generated content
       try:
         result = anvil.server.call(
-            "write_report_first_time",
-            animal_name=animal_name,
-            report_rich=report_final,
-            statut="transcribed",
-            unique_id=unique_id,
-            transcript=transcription
+          "write_report_first_time",
+          animal_name=animal_name,
+          report_rich=report_final,
+          statut="transcribed",
+          unique_id=unique_id,
+          transcript=transcription,
         )
 
         if result:
@@ -488,7 +488,7 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
       templates = anvil.server.call("read_templates")
 
       # Filter by priority if needed (e.g., only show templates with priority 1 or 2)
-      filtered_templates = [t for t in templates if t.get('priority') in (1, 2)]
+      filtered_templates = [t for t in templates if t.get("priority") in (1, 2)]
 
       print(f"[DEBUG] Retrieved {len(filtered_templates)} templates")
       return filtered_templates
@@ -514,10 +514,12 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
     print(f"[DEBUG] Creating new patient: {patient_details}")
     try:
       # Call server to create a new patient
-      new_patient = anvil.server.call("create_new_animal",
-                                      name=patient_details["name"],
-                                      animal_type=patient_details["type"],
-                                      proprietaire=patient_details["proprietaire"])
+      new_patient = anvil.server.call(
+        "create_new_animal",
+        name=patient_details["name"],
+        animal_type=patient_details["type"],
+        proprietaire=patient_details["proprietaire"],
+      )
 
       if new_patient:
         self.call_js("displayBanner", "New patient created", "success")
@@ -542,7 +544,7 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
   def open_archives_form(self, **event_args):
     print("[DEBUG] Opening Archives form")
     current_user = anvil.users.get_user()
-    if current_user and current_user.get('supervisor'):
+    if current_user and current_user.get("supervisor"):
       open_form("TEST_ArchivesSecretariat")
     else:
       open_form("TEST_Archives")

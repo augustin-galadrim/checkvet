@@ -19,29 +19,10 @@ class HeaderNav(HeaderNavTemplate):
     open_form("Production.AudioManagerForm")
 
   def open_templates_form(self, **event_args):
-    lang = anvil.server.call("pick_user_favorite_language")
-    if lang == "FR":
-      open_form("Templates.Templates")
-    else:
-      open_form("Templates.EN_Templates")
+    open_form("Templates.Templates")
 
   def open_archives_form(self, **event_args):
-    user = anvil.users.get_user(allow_remembered=True)
-    lang = anvil.server.call("pick_user_favorite_language")
-    if user and user["supervisor"]:
-      if lang == "FR":
-        open_form("Archives.ArchivesSecretariat")
-      else:
-        open_form("Archives.EN_ArchivesSecretariat")
-    else:
-      if lang == "FR":
-        open_form("Archives.Archives")
-      else:
-        open_form("Archives.EN_Archives")
+    open_form("Archives.Archives")
 
   def open_settings_form(self, **event_args):
-    lang = anvil.server.call("pick_user_favorite_language")
-    if lang == "FR":
-      open_form("Settings.Settings")
-    else:
-      open_form("Settings.EN_Settings")
+    open_form("Settings.Settings")

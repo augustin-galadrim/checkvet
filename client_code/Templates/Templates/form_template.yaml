@@ -1,4 +1,8 @@
-components: []
+components:
+- layout_properties: {slot: default}
+  name: header_nav_1
+  properties: {active_tab: Templates/AI}
+  type: form:Components.HeaderNav
 container:
   properties:
     html: |-
@@ -204,12 +208,7 @@ container:
 
             <!-- Section fixe : Navigation & Actions -->
             <div class="fixed-section">
-              <div class="nav-tabs">
-                <button class="nav-tab" data-tab="Production">Production</button>
-                <button class="nav-tab active" data-tab="Modèles/IA">Modèles/IA</button>
-                <button class="nav-tab" data-tab="Archives">Archives</button>
-                <button class="nav-tab" data-tab="Paramètres">Paramètres</button>
-              </div>
+              <div anvil-slot="default"></div>
               <div class="actions-row">
                 <div class="left-section">
                   <div class="buttons-container">

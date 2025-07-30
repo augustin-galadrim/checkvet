@@ -6,6 +6,7 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 
+
 def safe_value(report, key, default_value):
   """Retourne la valeur associée à la clé dans report, ou default_value si elle est manquante ou None."""
   if report is None:
@@ -13,13 +14,14 @@ def safe_value(report, key, default_value):
   val = report.get(key)
   return default_value if val is None else val
 
+
 class Archives(ArchivesTemplate):
   def __init__(self, **properties):
     print("Initialisation du formulaire Archives...")
     self.init_components(**properties)
     print("Composants du formulaire initialisés.")
     self.add_event_handler("show", self.form_show)
-    self.reports = []  # liste complète des rapports
+    self.reports = []
 
   def form_show(self, **event_args):
     print("Déclenchement de form_show du formulaire Archives.")
@@ -48,15 +50,19 @@ class Archives(ArchivesTemplate):
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
 
+  def open_create_form(self, **event_args):
+    print("open_create_form() called.")
+    open_form("Production.AudioManagerForm")
+
   def open_audio_manager_form(self, report, **event_args):
     print("open_audio_manager_form() appelé avec le rapport :", report)
     try:
       safe_report = {
-        'id': safe_value(report, 'id', ""),
-        'file_name': safe_value(report, 'file_name', "Sans nom"),
-        'report_rich': safe_value(report, 'report_rich', ""),
-        'statut': safe_value(report, 'statut', "Non spécifié"),
-        'name': safe_value(report, 'name', "")
+        "id": safe_value(report, "id", ""),
+        "file_name": safe_value(report, "file_name", "Sans nom"),
+        "report_rich": safe_value(report, "report_rich", ""),
+        "statut": safe_value(report, "statut", "Non spécifié"),
+        "name": safe_value(report, "name", ""),
       }
       print("Rapport sécurisé construit :", safe_report)
       open_form("Archives.AudioManagerEdit", report=safe_report)
@@ -66,29 +72,17 @@ class Archives(ArchivesTemplate):
       alert("Erreur lors de l'ouverture du rapport. Redirection vers Archives.")
       open_form("Archives.Archives")
 
-  def open_production_form(self, **event_args):
-    print("open_production_form() appelé.")
-    open_form("Production.AudioManagerForm")
-
-  def open_templates_form(self, **event_args):
-    print("open_templates_form() appelé.")
-    open_form("Templates.Templates")
-
-  def open_settings_form(self, **event_args):
-    print("open_settings_form() appelé.")
-    open_form("Settings.Settings")
-
-  def open_create_form(self, **event_args):
-    print("open_create_form() appelé.")
-    open_form("Production.AudioManagerForm")
-
   def filter_reports_client(self, filter_val, **event_args):
     print(f"Filtrage des rapports par statut = '{filter_val}'")
     try:
       if filter_val == "Afficher tout":
         filtered = self.reports
       else:
-        filtered = [r for r in self.reports if safe_value(r, 'statut', "Non spécifié") == filter_val]
+        filtered = [
+          r
+          for r in self.reports
+          if safe_value(r, "statut", "Non spécifié") == filter_val
+        ]
       print(f"Nombre de rapports filtrés : {len(filtered)}")
       self.call_js("populateReports", filtered)
     except Exception as e:
@@ -101,17 +95,17 @@ class Archives(ArchivesTemplate):
       self.call_js("populateReports", self.reports)
       return
     try:
-      results = anvil.server.call('search_reports', query)
+      results = anvil.server.call("search_reports", query)
       print(f"La recherche a renvoyé {len(results)} résultats.")
       transformed_results = []
       for rep in results:
         transformed_results.append({
-          'id': safe_value(rep, 'id', ""),
-          'file_name': safe_value(rep, 'file_name', "Sans nom"),
-          'name': safe_value(rep, 'name', ""),  # Utilisation de 'name' pour le patient
-          'statut': safe_value(rep, 'statut', "Non spécifié"),
-          'report_rich': safe_value(rep, 'report_rich', ""),
-          'last_modified': safe_value(rep, 'last_modified', "")
+          "id": safe_value(rep, "id", ""),
+          "file_name": safe_value(rep, "file_name", "Sans nom"),
+          "name": safe_value(rep, "name", ""),  # Utilisation de 'name' pour le patient
+          "statut": safe_value(rep, "statut", "Non spécifié"),
+          "report_rich": safe_value(rep, "report_rich", ""),
+          "last_modified": safe_value(rep, "last_modified", ""),
         })
       self.call_js("populateReports", transformed_results)
       print("populateReports appelé pour les résultats de recherche.")
@@ -126,11 +120,15 @@ class Archives(ArchivesTemplate):
     confirm_result = confirm("Are you sure you want to delete this report?")
     if confirm_result:
       try:
-        result = anvil.server.call('delete_report', report_rich)
+        result = anvil.server.call("delete_report", report_rich)
         if result:
-          print(f"Successfully deleted report with report_rich='{report_rich}' on server.")
+          print(
+            f"Successfully deleted report with report_rich='{report_rich}' on server."
+          )
           # Remove the deleted item from self.reports
-          self.reports = [r for r in self.reports if safe_value(r, 'report_rich', "") != report_rich]
+          self.reports = [
+            r for r in self.reports if safe_value(r, "report_rich", "") != report_rich
+          ]
           # Update the front-end list
           self.call_js("populateReports", self.reports)
       except Exception as e:

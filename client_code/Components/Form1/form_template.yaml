@@ -1,0 +1,121 @@
+components: []
+container:
+  properties:
+    html: |-
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            /* Styles copied from AudioManagerForm to ensure visual consistency */
+            .audio-section { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; position: relative; }
+            #audioBar { width: 100%; background-color: #4caf50; color: #fff; text-align: center; padding: 15px; font-size: 18px; cursor: pointer; margin-bottom: 20px; border-radius: 5px; }
+            .recording-controls { position: relative; width: 200px; height: 200px; margin: 20px auto; }
+            #circularProgress { position: relative; width: 200px; height: 200px; }
+            #progressRing { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(#ddd 0deg, #ddd 0deg); }
+            #centerHole { position: absolute; top: 8px; left: 8px; width: 184px; height: 184px; background-color: #fff; border-radius: 50%; z-index: 1; }
+            .control-button-group { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 30px; z-index: 2; }
+            .control-button { width: 45px; height: 45px; border: 1px solid #666; border-radius: 2px; cursor: pointer; background-color: white; color: #666; display: flex; align-items: center; justify-content: center; font-size: 24px; transition: all 0.3s ease; padding: 0; }
+            .control-button svg { pointer-events: none; }
+            .control-button:hover { background-color: #f5f5f5; border-color: #333; color: #333; }
+            @keyframes recordingFlash { 0% { background: conic-gradient(#ffe5e5 0deg, #ffe5e5 360deg); } 50% { background: conic-gradient(#ffffff 0deg, #ffffff 360deg); } 100% { background: conic-gradient(#ffe5e5 0deg, #ffe5e5 360deg); } }
+            .recording-flash { animation: recordingFlash 1.5s infinite; }
+          </style>
+        </head>
+        <body>
+          <!-- The recorder UI -->
+          <div class="audio-section">
+            <div class="recording-controls" id="recordingMode">
+              <div id="circularProgress">
+                <div id="progressRing"></div>
+                <div id="centerHole"></div>
+                <div class="control-button-group">
+                  <button id="playButton" class="control-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 11.5a2.5 2.5 0 0 0 2.5-2.5V4a2.5 2.5 0 1 0-5 0v5A2.5 2.5 0 0 0 8 11.5z"/><path d="M10 5a.5.5 0 0 1 1 0v4a3 3 0 1 1-6 0V5a.5.5 0 0 1 1 0v4a2 2 0 0 0 4 0V5z"/><path d="M8 13a4.5 4.5 0 0 0 4.5-4.5.5.5 0 0 1 1 0 5.5 5.5 0 0 1-11 0 .5.5 0 0 1 1 0A4.5 4.5 0 0 0 8 13z"/></svg>
+                  </button>
+                  <button id="stopButton" class="control-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path d="M4 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <audio id="audioPlayback" style="display: none;"></audio>
+          </div>
+
+          <script>
+            if (!window.__recording_widget_globals) {
+              window.__recording_widget_globals = true;
+
+              let recordingState = { mediaRecorder: null, recordedChunks: [], audioBlob: null, stream: null, isRecording: false };
+
+              const micIconHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 11.5a2.5 2.5 0 0 0 2.5-2.5V4a2.5 2.5 0 1 0-5 0v5A2.5 2.5 0 0 0 8 11.5z"/><path d="M10 5a.5.5 0 0 1 1 0v4a3 3 0 1 1-6 0V5a.5.5 0 0 1 1 0v4a2 2 0 0 0 4 0V5z"/><path d="M8 13a4.5 4.5 0 0 0 4.5-4.5.5.5 0 0 1 1 0 5.5 5.5 0 0 1-11 0 .5.5 0 0 1 1 0A4.5 4.5 0 0 0 8 13z"/></svg>`;
+              const pauseIconHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><rect x="9" y="2" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 12a6 6 0 0 0 12 0M12 18v4M8 22h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+
+              window.setRingPercentage = function(percentage) {
+                const ring = document.getElementById("progressRing");
+                if (ring) {
+                  const angle = (Math.max(0, Math.min(100, percentage)) / 100) * 360;
+                  ring.style.background = `conic-gradient(#4caf50 ${angle}deg, #ddd ${angle}deg)`;
+                }
+              };
+
+              window.startRecordingFlash = () => document.getElementById("progressRing")?.classList.add("recording-flash");
+              window.stopRecordingFlash = () => document.getElementById("progressRing")?.classList.remove("recording-flash");
+
+              window.attachRecordingEvents = function() {
+                const playButton = document.getElementById("playButton");
+                const stopButton = document.getElementById("stopButton");
+
+                if (playButton) {
+                  playButton.addEventListener("click", async (evt) => {
+                    if (!recordingState.isRecording) {
+                      try {
+                        recordingState.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        recordingState.mediaRecorder = new MediaRecorder(recordingState.stream);
+                        recordingState.recordedChunks = [];
+                        recordingState.mediaRecorder.ondataavailable = e => recordingState.recordedChunks.push(e.data);
+                        recordingState.mediaRecorder.onstop = () => {
+                          recordingState.audioBlob = new Blob(recordingState.recordedChunks, { type: 'audio/webm' });
+                          // THIS IS THE CRITICAL CHANGE: Call a method on THIS component
+                          anvil.call(stopButton, "handle_js_recording_complete", recordingState.audioBlob);
+                        };
+                        recordingState.mediaRecorder.start();
+                        recordingState.isRecording = true;
+                        playButton.innerHTML = pauseIconHTML;
+                        startRecordingFlash();
+                        anvil.call(playButton, 'start_recording');
+                      } catch (err) {
+                        console.error("Microphone access error:", err);
+                        anvil.call(playButton, 'show_error', "Microphone access denied.");
+                      }
+                    } else {
+                      recordingState.mediaRecorder.pause();
+                      recordingState.isRecording = false;
+                      playButton.innerHTML = micIconHTML;
+                      anvil.call(playButton, 'pause_recording');
+                    }
+                  });
+                }
+
+                if (stopButton) {
+                  stopButton.addEventListener("click", (evt) => {
+                    if (recordingState.mediaRecorder && recordingState.mediaRecorder.state !== "inactive") {
+                      recordingState.mediaRecorder.stop();
+                      recordingState.isRecording = false;
+                      stopRecordingFlash();
+                      if(playButton) playButton.innerHTML = micIconHTML;
+                      anvil.call(stopButton, 'stop_recording');
+                    }
+                  });
+                }
+              };
+            }
+
+            // Attach event handlers when this component is loaded
+            attachRecordingEvents();
+
+          </script>
+        </body>
+      </html>
+  type: HtmlTemplate
+is_package: true

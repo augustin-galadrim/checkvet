@@ -650,29 +650,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
     return url
 
   # -------------------------
-  # Navigation from top tabs
-  # -------------------------
-  def open_production_form(self, **event_args):
-    print("[DEBUG] Opening EN_Production form")
-    open_form("Production.AudioManagerForm")
-
-  def open_templates_form(self, **event_args):
-    print("[DEBUG] Opening EN_Templates form")
-    open_form("Templates.EN_Templates")
-
-  def open_archives_form(self, **event_args):
-    print("[DEBUG] Opening EN_Archives form")
-    current_user = anvil.users.get_user()
-    if current_user["supervisor"]:
-      open_form("Archives.EN_ArchivesSecretariat")
-    else:
-      open_form("Archives.EN_Archives")
-
-  def open_settings_form(self, **event_args):
-    print("[DEBUG] Opening EN_Settings form")
-    open_form("Settings.EN_Settings")
-
-  # -------------------------
   # Front-end relay for patient search
   # -------------------------
   def search_patients_relay(self, search_term, **event_args):

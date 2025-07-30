@@ -6,6 +6,7 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 
+
 def safe_value(report, key, default_value):
   """Retourne la valeur associée à 'key' dans 'report', ou 'default_value' si elle est manquante ou None."""
   if report is None:
@@ -13,21 +14,27 @@ def safe_value(report, key, default_value):
   val = report.get(key)
   return default_value if val is None else val
 
+
 class ArchivesSecretariat(ArchivesSecretariatTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
     self.add_event_handler("show", self.form_show)
 
     # Variables d'état.
-    self.reports = []                # liste complète des rapports
+    self.reports = []  # liste complète des rapports
     self.current_status_filter = "Afficher tout"
-    self.selected_vets = []          # liste des noms de vétérinaires sélectionnés
+    self.selected_vets = []  # liste des noms de vétérinaires sélectionnés
 
     try:
       self.struture = anvil.server.call("pick_user_info", "structure")
-      self.affiliated_vets = anvil.server.call("pick_structure", self.struture, "affiliated_vets")
+      self.affiliated_vets = anvil.server.call(
+        "pick_structure", self.struture, "affiliated_vets"
+      )
     except Exception as e:
-      print("Erreur lors de la récupération de la structure ou des vétérinaires affiliés :", e)
+      print(
+        "Erreur lors de la récupération de la structure ou des vétérinaires affiliés :",
+        e,
+      )
       self.struture = None
       self.affiliated_vets = []
 
@@ -64,8 +71,9 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
         subset_status = self.reports
       else:
         subset_status = [
-          r for r in self.reports
-          if safe_value(r, 'statut', "Non spécifié") == self.current_status_filter
+          r
+          for r in self.reports
+          if safe_value(r, "statut", "Non spécifié") == self.current_status_filter
         ]
 
       # 2) Filtrer par vétérinaires sélectionnés (self.selected_vets).
@@ -77,7 +85,8 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
           email = anvil.server.call("pick_user_email", vet, "email")
           selected_vets_email.append(email)
         final_subset = [
-          report for report in subset_status
+          report
+          for report in subset_status
           if report.get("owner_email") in selected_vets_email
         ]
 
@@ -88,16 +97,18 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
   def open_audio_manager_form(self, report, **event_args):
     try:
       safe_report = {
-        'id': safe_value(report, 'id', ""),
-        'file_name': safe_value(report, 'file_name', "Sans nom"),
-        'report_rich': safe_value(report, 'report_rich', ""),
-        'statut': safe_value(report, 'statut', "Non spécifié"),
-        'name': safe_value(report, 'name', "")
+        "id": safe_value(report, "id", ""),
+        "file_name": safe_value(report, "file_name", "Sans nom"),
+        "report_rich": safe_value(report, "report_rich", ""),
+        "statut": safe_value(report, "statut", "Non spécifié"),
+        "name": safe_value(report, "name", ""),
       }
       open_form("Archives.AudioManagerEditSecretariat", report=safe_report)
     except Exception as e:
       print("Erreur lors de l'ouverture du formulaire de gestion audio :", e)
-      alert("Erreur lors de l'ouverture du rapport. Redirection vers ArchivesSecretariat.")
+      alert(
+        "Erreur lors de l'ouverture du rapport. Redirection vers ArchivesSecretariat."
+      )
       open_form("Archives.ArchivesSecretariat")
 
   def open_production_form(self, **event_args):
@@ -127,7 +138,7 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
       return
 
     try:
-      results = anvil.server.call('search_reports_for_all_vets_in_structure', query)
+      results = anvil.server.call("search_reports_for_all_vets_in_structure", query)
     except Exception as e:
       print("Erreur de recherche depuis le serveur :", e)
       results = None
@@ -136,9 +147,9 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
     if not isinstance(results, list):
       fallback_results = []
       for rep in self.reports:
-        file_name = rep.get('file_name') or ""
-        animal = rep.get('animal') or {}
-        animal_name = animal.get('name', "")
+        file_name = rep.get("file_name") or ""
+        animal = rep.get("animal") or {}
+        animal_name = animal.get("name", "")
         if query.lower() in file_name.lower() or query.lower() in animal_name.lower():
           fallback_results.append(rep)
       results = fallback_results
@@ -149,14 +160,17 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
       if rep is None:
         continue
       transformed_results.append({
-        'id': safe_value(rep, 'id', ""),
-        'file_name': safe_value(rep, 'file_name', "Sans nom"),
-        'name': safe_value(rep, 'name', ""),
-        'statut': safe_value(rep, 'statut', "Non spécifié"),
-        'report_rich': safe_value(rep, 'report_rich', ""),
-        'last_modified': safe_value(rep, 'last_modified', "")
+        "id": safe_value(rep, "id", ""),
+        "file_name": safe_value(rep, "file_name", "Sans nom"),
+        "name": safe_value(rep, "name", ""),
+        "statut": safe_value(rep, "statut", "Non spécifié"),
+        "report_rich": safe_value(rep, "report_rich", ""),
+        "last_modified": safe_value(rep, "last_modified", ""),
       })
-    print("search_reports_client : nombre de résultats transformés :", len(transformed_results))
+    print(
+      "search_reports_client : nombre de résultats transformés :",
+      len(transformed_results),
+    )
     self.call_js("populateReports", transformed_results)
 
   def search_users_relay(self, search_input, **event_args):
@@ -169,7 +183,9 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
   def add_authorized_vet_relay(self, structure_id, user_email, **event_args):
     try:
       result = anvil.server.call("add_authorized_vet", structure_id, user_email)
-      self.affiliated_vets = anvil.server.call("pick_structure", self.struture, "affiliated_vets")
+      self.affiliated_vets = anvil.server.call(
+        "pick_structure", self.struture, "affiliated_vets"
+      )
       self.call_js("setAffiliatedVets", self.affiliated_vets)
       return result
     except Exception as e:
@@ -183,11 +199,15 @@ class ArchivesSecretariat(ArchivesSecretariatTemplate):
     confirm_result = confirm("Are you sure you want to delete this report?")
     if confirm_result:
       try:
-        result = anvil.server.call('delete_report', report_rich)
+        result = anvil.server.call("delete_report", report_rich)
         if result:
-          print(f"Successfully deleted report with report_rich='{report_rich}' on server.")
+          print(
+            f"Successfully deleted report with report_rich='{report_rich}' on server."
+          )
           # Remove the deleted item from self.reports
-          self.reports = [r for r in self.reports if safe_value(r, 'report_rich', '') != report_rich]
+          self.reports = [
+            r for r in self.reports if safe_value(r, "report_rich", "") != report_rich
+          ]
           # Refresh the front-end
           self.call_js("populateReports", self.reports)
       except Exception as e:

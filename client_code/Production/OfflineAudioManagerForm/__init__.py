@@ -16,6 +16,9 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
     # Initialize form components
     self.init_components(**properties)
     print("[DEBUG] Form components initialized.")
+    self.recording_widget_1.set_event_handler(
+      "recording_complete", self.handle_offline_recording
+    )
 
     # Initialize recording state
     self.recording_state = "idle"
@@ -90,6 +93,11 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
     """Called from JavaScript when offline event is triggered"""
     print("[DEBUG] App went offline, updating status")
     self.call_js("updateConnectionStatusIndicator", False)
+
+  def handle_offline_recording(self, audio_blob, **event_args):
+    """This method is called when the widget has a recording."""
+    print("Offline Form: Received audio from widget. Processing...")
+    self.process_recording(audio_blob)
 
   def process_recording(self, audio_blob, **event_args):
     """Process a recording - either directly or by queueing"""

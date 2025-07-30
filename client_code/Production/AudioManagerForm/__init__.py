@@ -185,10 +185,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
     except Exception as e:
       print(f"[ERROR] Exception in load_report_content: {e}")
 
-  # -------------------------
-  # Recording methods
-  # -------------------------
-
   def show_error(self, error_message, **event_args):
     print(f"[DEBUG] show_error() called with message: {error_message}")
     alert(error_message)

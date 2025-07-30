@@ -1,0 +1,116 @@
+components: []
+container:
+  properties:
+    html: |-
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            /* Copied from your theme.css to make the component self-contained */
+            .fixed-section {
+              background: white;
+              z-index: 10;
+            }
+            .nav-tabs {
+              display: flex;
+              width: 100%;
+              border-bottom: 1px solid #ddd;
+            }
+            .nav-tab {
+              flex: 1;
+              padding: 8px 16px;
+              cursor: pointer;
+              border: 1px solid #ccc;
+              border-bottom: none;
+              background: #f8f8f8;
+              font-size: 14px;
+              position: relative;
+              margin-right: -1px;
+              text-align: center;
+            }
+            .nav-tab.active {
+              background: #e5e5e5;
+              border-top: 1px solid #999;
+              border-left: 1px solid #999;
+              border-right: 1px solid #999;
+              border-bottom: 1px solid #e5e5e5;
+              margin-bottom: -1px;
+            }
+            .actions-row {
+              display: flex;
+              justify-content: flex-end; /* Aligns the time to the right */
+              align-items: center;
+              padding: 15px 20px;
+            }
+            .time {
+              color: #666;
+              font-size: 14px;
+            }
+
+            /* Responsive adjustments for smaller screens */
+            @media (max-width: 800px) {
+              .nav-tab {
+                font-size: 12px;
+                padding: 6px 8px;
+              }
+              .actions-row {
+                padding: 10px 15px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="fixed-section">
+            <div class="nav-tabs">
+              <button class="nav-tab" data-tab="Production" id="nav_production">Production</button>
+              <button class="nav-tab" data-tab="Templates/AI" id="nav_templates">Modèles/IA</button>
+              <button class="nav-tab" data-tab="Archives" id="nav_archives">Archives</button>
+              <button class="nav-tab" data-tab="Settings" id="nav_settings">Paramètres</button>
+            </div>
+          </div>
+
+          <script>
+            // This function attaches event listeners to the navigation buttons.
+            function attachHeaderEvents() {
+              document.querySelectorAll('.nav-tab').forEach(tab => {
+                const newTab = tab.cloneNode(true);
+                tab.parentNode.replaceChild(newTab, tab);
+
+                newTab.addEventListener('click', (event) => {
+                  const tabValue = newTab.getAttribute("data-tab");
+                  if (tabValue === 'Production') {
+                    anvil.call(event.target, 'open_production_form');
+                  } else if (tabValue === 'Templates/AI') {
+                    anvil.call(event.target, 'open_templates_form');
+                  } else if (tabValue === 'Archives') {
+                    anvil.call(event.target, 'open_archives_form');
+                  } else if (tabValue === 'Settings') {
+                    anvil.call(event.target, 'open_settings_form');
+                  }
+                });
+              });
+            }
+
+            // This function is called from Python to set the active tab
+            window.setActiveTab = function(tabName) {
+              document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-tab') === tabName) {
+                  btn.classList.add('active');
+                }
+              });
+            };
+
+            // Run the functions to attach events and set the initial time.
+            attachHeaderEvents();
+            updateTime();
+            setInterval(updateTime, 60000); // Update every minute
+          </script>
+        </body>
+      </html>
+  type: HtmlTemplate
+custom_component: true
+is_package: true
+properties:
+- {default_binding_prop: true, default_value: '', important: true, name: active_tab, type: string}

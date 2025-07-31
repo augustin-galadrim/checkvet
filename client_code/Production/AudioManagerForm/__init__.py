@@ -225,110 +225,89 @@ class AudioManagerForm(AudioManagerFormTemplate):
       return "EN"
 
   def handle_new_recording(self, audio_blob, **event_args):
-    """This is called when the RecordingWidget has a new recording for us."""
-    print("AudioManagerForm: Received audio from widget. Processing...")
-    self.process_recording(audio_blob)
+    """
+    Called when the RecordingWidget completes a recording.
+    Instead of processing immediately, this now hands the audio blob
+    to a JavaScript function to set up the decision UI.
+    """
+    print("AudioManagerForm: Received audio from widget. Setting up decision UI...")
+    # Call the new JavaScript function, passing the blob directly.
+    # Anvil will automatically handle passing the media object to JS.
+    anvil.js.call_js("setupDecisionUIForRecording", audio_blob)
 
   def process_recording(self, audio_blob, **event_args):
     """
-    This is the primary processing method for online users.
-    It attempts a direct server call, but falls back to the offline queue if the connection is lost.
+    Orchestrates the online processing of an audio blob.
+    This function now delegates steps to helper methods.
     """
     print("[DEBUG] AudioManagerForm: process_recording initiated.")
+    anvil_media_blob = anvil.js.to_media(audio_blob)
     try:
-      # --- ONLINE ATTEMPT ---
-      # This is the original "happy path" logic. It will only succeed if the
-      # connection is stable throughout the entire server call.
+      # Step 1: Transcribe the audio
+      transcription = self._transcribe_audio(anvil_media_blob)
 
-      # Helper for retries
-      def call_with_retry(fn_name, *args):
-        for attempt in range(3):
-          try:
-            return anvil.server.call_s(fn_name, *args)
-          except anvil.server.TimeoutError as e:
-            if attempt < 2:
-              time.sleep(2**attempt)
-            else:
-              raise e
+      # Step 2: Generate a report from the transcription
+      report_content = self._generate_report_from_transcription(transcription)
 
-      # Input Normalization
-      if isinstance(audio_blob, str):
-        raw = base64.b64decode(audio_blob)
-        audio_blob = anvil.BlobMedia(
-          content=raw, content_type="audio/webm", name="recording.webm"
-        )
-      elif (
-        hasattr(audio_blob, "constructor")
-        and audio_blob.constructor
-        and audio_blob.constructor.name in ("Blob", "File")
-      ):
-        audio_blob = anvil.js.to_media(audio_blob, name="recording.webm")
-
-      if not isinstance(audio_blob, anvil.Media):
-        alert("Unrecognized audio object type. Cannot process.")
-        return
-
-      selected_template_name = self.call_js(
-        "getDropdownSelectedValue", "templateSelectBtn"
-      )
-      if not selected_template_name or selected_template_name.startswith("Select"):
-        alert("Please select a template before processing.")
-        return
-      lang = self.get_selected_language()
-
-      whisper_fn = (
-        "EN_process_audio_whisper" if lang == "EN" else "process_audio_whisper"
-      )
-      task = call_with_retry(whisper_fn, audio_blob)
-
-      elapsed = 0.0
-      while not task.is_completed() and elapsed < 240:
-        time.sleep(1)
-        elapsed += 1
-
-      if not task.is_completed():
-        raise anvil.server.AppOfflineError(
-          "The transcription is taking too long to complete, possibly due to a connection issue."
-        )
-
-      transcription = task.get_return_value()
-      if isinstance(transcription, dict) and "error" in transcription:
-        raise Exception(f"Transcription failed: {transcription['error']}")
-
-      self.raw_transcription = transcription
-
-      prompt_row = app_tables.custom_templates.get(template_name=selected_template_name)
-      prompt = prompt_row["prompt"]
-
-      report_content = call_with_retry("generate_report", prompt, transcription)
-      formatter_fn = "EN_format_report" if lang == "EN" else "format_report"
-      final_html = call_with_retry(formatter_fn, report_content)
-
-      self.text_editor_1.html_content = final_html
+      # Step 3: Format and display the final report
+      self._format_and_display_report(report_content)
 
       print("[DEBUG] process_recording completed successfully (ONLINE).")
       return "OK"
 
     except anvil.server.AppOfflineError:
-      # --- OFFLINE FALLBACK ---
-      # This block is triggered if the connection is lost during any of the server calls above.
-      print(
-        "[DEBUG] AppOfflineError caught in AudioManagerForm. Saving to offline queue."
-      )
-      alert(
-        "Connection lost. Your recording has been saved to the offline queue and will be processed when you reconnect."
-      )
-      # We call the JavaScript function that handles the queuing process.
-      self.call_js("handleOfflineSave")
-
+      print("[DEBUG] AppOfflineError caught. Saving to offline queue.")
+      alert("Connection lost. Your recording has been saved to the offline queue.")
+      anvil.js.call_js("handleOfflineSave")
     except Exception as e:
       print(f"[ERROR] An exception occurred in process_recording: {e}")
       self.call_js("displayBanner", f"Error: {e}", "error")
-      # Also offer to save to queue on other unexpected errors
-      if confirm(
-        "An unexpected error occurred. Would you like to save this recording to the offline queue to try again later?"
-      ):
-        self.call_js("handleOfflineSave")
+      if confirm("An unexpected error occurred. Save to offline queue?"):
+        anvil.js.call_js("handleOfflineSave")
+
+  def _transcribe_audio(self, audio_blob):
+    """Helper to handle the transcription step."""
+    lang = self.get_selected_language()
+
+    # Using the new unified background task from Recommendation 1
+    task = anvil.server.call_s("EN_bg_process_audio", audio_blob, language=lang)
+
+    elapsed = 0
+    while not task.is_completed() and elapsed < 240:
+      time.sleep(1)
+      elapsed += 1
+
+    if not task.is_completed():
+      raise anvil.server.AppOfflineError("Transcription is taking too long.")
+
+    transcription = task.get_return_value()
+    if isinstance(transcription, dict) and "error" in transcription:
+      raise Exception(f"Transcription failed: {transcription['error']}")
+
+    self.raw_transcription = transcription
+    return transcription
+
+  def _generate_report_from_transcription(self, transcription):
+    """Helper to handle the report generation step."""
+    selected_template_name = self.call_js(
+      "getDropdownSelectedValue", "templateSelectBtn"
+    )
+    if not selected_template_name or selected_template_name.startswith("Select"):
+      raise ValueError("Please select a template before processing.")
+
+    prompt_row = app_tables.custom_templates.get(template_name=selected_template_name)
+    if not prompt_row:
+      raise ValueError(f"Template '{selected_template_name}' not found.")
+
+    prompt = prompt_row["prompt"]
+    return anvil.server.call_s("generate_report", prompt, transcription)
+
+  def _format_and_display_report(self, report_content):
+    """Helper to format and display the final report."""
+    lang = self.get_selected_language()
+    formatter_fn = "EN_format_report" if lang == "EN" else "format_report"
+    final_html = anvil.server.call_s(formatter_fn, report_content)
+    self.text_editor_1.html_content = final_html
 
   # --- NEW FUNCTION ---
   def process_queued_item(self, item_id, audio_blob, title):

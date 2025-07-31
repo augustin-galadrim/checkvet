@@ -29,7 +29,7 @@ class HeaderNav(HeaderNavTemplate):
     open_form("Templates.Templates")
 
   def open_archives_form(self, **event_args):
-    open_form("Archives.Archives")
+    open_form("Archives.ArchivesForm")
 
   def open_settings_form(self, **event_args):
     open_form("Settings.Settings")

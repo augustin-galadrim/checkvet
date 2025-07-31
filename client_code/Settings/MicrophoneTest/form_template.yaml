@@ -1,7 +1,7 @@
 components:
 - layout_properties: {slot: default}
   name: header_return_1
-  properties: {return_form: Settings.Settings}
+  properties: {return_form: Settings.Settings, title: ''}
   type: form:Components.HeaderReturn
 - layout_properties: {slot: recorder_slot}
   name: recording_widget_1

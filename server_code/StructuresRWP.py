@@ -19,21 +19,26 @@ def read_structures():
   for structure in structures:
     print(f"Processing structure: {structure['name']}")
     structure_dict = {
-        'structure': structure['name'],
-        'phone': structure['phone'],  # This will return a list of user rows
-        'email': structure['email'],
-        'affiliated_vets': structure['affiliated_vets'],
-        'authorized_vets': structure['authorized_vets'],
-        'owner': structure['owner']
+      "structure": structure["name"],
+      "phone": structure["phone"],  # This will return a list of user rows
+      "email": structure["email"],
+      "affiliated_vets": structure["affiliated_vets"],
+      "authorized_vets": structure["authorized_vets"],
+      "owner": structure["owner"],
     }
-    print(f"Number of vets in clinique: {len(structure['affiliated_vets']) if structure['affiliated_vets'] else 0}")
+    print(
+      f"Number of vets in clinique: {len(structure['affiliated_vets']) if structure['affiliated_vets'] else 0}"
+    )
     result.append(structure_dict)
 
   print(f"Returning {len(result)} structures")
   return result
 
+
 @anvil.server.callable
-def write_structure(name=None, phone=None, email=None, address=None, affiliated_vets=None):
+def write_structure(
+  name=None, phone=None, email=None, address=None, affiliated_vets=None
+):
   current_user = anvil.users.get_user()
   print(f"Writing structure '{name}' for user: {current_user}")
 
@@ -48,20 +53,21 @@ def write_structure(name=None, phone=None, email=None, address=None, affiliated_
   # Update only the fields that were provided
   updates = []
   if phone is not None:
-    structure_row['phone'] = phone
-    updates.append('phone')
+    structure_row["phone"] = phone
+    updates.append("phone")
   if email is not None:
-    structure_row['email'] = email
-    updates.append('email')
+    structure_row["email"] = email
+    updates.append("email")
   if address is not None:
-    structure_row['address'] = address
-    updates.append('address')
+    structure_row["address"] = address
+    updates.append("address")
   if affiliated_vets is not None:
-    structure_row['affiliated_vets'] = affiliated_vets
-    updates.append('affiliated_vets')
+    structure_row["affiliated_vets"] = affiliated_vets
+    updates.append("affiliated_vets")
 
   print(f"Updated fields: {', '.join(updates)}")
   return True
+
 
 @anvil.server.callable
 def pick_structure(structure_name, header):
@@ -71,17 +77,66 @@ def pick_structure(structure_name, header):
   # Fetch row from the 'structures' table
   structure = app_tables.structures.get(name=structure_name)
   print(f"Structure found: {structure is not None}")
-  print('test')
-  print(structure['affiliated_vets'])
+  print("test")
+  print(structure["affiliated_vets"])
   # Assuming structure['affiliated_vets'] contains a list of Anvil Row objects
-  list_of_dicts = [dict(row) for row in structure['affiliated_vets']]
+  list_of_dicts = [dict(row) for row in structure["affiliated_vets"]]
   # Assuming `list_of_dicts` is already defined and contains the list of dictionaries
-  names_list = [d['name'] for d in list_of_dicts if 'name' in d]
-  #print(names_list)
+  names_list = [d["name"] for d in list_of_dicts if "name" in d]
+  # print(names_list)
   # Output the result
   return names_list
 
 
+@anvil.server.callable
+def get_affiliated_vets_details(structure_name):
+  """
+  Retrieves the name and email for all veterinarians affiliated with a given structure.
+
+  This function is called by the unified ArchivesForm when a supervisor logs in,
+  in order to populate the veterinarian filter modal.
+
+  Args:
+    structure_name (str): The name of the structure to look up.
+
+  Returns:
+    list of dict: A list of dictionaries, where each dictionary represents a vet
+                  and contains 'name' and 'email' keys. Returns an empty list
+                  if the structure is not found or has no affiliated vets.
+  """
+  print(f"Server: get_affiliated_vets_details called for structure: '{structure_name}'")
+
+  try:
+    # 1. Find the structure row in the 'structures' table by its name.
+    structure_row = app_tables.structures.get(name=structure_name)
+
+    if not structure_row:
+      print(f"Server: No structure found with name '{structure_name}'.")
+      return []
+
+    # 2. Access the 'affiliated_vets' column. This is a list of links to user rows.
+    affiliated_vets_rows = structure_row["affiliated_vets"]
+
+    if not affiliated_vets_rows:
+      print(f"Server: The structure '{structure_name}' has no affiliated vets listed.")
+      return []
+
+    # 3. Create a list of dictionaries containing the required details for each vet.
+    vet_details_list = []
+    for vet_row in affiliated_vets_rows:
+      # It's good practice to check if the linked row still exists
+      if vet_row:
+        vet_details_list.append({"name": vet_row["name"], "email": vet_row["email"]})
+
+    print(f"Server: Returning details for {len(vet_details_list)} affiliated vets.")
+    return vet_details_list
+
+  except Exception as e:
+    # Log any unexpected errors and return an empty list to prevent crashes.
+    print(
+      f"Server ERROR in get_affiliated_vets_details for structure '{structure_name}': {e}"
+    )
+    return []
 
 
 """

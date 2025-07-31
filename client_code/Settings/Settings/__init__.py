@@ -315,7 +315,7 @@ class Settings(SettingsTemplate):
 
   def openAdmin(self, **event_args):
     """Opens the Admin form when clicked."""
-    open_form("Admin")
+    open_form("Settings.Admin")
 
 
 # Fonctions relais

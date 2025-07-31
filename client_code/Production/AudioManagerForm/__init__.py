@@ -144,7 +144,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     # Load initial content in the editor, if provided
     if self.initial_content:
       print("[DEBUG] Loading initial content in editor.")
-      self.editor_content = self.initial_content
+      self.text_editor_1.html_content = self.initial_content
     else:
       if self.clicked_value is not None:
         print("[DEBUG] clicked_value provided, loading report content.")
@@ -174,7 +174,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       if error:
         alert(error)
       elif content:
-        self.editor_content = content
+        self.text_editor_1.html_content = content
       else:
         alert("Unexpected error: no content returned.")
     except Exception as e:
@@ -420,7 +420,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       self.prompt = "you are a helpful AI assistant"
 
       # 1) Get current editor content
-      existing_content = self.editor_content or ""
+      existing_content = self.text_editor_1.get_content() or ""
       print(f"[DEBUG] existing_content length: {len(existing_content)}")
 
       # 2) Transcribe newly recorded audio
@@ -467,7 +467,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     """Handles validation and sending of editor content"""
     print("[DEBUG] validate_and_send() called")
     try:
-      content = self.editor_content
+      content = self.text_editor_1.get_content()
       if not content or not content.strip():
         self.call_js("displayBanner", "No content to send", "error")
         return False

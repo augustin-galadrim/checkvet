@@ -7,6 +7,7 @@ import anvil.server
 import json
 import openai
 
+
 @anvil.server.callable
 def get_user_reports():
   current_user = anvil.users.get_user()
@@ -21,16 +22,11 @@ def get_user_reports():
 
   valid_reports = []
   for row in reports:
-    file_name = row['fileName'] if row['fileName'] else 'Unnamed Report'
-    report_data = row['report'] if row['report'] else {}
-    valid_reports.append({'fileName': file_name, 'Report': report_data})
+    file_name = row["fileName"] if row["fileName"] else "Unnamed Report"
+    report_data = row["report"] if row["report"] else {}
+    valid_reports.append({"fileName": file_name, "Report": report_data})
 
   return valid_reports
-
-
-
-
-
 
 
 @anvil.server.callable
@@ -49,15 +45,15 @@ def get_report_content(file_name):
   # Query using the 'fileName' column and the current user
   try:
     report = app_tables.reportstable.get(
-        owner=user,
-        fileName=file_name  # Query directly using the text column
+      owner=user,
+      fileName=file_name,  # Query directly using the text column
     )
   except Exception as e:
     print(f"Server: Error during query - {e}")
     return None, "Error querying the database"
 
   if report:
-    content = report.get('report', {}).get('content', "No content available")
+    content = report.get("report", {}).get("content", "No content available")
     print(f"Server: Report found, returning content: {content[:100]}...")
     return content, None
   else:
@@ -65,23 +61,21 @@ def get_report_content(file_name):
     return None, f"No report found with fileName: {file_name}"
 
 
-
-
-
-
 # SELECTION
+
 
 @anvil.server.callable
 def get_horses_for_current_user():
   current_user = anvil.users.get_user()
   if current_user:
-    horses = [(row['horseName'], row['horseName']) for row in app_tables.horsestable.search(vet=current_user)]
+    horses = [
+      (row["horseName"], row["horseName"])
+      for row in app_tables.horsestable.search(vet=current_user)
+    ]
     # Add the default option and "All" option at the beginning of the list
     return [("Select a horse", None), ("All", "All")] + horses
   else:
     return [("Select a horse", None), ("All", "All")]
-
-
 
 
 @anvil.server.callable
@@ -97,10 +91,7 @@ def get_filtered_user_reports(horse_name=None):
 
     if horse_row:
       # Query reports for the current user and specific horse
-      reports = app_tables.reportstable.search(
-          owner=current_user,
-          horseName=horse_row
-      )
+      reports = app_tables.reportstable.search(owner=current_user, horseName=horse_row)
     else:
       # If no matching horse is found, return an empty list
       return []
@@ -109,7 +100,13 @@ def get_filtered_user_reports(horse_name=None):
     reports = app_tables.reportstable.search(owner=current_user)
 
   # Return the filtered reports as a list of dictionaries
-  return [{'Reports': r['reports'], 'horseName': r['horseName']['horseName'] if r['horseName'] else 'Unknown'} for r in reports]
+  return [
+    {
+      "Reports": r["reports"],
+      "horseName": r["horseName"]["horseName"] if r["horseName"] else "Unknown",
+    }
+    for r in reports
+  ]
 
 
 @anvil.server.callable
@@ -135,7 +132,7 @@ def save_report_with_images(report_name, content, images):
       print(f"Server: Created new report with name: {report_name}")
 
     # Update the report content
-    report['report'] = rich_text_content
+    report["report"] = rich_text_content
     report.update()
 
     # Handle embedded images if present
@@ -143,8 +140,7 @@ def save_report_with_images(report_name, content, images):
       print(f"DEBUG: Processing images = {images}")
       # First remove any existing images for this report
       existing_images = app_tables.embeddedimagesreportstable.search(
-          owner=user,
-          report_id=report
+        owner=user, report_id=report
       )
       for img in existing_images:
         img.delete()
@@ -153,11 +149,11 @@ def save_report_with_images(report_name, content, images):
       for image in images:
         print(f"DEBUG: Adding image = {image}")
         app_tables.embeddedimagesreportstable.add_row(
-            owner=user,
-            media=image['media'],
-            report_id=report,
-            reference_id=image.get('reference_id', None),
-            position=image.get('position', None)
+          owner=user,
+          media=image["media"],
+          report_id=report,
+          reference_id=image.get("reference_id", None),
+          position=image.get("position", None),
         )
 
     print("Server: Report and embedded images saved successfully")
@@ -174,7 +170,9 @@ def save_report_with_images(report_name, content, images):
 def save_report_with_images_and_meta_data(report_name, content, images, horse_row):
   print("DEBUG: Entered save_report_with_images_and_meta_data")
   print(f"DEBUG: report_name = {report_name}")
-  print(f"DEBUG: Content type = {type(content)} | Content length = {len(content) if content else 'N/A'}")
+  print(
+    f"DEBUG: Content type = {type(content)} | Content length = {len(content) if content else 'N/A'}"
+  )
   print(f"DEBUG: Images count = {len(images) if images else 0}")
   print(f"DEBUG: horse_row = {horse_row}")
 
@@ -196,9 +194,9 @@ def save_report_with_images_and_meta_data(report_name, content, images, horse_ro
     report = app_tables.reportstable.get(owner=user, fileName=report_name)
     if not report:
       report = app_tables.reportstable.add_row(
-          owner=user,
-          fileName=report_name,
-          horseName=horse_row  # Link the horse_row
+        owner=user,
+        fileName=report_name,
+        horseName=horse_row,  # Link the horse_row
       )
       print(f"DEBUG: Created new report: {report_name}")
     else:
@@ -206,7 +204,7 @@ def save_report_with_images_and_meta_data(report_name, content, images, horse_ro
       report.update(horseName=horse_row)
 
     # Update report content
-    report['report'] = rich_text_content
+    report["report"] = rich_text_content
     report.update()
     print(f"DEBUG: Updated report content for: {report_name}")
 
@@ -215,8 +213,7 @@ def save_report_with_images_and_meta_data(report_name, content, images, horse_ro
       print(f"DEBUG: Processing {len(images)} images")
       # Remove existing images
       existing_images = app_tables.embeddedimagesreportstable.search(
-          owner=user,
-          report_id=report
+        owner=user, report_id=report
       )
       for img in existing_images:
         print(f"DEBUG: Deleting existing image: {img['reference_id']}")
@@ -226,11 +223,11 @@ def save_report_with_images_and_meta_data(report_name, content, images, horse_ro
       for idx, image in enumerate(images):
         print(f"DEBUG: Adding image {idx + 1}: {image}")
         app_tables.embeddedimagesreportstable.add_row(
-            owner=user,
-            media=image['media'],
-            report_id=report,
-            reference_id=image.get('reference_id', f"img_{idx}"),
-            position=image.get('position', None)
+          owner=user,
+          media=image["media"],
+          report_id=report,
+          reference_id=image.get("reference_id", f"img_{idx}"),
+          position=image.get("position", None),
         )
 
     print("SUCCESS: Report and associated images saved successfully")
@@ -240,21 +237,17 @@ def save_report_with_images_and_meta_data(report_name, content, images, horse_ro
     return False
 
 
-
-
-
-
 @anvil.server.callable
 def load_report_content(clicked_value):
   print(f"Server: load_report_content called with report_name: {clicked_value}")
 
   # Validate input
-  if not isinstance(clicked_value, dict) or 'fileName' not in clicked_value:
+  if not isinstance(clicked_value, dict) or "fileName" not in clicked_value:
     print("Server: Invalid clicked_value format")
     return None, "Invalid report selection"
 
   # Extract fileName
-  file_name = clicked_value['fileName']
+  file_name = clicked_value["fileName"]
 
   # Query the database
   user = anvil.users.get_user()
@@ -270,7 +263,7 @@ def load_report_content(clicked_value):
     return None, "Error querying the database"
 
   if report_row:
-    report_content = report_row['report'].get('content', "No content available")
+    report_content = report_row["report"].get("content", "No content available")
     print(f"Server: Report found, returning content: {report_content[:100]}...")
     return report_content, None
   else:
@@ -278,11 +271,11 @@ def load_report_content(clicked_value):
     return None, f"No report found with fileName: {file_name}"
 
 
-
-
 @anvil.server.callable
 def get_reports_by_structure(structure_name):
-  print(f"DEBUG: Entering get_reports_by_structure with structure_name='{structure_name}'")
+  print(
+    f"DEBUG: Entering get_reports_by_structure with structure_name='{structure_name}'"
+  )
 
   try:
     # 1) Look up the structure row
@@ -307,23 +300,23 @@ def get_reports_by_structure(structure_name):
     results = []
     for report_row in reports_query:
       # Safely pull the animal's name
-      animal_row = report_row['animal']
-      animal_name = animal_row['name'] if animal_row else None
+      animal_row = report_row["animal"]
+      animal_name = animal_row["name"] if animal_row else None
 
       # Format last_modified as a string (optional)
       dt_str = None
-      if report_row['last_modified']:
-        dt_str = report_row['last_modified'].strftime("%Y-%m-%d %H:%M:%S")
+      if report_row["last_modified"]:
+        dt_str = report_row["last_modified"].strftime("%Y-%m-%d %H:%M:%S")
 
       results.append({
-          "file_name": report_row["file_name"],
-          # Add the animal name
-          "name": animal_name,
-          # Use formatted last_modified
-          "last_modified": dt_str,
-          "owner_email": report_row["vet"]["email"] if report_row["vet"] else None,
-          "report_rich": report_row["report_rich"],
-          "statut": report_row["statut"],
+        "file_name": report_row["file_name"],
+        # Add the animal name
+        "name": animal_name,
+        # Use formatted last_modified
+        "last_modified": dt_str,
+        "owner_email": report_row["vet"]["email"] if report_row["vet"] else None,
+        "report_rich": report_row["report_rich"],
+        "statut": report_row["statut"],
       })
 
     print(f"DEBUG: Returning {len(results)} report(s) for structure '{structure_name}'")

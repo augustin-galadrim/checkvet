@@ -7,7 +7,7 @@ components:
   type: form:Components.RecordingWidget
 - layout_properties: {slot: default}
   name: header_nav_1
-  properties: {}
+  properties: {active_tab: Production}
   type: form:Components.HeaderNav
 container:
   properties:

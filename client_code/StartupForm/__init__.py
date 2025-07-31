@@ -10,8 +10,6 @@ class StartupForm(StartupFormTemplate):
     self.init_components(**properties)
 
     try:
-      # This is the "Online Path"
-      # Anvil will attempt to connect to the server here. If it fails, it raises AppOfflineError.
       user = anvil.users.get_user(allow_remembered=True)
       if not user:
         user = anvil.users.login_with_form()
@@ -30,11 +28,10 @@ class StartupForm(StartupFormTemplate):
         open_form("Production.OfflineAudioManagerForm")
 
     except anvil.server.AppOfflineError:
-      # This is the "Offline Path"
-      # This block executes if any server call in the 'try' block fails due to being offline.
       print("App is offline. Loading offline-first audio manager.")
       # Open the form specifically designed for offline use. No login is required.
       open_form("Production.OfflineAudioManagerForm")
+
     except Exception as e:
       # Catch any other unexpected errors during startup
       print(f"An unexpected error occurred during startup: {e}")

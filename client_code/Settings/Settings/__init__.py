@@ -293,7 +293,7 @@ class Settings(SettingsTemplate):
         print("Debug: No current user found")
         return False
 
-      admin_emails = ["cristobal.navarro@me.com", "biffy071077@gmail.com"]
+      admin_emails = ["cristobal.navarro@me.com", "biffy071077@gmail.com", "augustincramer.galadrim@gmail"]
 
       # Use square bracket notation instead of .get() method
       try:

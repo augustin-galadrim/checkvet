@@ -304,7 +304,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
       formatter_fn = "EN_format_report" if lang == "EN" else "format_report"
       final_html = call_with_retry(formatter_fn, report_content)
 
-      self.editor_content = final_html
+      self.text_editor_1.html_content = final_html
+
       print("[DEBUG] process_recording completed successfully (ONLINE).")
       return "OK"
 
@@ -447,7 +448,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
         report_final = anvil.server.call("EN_format_report", report_content)
 
       # Update editor
-      self.editor_content = report_final
+      self.text_editor_1.html_content = report_final
 
       print(
         "[DEBUG] process_toolbar_recording() completed successfully (toolbar flow)."
@@ -480,27 +481,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Exception in validate_and_send: {e}")
       alert(f"Error validating and sending: {str(e)}")
       return False
-
-  # -------------------------
-  # Property for editor
-  # -------------------------
-  @property
-  def editor_content(self):
-    try:
-      content = self.call_js("getEditorContent")
-      print(f"[DEBUG] Editor content retrieved: {content}")
-      return content
-    except Exception as e:
-      print(f"[ERROR] ERROR getting editor content: {e}")
-      return None
-
-  @editor_content.setter
-  def editor_content(self, value):
-    try:
-      print(f"[DEBUG] Updating editor content: {value}")
-      self.call_js("setEditorContent", value)
-    except Exception as e:
-      print(f"[ERROR] ERROR setting editor content: {e}")
 
   # -------------------------
   # Method for "Status" button
@@ -562,8 +542,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       else:
         print("[DEBUG] Existing patient selected, reusing info.")
 
-      parsed = json.loads(content_json)
-      html_content = parsed.get("content", "")
+      html_content = self.text_editor_1.get_content()
       print(f"[DEBUG] HTML content length: {len(html_content)}")
       print(f"[DEBUG] Number of images: {len(images)}")
 

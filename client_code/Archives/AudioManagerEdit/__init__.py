@@ -86,7 +86,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
   def form_show(self, **event_args):
     """Lors de l'affichage du formulaire, s'assurer que l'éditeur affiche le contenu actuel du rapport."""
     if self.initial_content:
-      self.editor_content = self.initial_content
+      self.text_editor_1.html_content = self.initial_content
 
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS"""
@@ -110,19 +110,12 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     """
     print("process_recording() appelé avec un blob audio en mode édition.")
     try:
-      # 1) Transcrire l'audio
       transcription = anvil.server.call("process_audio_whisper", audio_blob)
-
-      # 2) Appeler la nouvelle fonction serveur 'edit_report'
-      #    en fournissant la transcription et le contenu actuel de l'éditeur
-      edited_report = anvil.server.call(
-        "edit_report", transcription, self.editor_content
-      )
-
-      # 3) Mettre à jour l'éditeur avec le rapport édité
-      self.editor_content = edited_report
-
+      current_content = self.text_editor_1.get_content()
+      edited_report = anvil.server.call("edit_report", transcription, current_content)
+      self.text_editor_1.html_content = edited_report
       return "OK"
+
     except Exception as e:
       alert(f"Erreur lors du traitement de l'enregistrement : {str(e)}")
 
@@ -132,33 +125,12 @@ class AudioManagerEdit(AudioManagerEditTemplate):
   def relaunch_ai(self, **event_args):
     print("relaunch_ai() appelé avec transcript:", self.transcript)
     try:
-      # On réutilise la même logique d'édition,
-      # en passant le transcript comme instructions et l'éditeur comme rapport.
-      edited_report = anvil.server.call(
-        "edit_report", self.transcript, self.editor_content
-      )
-      self.editor_content = edited_report
+      current_content = self.text_editor_1.get_content()
+      edited_report = anvil.server.call("edit_report", self.transcript, current_content)
+      self.text_editor_1.html_content = edited_report
       self.call_js("displayBanner", "Rapport mis à jour avec succès", "success")
     except Exception as e:
       alert("Erreur lors du relancement de l'IA : " + str(e))
-
-  # ----------------------------------------------------------
-  # Propriété de l'éditeur
-  # ----------------------------------------------------------
-  @property
-  def editor_content(self):
-    try:
-      return self.call_js("getEditorContent")
-    except Exception as e:
-      print("ERREUR lors de la récupération du contenu de l'éditeur :", e)
-      return None
-
-  @editor_content.setter
-  def editor_content(self, value):
-    try:
-      self.call_js("setEditorContent", value)
-    except Exception as e:
-      print("ERREUR lors de la définition du contenu de l'éditeur :", e)
 
   # ----------------------------------------------------------
   # Sélection du Statut
@@ -185,8 +157,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     """
     print("update_report() appelé depuis JS en mode édition")
     try:
-      parsed = json.loads(content_json)
-      html_content = parsed.get("content", "")
+      html_content = self.text_editor_1.get_content()
       print(f"Longueur du contenu HTML : {len(html_content)}")
       print(f"Nombre d'images : {len(images)}")
       statut = self.statut or "Non spécifié"

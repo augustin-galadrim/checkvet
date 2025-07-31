@@ -180,10 +180,8 @@ class ArchivesForm(ArchivesFormTemplate):
         "name": report.get("name"),
       }
 
-      if self.is_supervisor:
-        open_form("Archives.AudioManagerEditSecretariat", report=safe_report)
-      else:
-        open_form("Archives.AudioManagerEdit", report=safe_report)
+      open_form("Archives.AudioManagerEdit", report=safe_report)
+
     except Exception as e:
       alert(f"Error opening report editor: {e}")
       open_form("ArchivesForm")

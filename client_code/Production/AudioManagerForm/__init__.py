@@ -263,6 +263,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] An exception occurred in process_recording: {e}")
       self.call_js("displayBanner", f"Error: {e}", "error")
       if confirm("An unexpected error occurred. Save to offline queue?"):
+        print("[DEBUG] User confirmed offline save. Calling JS: handleOfflineSave.")
         anvil.js.call_js("handleOfflineSave")
 
   def _transcribe_audio(self, audio_blob):

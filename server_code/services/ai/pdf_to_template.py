@@ -6,7 +6,7 @@ from anvil.tables import app_tables
 import anvil.server
 import io
 import PyPDF2
-from ..AI import (
+from . import (
   client,
   RETRY_LIMIT,
   DEFAULT_MODEL,

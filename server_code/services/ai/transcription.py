@@ -5,7 +5,7 @@ import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
 import time
-from ..AI import client, RETRY_LIMIT
+from . import client, RETRY_LIMIT
 import base64
 from pydub import AudioSegment
 import io

@@ -10,7 +10,7 @@ from datetime import datetime
 from pydub import AudioSegment
 import anvil.users
 import anvil.server
-from .AI import client
+from .services.ai import client
 
 
 @anvil.server.callable
@@ -35,7 +35,7 @@ def process_and_log_test(audio_blob):
     print(f"[process_and_log_test] First 100 bytes (hex): {audio_bytes[:100].hex()}")
 
     # (Optional) Save raw bytes to a temporary file for debugging
-    with open('raw_audio_input_test', 'wb') as f:
+    with open("raw_audio_input_test", "wb") as f:
       f.write(audio_bytes)
     print("[process_and_log_test] Raw audio saved to 'raw_audio_input_test'")
 
@@ -44,22 +44,26 @@ def process_and_log_test(audio_blob):
       audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
       print("[process_and_log_test] Audio format auto-detected successfully.")
     except Exception as e:
-      print("[process_and_log_test] Auto-detection failed. Attempting manual format checks...")
+      print(
+        "[process_and_log_test] Auto-detection failed. Attempting manual format checks..."
+      )
       header = audio_bytes[:4]
-      if header.startswith(b'OggS'):
-        guessed_format = 'ogg'
-      elif header.startswith(b'fLaC'):
-        guessed_format = 'flac'
-      elif header.startswith(b'RIFF'):
-        guessed_format = 'wav'
-      elif header.startswith(b'\xFF\xF1') or header.startswith(b'\xFF\xF9'):
-        guessed_format = 'mp3'
+      if header.startswith(b"OggS"):
+        guessed_format = "ogg"
+      elif header.startswith(b"fLaC"):
+        guessed_format = "flac"
+      elif header.startswith(b"RIFF"):
+        guessed_format = "wav"
+      elif header.startswith(b"\xff\xf1") or header.startswith(b"\xff\xf9"):
+        guessed_format = "mp3"
       else:
-        guessed_format = 'mp3'
+        guessed_format = "mp3"
       print(f"[process_and_log_test] Guessed format: {guessed_format}")
       audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format=guessed_format)
 
-    print(f"[process_and_log_test] Audio loaded successfully. Duration: {len(audio)} ms")
+    print(
+      f"[process_and_log_test] Audio loaded successfully. Duration: {len(audio)} ms"
+    )
 
     # --- Optional Audio Optimization / Downsampling ---
     audio = audio.set_frame_rate(12000).set_channels(1)
@@ -73,13 +77,11 @@ def process_and_log_test(audio_blob):
 
     # Create a file-like object from the MP3 bytes (Whisper requires a file-like object)
     audio_file = io.BytesIO(mp3_bytes)
-    audio_file.name = 'audio.mp3'
+    audio_file.name = "audio.mp3"
 
     # Use the converted MP3 file for transcription via Whisper
     response = client.audio.transcriptions.create(
-        model="whisper-1",
-        file=audio_file,
-        language="fr"
+      model="whisper-1", file=audio_file, language="fr"
     )
     transcription_text = response.text
     print("[process_and_log_test] Transcription completed successfully.")
@@ -89,11 +91,11 @@ def process_and_log_test(audio_blob):
     current_user = anvil.users.get_user()
     current_time = datetime.now()  # Get the current time
     app_tables.microphone_tests.add_row(
-        user=current_user,
-        test=transcription_text,
-        date=current_time
+      user=current_user, test=transcription_text, date=current_time
     )
-    print("[process_and_log_test] Transcription logged to 'microphone_tests' with current time.")
+    print(
+      "[process_and_log_test] Transcription logged to 'microphone_tests' with current time."
+    )
 
     return transcription_text
 

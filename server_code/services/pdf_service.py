@@ -5,11 +5,12 @@ import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
 import anvil.media
-from .UsersSpecial import get_full_user_info
+from .user_service import get_full_user_info
 
 # If using WeasyPrint:
 from weasyprint import HTML
 import base64
+
 
 @anvil.server.callable
 def build_report_pdf_base64(placeholders, images):
@@ -37,7 +38,7 @@ def build_report_pdf_base64(placeholders, images):
   if not user_info:
     print("ERROR: No user found or user record not found!")
     raise anvil.users.AuthenticationFailed(
-        "No user is logged in or user record not found."
+      "No user is logged in or user record not found."
     )
 
   # Extract relevant fields with updated column names
@@ -59,7 +60,7 @@ def build_report_pdf_base64(placeholders, images):
     if m:
       print(f"DEBUG: media_to_img_tag: Converting media {m} to base64 inline data.")
       content_bytes = m.get_bytes()
-      base64_data = base64.b64encode(content_bytes).decode('utf-8')
+      base64_data = base64.b64encode(content_bytes).decode("utf-8")
       content_type = m.content_type if m.content_type else "image/png"
       return f'<img src="data:{content_type};base64,{base64_data}" alt="UserImage" style="max-width:100%; height:auto;" />'
     else:

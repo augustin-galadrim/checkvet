@@ -116,7 +116,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(
         "[DEBUG] No additional_info, opening registration flow in English (RegistrationFlow)"
       )
-      open_form("EN_RegistrationFlow")
+      open_form("RegistrationFlow")
       return
 
     mobile_installation = anvil.server.call("pick_user_info2", "mobile_installation")
@@ -125,7 +125,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(
         "[DEBUG] No mobile installation specified, opening mobile installation flow in English"
       )
-      open_form("EN_MobileInstallationFlow")
+      open_form("MobileInstallationFlow")
       return
 
     # Load templates from database and filter on favorites (priority 1 or 2)

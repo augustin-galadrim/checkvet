@@ -1,7 +1,7 @@
 components:
 - layout_properties: {slot: default}
   name: header_nav_1
-  properties: {active_tab: Archives}
+  properties: {}
   type: form:Components.HeaderNav
 container:
   properties:

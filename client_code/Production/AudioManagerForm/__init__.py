@@ -90,14 +90,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       t.t("select_template_placeholder"),
     )
 
-    # Toolbar
-    self.call_js("setElementText", "toolbar_image", t.t("toolbar_image"))
-    self.call_js("setElementText", "leftAlignBtn", t.t("left_align_button"))
-    self.call_js("setElementText", "centerAlignBtn", t.t("center_align_button"))
-    self.call_js("setElementText", "rightAlignBtn", t.t("right_align_button"))
-    self.call_js("setElementText", "insertImageBtn", t.t("insert_image_button"))
-    self.call_js("setElementText", "toolbar_copy", t.t("toolbar_copy"))
-
     # Bottom Buttons
     self.call_js("setElementText", "button_status", t.t("button_status"))
     self.call_js("setElementText", "button_archive", t.t("button_archive"))
@@ -238,7 +230,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def process_recording(self, audio_blob, **event_args):
     """
     Orchestrates the online processing of an audio blob.
-    This function now delegates steps to helper methods.
+    This function now returns a status to the JavaScript caller.
     """
     print("[DEBUG] AudioManagerForm: process_recording initiated.")
     anvil_media_blob = anvil.js.to_media(audio_blob)
@@ -253,25 +245,29 @@ class AudioManagerForm(AudioManagerFormTemplate):
       self._format_and_display_report(report_content)
 
       print("[DEBUG] process_recording completed successfully (ONLINE).")
-      return "OK"
+      return "OK"  # Return success status
 
     except anvil.server.AppOfflineError:
       print("[DEBUG] AppOfflineError caught. Saving to offline queue.")
       alert("Connection lost. Your recording has been saved to the offline queue.")
       anvil.js.call_js("handleOfflineSave")
+      return "OFFLINE_SAVE"  # Return offline status
+
     except Exception as e:
       print(f"[ERROR] An exception occurred in process_recording: {e}")
       self.call_js("displayBanner", f"Error: {e}", "error")
       if confirm("An unexpected error occurred. Save to offline queue?"):
         print("[DEBUG] User confirmed offline save. Calling JS: handleOfflineSave.")
         anvil.js.call_js("handleOfflineSave")
+        return "OFFLINE_SAVE"  # Return offline status
+      else:
+        return "ERROR"  # Return error status
 
   def _transcribe_audio(self, audio_blob):
     """Helper to handle the transcription step."""
     lang = self.get_selected_language()
 
-    # Using the new unified background task from Recommendation 1
-    task = anvil.server.call_s("EN_bg_process_audio", audio_blob, language=lang)
+    task = anvil.server.call_s("process_audio_whisper", audio_blob, language=lang)
 
     elapsed = 0
     while not task.is_completed() and elapsed < 240:

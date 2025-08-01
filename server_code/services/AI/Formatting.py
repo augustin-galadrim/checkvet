@@ -1,314 +1,17 @@
 import anvil.secrets
-import base64
-import io
-import json
-import os
-import re
-import time
-from datetime import datetime
-
+import anvil.users
 import anvil.tables as tables
 import anvil.tables.query as q
-import anvil.users
-import anvil.server
-import markdown
-import PyPDF2
 from anvil.tables import app_tables
-from openai import OpenAI
-from pydub import AudioSegment
+import anvil.server
+from ..AI import (
+  client,
+  RETRY_LIMIT,
+  DEFAULT_MODEL,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_MAX_TOKENS,
+)
 
-########################################### SETTINGS ###################################################
-
-# Initialize OpenAI client with hardcoded key (for testing only)
-try:
-  openai_key = anvil.secrets.get_secret("OPENAI_API_KEY")
-  client = OpenAI(api_key=openai_key)
-  print("OpenAI API initialized successfully")
-except Exception as e:
-  print(f"Error initializing OpenAI API: {str(e)}")
-  raise RuntimeError("Failed to initialize OpenAI API")
-
-# Set default parameters
-DEFAULT_MODEL = "chatgpt-4o-latest"
-DEFAULT_TEMPERATURE = 0.7
-DEFAULT_MAX_TOKENS = 1500
-
-@anvil.server.callable
-def initialize_server_environment():
-  print("--- SERVER INITIALIZATION CHECK ---")
-  try:
-    AudioSegment.silent(duration=10) 
-    print("SUCCESS: FFmpeg dependency is correctly installed and accessible.")
-  except Exception as e:
-    print("ERROR: FFmpeg dependency check failed.")
-    print("   Audio processing will likely fail for non-WAV formats.")
-    print(f"   Details: {str(e)}")
-  print("-----------------------------------")
-  return True
-
-########################################### AUDIO SECTION ###################################################
-
-
-RETRY_LIMIT         = 3
-MAX_SINGLE_CHUNK_MS = 60_000
-OVERLAP_MS          = 10_000
-WEBM_MAGIC          = b'\x1A\x45\xDF\xA3'
-
-# ------------------------------------------------------------------
-# Public entry point (same name & args as before)
-# ------------------------------------------------------------------
-# ───────────────────────────────────────────────────────────────────
-# ENTRY POINT (same name & args)  → returns a BACKGROUND-TASK ID
-# ───────────────────────────────────────────────────────────────────
-
-@anvil.server.callable
-def process_audio_whisper(audio_blob):
-  return anvil.server.launch_background_task(
-    'bg_process_audio_whisper', audio_blob
-  )
-
-@anvil.server.callable
-def EN_process_audio_whisper(audio_blob):
-  return anvil.server.launch_background_task(
-    'EN_bg_process_audio_whisper', audio_blob
-  )
-
-@anvil.server.background_task
-def bg_process_audio_whisper(audio_blob):
-  # --- DEBUG LOG ---
-  print("PYTHON SERVER (bg_process_audio_whisper): Task started.")
-  print(f"PYTHON SERVER: Received Media object. Type: '{audio_blob.content_type}', Size: {audio_blob.length} bytes.")
-  # --- END DEBUG LOG ---
-  # --- Helper for Whisper API call ---
-  def whisper_call(seg):
-    buf = io.BytesIO()
-    seg.export(buf, format="wav")
-    buf.seek(0)
-    buf.name = "audio.wav"
-
-    for n in range(RETRY_LIMIT):
-      try:
-        return client.audio.transcriptions.create(
-          model="whisper-1", file=buf, language="fr"
-        ).text
-      except Exception as e:
-        if n < RETRY_LIMIT - 1:
-          time.sleep(2 ** n)
-          print(f"[WARN] Whisper retry {n+1}/{RETRY_LIMIT}: {e}")
-        else:
-          return {"error": "La transcription par Whisper a échoué après plusieurs tentatives."}
-
-  # --- 0. Convert to raw bytes ---
-  if isinstance(audio_blob, str):
-    try: 
-      audio_bytes = base64.b64decode(audio_blob, validate=True)
-    except Exception: 
-      return {"error": "Chaîne audio Base-64 invalide."}
-  elif hasattr(audio_blob, 'get_bytes'): 
-    audio_bytes = audio_blob.get_bytes()
-  elif isinstance(audio_blob, (bytes, bytearray)): 
-    audio_bytes = bytes(audio_blob)
-  else: 
-    return {"error": "Type de blob audio non supporté."}
-
-  # --- 1. Load with pydub ---
-  def try_load(fmt=None):
-    try: 
-      return AudioSegment.from_file(io.BytesIO(audio_bytes), format=fmt)
-    except Exception: 
-      return None
-
-  audio = None
-  header = audio_bytes[:16]
-  if header.startswith(WEBM_MAGIC): audio = try_load("webm")
-  elif header.startswith(b"OggS"): audio = try_load("ogg")
-  elif header.startswith(b"fLaC"): audio = try_load("flac")
-  elif header.startswith(b"RIFF"): audio = try_load("wav")
-  elif header[:3] in (b"\xFF\xF1", b"\xFF\xF9") or header.startswith(b"ID3"): audio = try_load("mp3")
-  elif header[4:8] in (b"M4A ", b"MP4 ", b"isom", b"iso2", b"mp42"): audio = try_load("mp4")
-  elif header.startswith(b"caff"): audio = try_load("caf")
-
-  if audio is None:
-    for fmt in ["webm", "ogg", "flac", "wav", "mp3", "m4a", "caf", "mp4", "aac"]:
-      audio = try_load(fmt)
-      if audio: 
-        break
-
-  if audio is None: return {"error": "Format audio non supporté. Le fichier n'a pas pu être lu."}
-
-  # --- 2. Sanity checks and Normalization ---
-  if len(audio) < 150:
-    pad = AudioSegment.silent(duration=300)
-    audio = pad + audio + pad
-
-  if audio.dBFS == float("-inf") or audio.dBFS < -80:
-    return {"error": "L'audio est silencieux. Veuillez enregistrer à nouveau."}
-
-  audio = audio.set_channels(1).set_frame_rate(16000)
-
-  # --- 3. Transcription (with chunking) ---
-  if len(audio) <= MAX_SINGLE_CHUNK_MS:
-    transcription = whisper_call(audio)
-  else:
-    parts, p = [], 0
-    while p < len(audio):
-      q = min(p + MAX_SINGLE_CHUNK_MS + OVERLAP_MS, len(audio))
-      parts.append(whisper_call(audio[p:q]).strip())
-      p += MAX_SINGLE_CHUNK_MS
-    transcription = " ".join(parts)    
-
-  return transcription
-
-
-
-################ EN
-@anvil.server.background_task
-def EN_bg_process_audio_whisper(audio_blob):
-  print("PYTHON SERVER (bg_process_audio_whisper): Task started.")
-  print(f"PYTHON SERVER: Received Media object. Type: '{audio_blob.content_type}', Size: {audio_blob.length} bytes.")
-  # --- Helper for Whisper API call ---
-  def whisper_call(seg):
-    buf = io.BytesIO()
-    seg.export(buf, format="wav")
-    buf.seek(0)
-    buf.name = "audio.wav"
-
-    for n in range(RETRY_LIMIT):
-      try:
-        return client.audio.transcriptions.create(
-          model="whisper-1",
-          file=buf,
-          language="en"  # English language
-        ).text
-      except Exception as e:
-        if n < RETRY_LIMIT - 1:
-          time.sleep(2 ** n)
-          print(f"[WARN] Whisper retry {n+1}/{RETRY_LIMIT}: {e}")
-        else:
-          return {"error": "Whisper transcription failed after multiple retries."}
-
-  # --- 0. Convert to raw bytes ---
-  if isinstance(audio_blob, str):
-    try: audio_bytes = base64.b64decode(audio_blob, validate=True)
-    except Exception: return {"error": "Invalid Base-64 audio string"}
-  elif hasattr(audio_blob, 'get_bytes'): audio_bytes = audio_blob.get_bytes()
-  elif isinstance(audio_blob, (bytes, bytearray)): audio_bytes = bytes(audio_blob)
-  else: return {"error": "Unsupported audio_blob type"}
-
-    # --- 1. Load with pydub ---
-  def try_load(fmt=None):
-    try: return AudioSegment.from_file(io.BytesIO(audio_bytes), format=fmt)
-    except Exception: return None
-
-  audio = None
-  header = audio_bytes[:16]
-  if header.startswith(WEBM_MAGIC): audio = try_load("webm")
-  elif header.startswith(b"OggS"): audio = try_load("ogg")
-  elif header.startswith(b"fLaC"): audio = try_load("flac")
-  elif header.startswith(b"RIFF"): audio = try_load("wav")
-  elif header[:3] in (b"\xFF\xF1", b"\xFF\xF9") or header.startswith(b"ID3"): audio = try_load("mp3")
-  elif header[4:8] in (b"M4A ", b"MP4 ", b"isom", b"iso2", b"mp42"): audio = try_load("mp4")
-  elif header.startswith(b"caff"): audio = try_load("caf")
-
-  if audio is None:
-    for fmt in ["webm", "ogg", "flac", "wav", "mp3", "m4a", "caf", "mp4", "aac"]:
-      audio = try_load(fmt)
-      if audio: break
-
-  if audio is None: return {"error": "Unsupported audio format. The file could not be read."}
-
-    # --- 2. Sanity checks and Normalization ---
-  if len(audio) < 150:
-    pad = AudioSegment.silent(duration=300)
-    audio = pad + audio + pad
-
-  if audio.dBFS == float("-inf") or audio.dBFS < -80:
-    return {"error": "Audio is silent. Please record again."}
-
-  audio = audio.set_channels(1).set_frame_rate(16000)
-
-  # --- 3. Transcription (with chunking) ---
-  if len(audio) <= MAX_SINGLE_CHUNK_MS:
-    transcription = whisper_call(audio)
-  else:
-    parts, p = [], 0
-    while p < len(audio):
-      q = min(p + MAX_SINGLE_CHUNK_MS + OVERLAP_MS, len(audio))
-      parts.append(whisper_call(audio[p:q]).strip())
-      p += MAX_SINGLE_CHUNK_MS
-    transcription = " ".join(parts)    
-
-  return transcription
-
-########################################### REPORT GENERATION SECTION ###################################################
-@anvil.server.callable
-def generate_report(prompt, transcription):
-  """
-  Generate report using GPT-4.
-  Includes retry mechanism with exponential backoff for API failures.
-  """
-  def _gpt4_generate(prompt_text, transcription_text):
-    """Call GPT-4 API with retries and back-off."""
-    for attempt in range(RETRY_LIMIT):
-      try:
-        messages = [
-            {"role": "system", "content": prompt_text},
-            {"role": "user", "content": transcription_text}
-        ]
-
-        response = client.chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=messages,
-            temperature=DEFAULT_TEMPERATURE,
-            max_tokens=DEFAULT_MAX_TOKENS
-        )
-
-        return response.choices[0].message.content
-      except Exception as e:
-        wait = 2 ** attempt
-        print(f"[WARN] GPT-4 attempt {attempt+1}/{RETRY_LIMIT} failed: {e}. "
-              f"Retrying in {wait}s...")
-        if attempt < RETRY_LIMIT - 1:
-          time.sleep(wait)
-    # If we get here, all retries failed
-    raise Exception("GPT-4 report generation failed after multiple attempts")
-
-  try:
-    # Call the GPT-4 API with retry mechanism
-    result = _gpt4_generate(prompt, transcription)
-    print("[DEBUG] Report generation done")
-    return result
-
-  except Exception as e:
-    print(f"[ERROR] generate_report: {e}")
-    raise Exception(f"Error generating report: {e}")
-
-
-@anvil.server.callable
-def generate_report_leg(prompt, transcription):
-  """Generate report using GPT-4"""
-  try:
-    messages = [
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": transcription}
-    ]
-
-    response = client.chat.completions.create(
-        model=DEFAULT_MODEL,
-        messages=messages,
-        temperature=DEFAULT_TEMPERATURE,
-        max_tokens=DEFAULT_MAX_TOKENS
-    )
-
-    return response.choices[0].message.content
-  except Exception as e:
-    print(f"GPT-4 API error: {str(e)}")
-    raise Exception("Error generating report")
-
-
-
-########################################### FORMAT SECTION ###################################################
-# 1. Probabilistic
 
 @anvil.server.callable
 def format_report(transcription):
@@ -651,23 +354,21 @@ Ne commance jamais ta réponse par ```html et ne finis jamais ta réponse par ``
   """
   try:
     messages = [
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": transcription}
+      {"role": "system", "content": prompt},
+      {"role": "user", "content": transcription},
     ]
 
     response = client.chat.completions.create(
-        model=DEFAULT_MODEL,
-        messages=messages,
-        temperature=DEFAULT_TEMPERATURE,
-        max_tokens=DEFAULT_MAX_TOKENS
+      model=DEFAULT_MODEL,
+      messages=messages,
+      temperature=DEFAULT_TEMPERATURE,
+      max_tokens=DEFAULT_MAX_TOKENS,
     )
     print(response.choices[0].message.content)
     return response.choices[0].message.content
   except Exception as e:
     print(f"GPT-4 API error: {str(e)}")
     raise Exception("Error generating report")
-
-
 
 
 @anvil.server.callable
@@ -884,15 +585,15 @@ Important:
   """
   try:
     messages = [
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": transcription}
+      {"role": "system", "content": prompt},
+      {"role": "user", "content": transcription},
     ]
 
     response = client.chat.completions.create(
-        model=DEFAULT_MODEL,
-        messages=messages,
-        temperature=DEFAULT_TEMPERATURE,
-        max_tokens=DEFAULT_MAX_TOKENS
+      model=DEFAULT_MODEL,
+      messages=messages,
+      temperature=DEFAULT_TEMPERATURE,
+      max_tokens=DEFAULT_MAX_TOKENS,
     )
     print(response.choices[0].message.content)
     return response.choices[0].message.content
@@ -901,12 +602,8 @@ Important:
     raise Exception("Error generating report")
 
 
-
-
-
-
-
 # 2. deterministic
+
 
 def strip_leading_bullet(line):
   """
@@ -916,9 +613,10 @@ def strip_leading_bullet(line):
   stripped_line = line.strip()
   for bullet_char in ("- ", "* ", "• "):
     if stripped_line.startswith(bullet_char):
-      stripped_line = stripped_line[len(bullet_char):]
+      stripped_line = stripped_line[len(bullet_char) :]
       break
   return stripped_line
+
 
 def detect_heading(line):
   """
@@ -955,6 +653,7 @@ def detect_heading(line):
     return True, stripped
   return False, stripped
 
+
 def markdown_to_inline(text):
   """
   Converts a single line of Markdown to 'inline' HTML.
@@ -964,6 +663,7 @@ def markdown_to_inline(text):
   if converted.startswith("<p>") and converted.endswith("</p>"):
     converted = converted[3:-4]
   return converted
+
 
 def convert_markdown_custom(report, lang="fr"):
   """
@@ -1032,6 +732,7 @@ def convert_markdown_custom(report, lang="fr"):
 
   return "\n".join(html_parts)
 
+
 @anvil.server.callable
 def format_report_deterministic(transcription):
   """
@@ -1086,215 +787,3 @@ def format_report_deterministic(transcription):
   except Exception as e:
     print(f"Erreur lors du formatage du rapport : {str(e)}")
     raise Exception("Error generating report")
-
-
-
-
-
-
-
-################################### PDF TO TEMPLATE SECTION ##########################################
-
-@anvil.server.callable
-def process_pdf(prompt, pdf_file):
-  """
-  Convert PDF to text, then process it using GPT-4 text endpoint.
-  """
-
-  try:
-    # Get PDF bytes
-    pdf_bytes = pdf_file.get_bytes()
-    pdf_stream = io.BytesIO(pdf_bytes)
-
-    # Extract text using PyPDF2
-    reader = PyPDF2.PdfReader(pdf_stream)
-
-    # Collect text from all pages
-    pdf_text = ""
-    for page in reader.pages:
-      pdf_text += page.extract_text() or ""
-
-    # Build messages for standard GPT-4
-    # We'll chunk the text if it's too large, or just show a simple prompt
-    messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": f"{prompt}\n\nPDF Content:\n{pdf_text}"}
-    ]
-
-    # Make the API call to GPT-4 (text-based)
-    response = client.chat.completions.create(
-        model=DEFAULT_MODEL,  # standard GPT-4, not the vision preview
-        messages=messages,
-        max_tokens=DEFAULT_MAX_TOKENS,
-        temperature=DEFAULT_TEMPERATURE
-    )
-
-    # Return the model's output
-    return response.choices[0].message.content
-
-  except Exception as e:
-    print(f"Error processing PDF: {str(e)}")
-    raise Exception(f"Error processing PDF: {str(e)}")
-
-
-"""
-Usage examples:
-pdf_file = anvil.file_picker.pick_file(file_types=['application/pdf'])
-summary = anvil.server.call('process_pdf', pdf_file)
-"""
-
-
-@anvil.server.callable
-def reprocess_output_with_prompt(first_output, second_prompt):
-  """
-  Takes the first model output and a second prompt,
-  then calls the GPT-4 endpoint again for a refined output.
-  """
-  try:
-    messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": first_output},
-        {"role": "user", "content": second_prompt},
-    ]
-
-    response = client.chat.completions.create(
-        model=DEFAULT_MODEL,
-        messages=messages,
-        max_tokens=DEFAULT_MAX_TOKENS
-    )
-
-    return response.choices[0].message.content
-
-  except Exception as e:
-    print(f"Error in reprocess_output_with_prompt: {str(e)}")
-    raise Exception(f"Error in reprocess_output_with_prompt: {str(e)}")
-
-
-@anvil.server.callable
-def store_final_output_in_db(final_output, template_name):
-  """
-  Logs the final output in the customtemplatestable under header "prompt",
-  sets the owner to the current user, sets templateName, and sets systemPrompt to True.
-  """
-  user = anvil.users.get_user()
-  if not user:
-    raise Exception("No user is currently logged in.")
-
-  # Add row in your customtemplatestable
-  app_tables.custom_templates.add_row(
-      prompt=final_output,
-      owner=user,
-      template_name=template_name,
-  )
-
-
-
-
-
-
-
-
-"""
-Usage example:
-prompt = anvil.server.call('get_prompt', 'desired_prompt_name')
-"""
-
-
-
-######################################### EDITION SECTION ######################################
-
-@anvil.server.callable
-def edit_report(transcription, report):
-  """
-  Processes transcribed voice commands to edit a veterinary report.
-
-  Args:
-      transcription (str): The transcribed voice command with editing instructions
-      report (str): The current report content to be edited
-
-  Returns:
-      str: The edited report content
-  """
-  prompt = """
-Tu es un assistant IA expert dans l'édition de rapports vétérinaires selon les commandes orales du vétérinaire utilisateur.
-Accomplis la demande du vétérinaire utilisateur en respectant la précision de la médecine vétérinaire et l'orthographe des termes techniques. Assure-toi que ton output inclue toujours l'intégralité du rapport.
-
-Exemples:
-- Si le vétérinaire demande des ajouts, renvoie le compte rendu entier avec les ajouts
-- Si le vétérinaire demande des modifications, renvoie le compte rendu entier avec les modifications
-- Si le vétérinaire demande des suppressions, renvoie le compte rendu entier sans les éléments à supprimer
-
-Voici le rapport actuel:
-{report}
-
-Instruction du vétérinaire pour éditer ce rapport:
-{transcription}
-  """
-
-  try:
-    formatted_prompt = prompt.format(report=report, transcription=transcription)
-
-    messages = [
-        {"role": "system", "content": formatted_prompt}
-    ]
-
-    response = client.chat.completions.create(
-        model=DEFAULT_MODEL,
-        messages=messages,
-        temperature=DEFAULT_TEMPERATURE,
-        max_tokens=DEFAULT_MAX_TOKENS
-    )
-
-    print("Edited report generated successfully")
-    return response.choices[0].message.content
-  except Exception as e:
-    print(f"GPT-4 API error: {str(e)}")
-    raise Exception(f"Error editing report: {str(e)}")
-
-
-
-@anvil.server.callable
-def EN_edit_report(transcription, report):
-  """
-  Processes transcribed voice commands to edit a veterinary report.
-
-  Args:
-      transcription (str): The transcribed voice command with editing instructions
-      report (str): The current report content to be edited
-
-  Returns:
-      str: The edited report content
-  """
-  prompt = """
-You are an AI assistant specialized in editing veterinary reports according to the verbal commands of the veterinary user.
-Complete the veterinary user's request while maintaining accuracy in veterinary medicine and correct spelling of technical terms. Make sure your output always includes the entire report.
-Examples:
-
-If the veterinarian requests additions, return the entire report with the additions
-If the veterinarian requests modifications, return the entire report with the modifications
-If the veterinarian requests deletions, return the entire report without the elements to be deleted
-Here is the current report:
-{report}
-Veterinarian's instruction to edit this report:
-{transcription}
-  """
-
-  try:
-    formatted_prompt = prompt.format(report=report, transcription=transcription)
-
-    messages = [
-        {"role": "system", "content": formatted_prompt}
-    ]
-
-    response = client.chat.completions.create(
-        model=DEFAULT_MODEL,
-        messages=messages,
-        temperature=DEFAULT_TEMPERATURE,
-        max_tokens=DEFAULT_MAX_TOKENS
-    )
-
-    print("Edited report generated successfully")
-    return response.choices[0].message.content
-  except Exception as e:
-    print(f"GPT-4 API error: {str(e)}")
-    raise Exception(f"Error editing report: {str(e)}")

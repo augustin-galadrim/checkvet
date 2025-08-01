@@ -71,6 +71,29 @@ container:
           </div>
 
           <script>
+            // --- ADDED THIS BLOCK TO MAKE THE COMPONENT SELF-CONTAINED ---
+            if (!window.__header_nav_globals) {
+              window.__header_nav_globals = true;
+
+              // This function is now defined inside the component that uses it.
+              window.setElementText = function(elementId, newText) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                  element.textContent = newText;
+                }
+              };
+
+              // This function was also missing and is now included.
+              window.updateTime = function() {
+                const timeElem = document.querySelector('.time');
+                if (timeElem) {
+                  const now = new Date();
+                  timeElem.textContent = `${now.getHours().toString().padStart(2, '0')}h${now.getMinutes().toString().padStart(2, '0')}`;
+                }
+              };
+            }
+            // --- END OF ADDED BLOCK ---
+
             // This function attaches event listeners to the navigation buttons.
             function attachHeaderEvents() {
               document.querySelectorAll('.nav-tab').forEach(tab => {

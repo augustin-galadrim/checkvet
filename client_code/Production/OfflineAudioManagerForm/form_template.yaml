@@ -1,12 +1,12 @@
 components:
-- layout_properties: {slot: playback_slot}
-  name: audio_playback_1
-  properties: {}
-  type: form:Components.AudioPlayback
 - layout_properties: {slot: recorder_slot}
   name: recording_widget_1
   properties: {}
   type: form:Components.RecordingWidget
+- layout_properties: {slot: playback_slot}
+  name: audio_playback_1
+  properties: {}
+  type: form:Components.AudioPlayback
 - layout_properties: {slot: default}
   name: header_nav_1
   properties: {active_tab: Production}

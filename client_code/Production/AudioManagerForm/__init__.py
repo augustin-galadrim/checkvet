@@ -38,7 +38,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.recording_widget.set_event_handler(
       "recording_complete", self.handle_new_recording
     )
-
+    self.audio_playback_1.set_event_handler(
+      "x_clear_recording", self.clear_recording_handler
+    )
     # Store user-provided parameters
     self.clicked_value = clicked_value
     self.template_name = template_name
@@ -177,21 +179,32 @@ class AudioManagerForm(AudioManagerFormTemplate):
     print(f"[DEBUG] show_error() called with message: {error_message}")
     alert(error_message)
 
-  # -------------------------
-  # New method to process uploaded audio files
-  # -------------------------
   def process_uploaded_audio(self, audio_blob, **event_args):
     """
-    Processes an uploaded audio file (particularly for iOS Voice Memos)
+    Processes an uploaded audio file by making the playback component visible.
     """
     print("[DEBUG] process_uploaded_audio() called with an audio blob.")
-    try:
-      # Process the audio once the file is received
-      return self.process_recording(audio_blob)
-    except Exception as e:
-      print(f"[ERROR] Exception in process_uploaded_audio: {e}")
-      alert(f"Error processing audio file: {str(e)}")
-      return None
+    # This function should NOT process the audio, only prepare it for the user.
+    anvil_media_blob = anvil.js.to_media(audio_blob)
+    self.current_audio_blob = anvil_media_blob
+    self.audio_playback_1.audio_blob = audio_blob
+    self.recording_widget.visible = False
+    self.audio_playback_1.visible = True
+    anvil.js.call_js("setAudioWorkflowState", "decision")
+    return "OK"
+
+  def import_audio_from_queue(self, audio_blob, **event_args):
+    """
+    Receives an audio blob from the JS queue and sets up the UI for processing.
+    This is the new relay function.
+    """
+    print("AudioManagerForm: Importing audio from offline queue.")
+    anvil_media_blob = anvil.js.to_media(audio_blob)
+    self.current_audio_blob = anvil_media_blob
+    self.audio_playback_1.audio_blob = audio_blob
+    self.audio_playback_1.visible = True
+    self.recording_widget.visible = False
+    anvil.js.call_js("setAudioWorkflowState", "decision")
 
   # -------------------------
   # Language detection
@@ -217,33 +230,68 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Error getting selected language: {e}")
       return "EN"
 
+  def get_current_audio_blob(self, **event_args):
+    """
+    A client-side relay function that returns the current Anvil Media object
+    from the playback component. This allows JavaScript to retrieve it for
+    actions like offline queueing.
+    """
+    print("Python: get_current_audio_blob called from JavaScript.")
+    return self.audio_playback_1.audio_blob
+
   def handle_new_recording(self, audio_blob, **event_args):
     """
     Called when the RecordingWidget completes a recording.
-    This now shows the AudioPlayback component.
+    This now shows the AudioPlayback component and moves UI to decision state.
     """
     print("AudioManagerForm: Received audio from widget.")
+    anvil_media_blob = anvil.js.to_media(audio_blob)
+    self.current_audio_blob = anvil_media_blob  # Store blob
     self.recording_widget.visible = False
     self.audio_playback_1.audio_blob = audio_blob
     self.audio_playback_1.visible = True
-    # You might need to hide/show other UI elements like the decision buttons here
+    # Explicitly call the JS function to switch the UI state
     anvil.js.call_js("setAudioWorkflowState", "decision")
 
   def clear_recording_handler(self, **event_args):
     """Handles the x-clear-recording event from the AudioPlayback component."""
     print("AudioManagerForm: Clearing recording.")
+    self.current_audio_blob = None
     self.audio_playback_1.visible = False
     self.audio_playback_1.audio_blob = None
     self.recording_widget.visible = True
     anvil.js.call_js("setAudioWorkflowState", "input")
 
-  def process_recording(self, audio_blob, **event_args):
+  def prepare_ui_for_processing(self, **event_args):
     """
-    Orchestrates the online processing of an audio blob.
-    This function now returns a status to the JavaScript caller.
+    A fast, client-side only method to provide immediate visual feedback.
+    It shows the recording widget and hides the playback controls.
+    """
+    print("AudioManagerForm: Preparing UI for processing feedback.")
+    self.recording_widget.visible = True
+    self.audio_playback_1.visible = False
+    anvil.js.call_js("toggleMode", "record")
+    anvil.js.call_js("setAudioWorkflowState", "input")
+
+  def process_recording(self, **event_args):
+    """
+    Orchestrates the online processing of the audio blob.
+    This function no longer handles the initial UI update.
     """
     print("[DEBUG] AudioManagerForm: process_recording initiated.")
-    anvil_media_blob = anvil.js.to_media(audio_blob)
+
+    auudio_blob = self.audio_playback_1.audio_blob
+    anvil_media_blob = anvil.js.to_media(auudio_blob)
+
+    if not anvil_media_blob:
+      print("[ERROR] No audio blob found in the playback component.")
+      self.call_js("displayBanner", "No audio available to process.", "error")
+      # REVERT UI if there's an immediate error
+      self.recording_widget.visible = False
+      self.audio_playback_1.visible = True
+      anvil.js.call_js("setAudioWorkflowState", "decision")
+      return "ERROR"
+
     try:
       # Step 1: Transcribe the audio
       transcription = self._transcribe_audio(anvil_media_blob)

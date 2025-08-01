@@ -66,7 +66,7 @@ container:
           </style>
         </head>
         <body>
-          <div class="container">
+          <div class="container"  id="offline-form-stable-anchor">
             <div class="fixed-section">
               <div class="actions-row">
                 <button class="queue-button" id="viewQueueBtn">
@@ -125,6 +125,27 @@ container:
             if (!window.__offline_form_globals) {
               window.__offline_form_globals = true;
 
+              window.clientSideAudioManager = {
+                _currentBlob: null,
+
+                // Called by Python to store the blob immediately after recording.
+                storeBlob: function(blob) {
+                  console.log("ClientSideManager: Storing blob of size:", blob ? blob.size : 'null');
+                  this._currentBlob = blob;
+                },
+
+                // Called by our own JS functions to get the blob for saving.
+                getBlob: function() {
+                  return this._currentBlob;
+                },
+
+                // Called by Python to clear the blob when the UI is reset.
+                clearBlob: function() {
+                  console.log("ClientSideManager: Clearing stored blob.");
+                  this._currentBlob = null;
+                }
+              };
+
               let db;
               // --- IndexedDB Functions ---
               function initDB() {
@@ -142,13 +163,43 @@ container:
                 });
               }
 
-              function storeAudioInQueue(audioBlob, metadata) {
-                if (!db) return alert("Database not initialized.");
+              function storeAudioInQueue(metadata) {
+                if (!db) {
+                  displayBanner("Database not initialized.", "error");
+                  return;
+                }
+
+                const audioBlob = window.clientSideAudioManager.getBlob();
+                if (!audioBlob) {
+                  displayBanner("Error: No audio data to save.", "error");
+                  return;
+                }
+
                 const transaction = db.transaction(['recordings'], 'readwrite');
                 const store = transaction.objectStore('recordings');
-                const recording = { ...metadata, audioBlob };
-                store.add(recording);
-                updateQueueBadge();
+                const request = store.add({ ...metadata, audioBlob: audioBlob });
+
+                // THIS IS THE CRITICAL CHANGE:
+                // We now define what happens on success and on error.
+
+                request.onsuccess = () => {
+                  console.log("Successfully saved to IndexedDB.");
+
+                  // 1. Show the success banner
+                  displayBanner(`'${metadata.title}' saved to offline queue.`, "success");
+
+                  // 2. Call back to Python to reset the UI
+                  const stableAnchor = document.getElementById('offline-form-stable-anchor');
+                  anvil.call(stableAnchor, 'reset_ui_to_recording');
+
+                  // 3. Update the badge
+                  updateQueueBadge();
+                };
+
+                request.onerror = (event) => {
+                  console.error("Error saving to IndexedDB:", event.target.error);
+                  displayBanner("Failed to save recording to queue.", "error");
+                };
               }
 
               function getQueuedRecordings() {

@@ -280,8 +280,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     """
     print("[DEBUG] AudioManagerForm: process_recording initiated.")
 
-    auudio_blob = self.audio_playback_1.audio_blob
-    anvil_media_blob = anvil.js.to_media(auudio_blob)
+    anvil_media_blob = self.current_audio_blob
 
     if not anvil_media_blob:
       print("[ERROR] No audio blob found in the playback component.")

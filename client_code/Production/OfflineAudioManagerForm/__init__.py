@@ -13,9 +13,12 @@ import anvil.js
 class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
+    # This handler connects the RecordingWidget's 'recording_complete' event
+    # to our method for processing the new audio.
     self.recording_widget_1.set_event_handler(
-      "recording_complete", self.handle_offline_recording
+      "recording_complete", self.handle_recording_complete
     )
+    # This will hold the stable Anvil Media Object of the recording.
     self.current_audio_blob = None
     self.add_event_handler("show", self.form_show)
 
@@ -24,46 +27,56 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
     self.reset_ui_to_recording()
     self.call_js("initializeDBAndQueue")
 
-  def handle_offline_recording(self, audio_blob, **event_args):
+  def handle_recording_complete(self, audio_blob, **event_args):
     """
-    Called when the widget has a recording. Transitions UI to decision state.
-    This is the critical point where we stabilize the blob.
+    This function is triggered when the RecordingWidget has a complete recording.
+    It mirrors the workflow of the online AudioManagerForm by:
+      1. Stabilizing the audio blob into a durable Anvil Media Object.
+      2. Making the AudioPlayback component visible.
+      3. Setting the blob on the playback component to enable listening.
+      4. Showing the decision buttons ('Queue'/'Discard').
     """
-    print("Offline Form: Received audio from widget. Showing playback.")
+    print(
+      "Offline Form: Received audio from widget. Transitioning to playback/decision state."
+    )
 
-    # Stabilize the blob immediately by converting it to an Anvil Media Object.
-    # This is for long-term storage (e.g., sending to the queue).
+    # 1. Stabilize the blob immediately by converting it to an Anvil Media Object.
+    # This is crucial for reliable storage and passing the data to the server or queue.
     self.current_audio_blob = anvil.js.to_media(audio_blob)
 
-    # --- KEY CHANGE: Make the component visible BEFORE setting the blob ---
-    # This ensures the component's DOM elements are available for the JS call.
+    # 2. Update the UI: Hide the recorder and show the player.
+    # It is important to make the player component visible *before* setting its
+    # audio_blob property to ensure its HTML elements are in the DOM.
     self.recording_widget_1.visible = False
     self.audio_playback_1.visible = True
 
-    # Now, set the audio_blob property. The setter in the AudioPlayback component
-    # will call the necessary JavaScript to set up the player.
-    # We pass the original JS blob proxy, which is what URL.createObjectURL needs.
+    # 3. Set the audio_blob property on the AudioPlayback component.
+    # This passes the original JavaScript blob proxy, which the component uses
+    # internally to create an object URL for the <audio> element.
     self.audio_playback_1.audio_blob = audio_blob
 
-    # Finally, show the decision buttons (Queue/Discard)
+    # 4. Show the decision buttons to the user.
     self.call_js("showDecisionButtons", True)
 
   def reset_ui_to_recording(self):
-    """Resets the UI to the initial recording state."""
+    """Resets the UI to the initial recording state, clearing any previous audio."""
+    print("Offline Form: Resetting UI to initial recording state.")
     self.current_audio_blob = None
     self.recording_widget_1.visible = True
     self.audio_playback_1.visible = False
+    # It's good practice to clear the blob property on the component as well.
     self.audio_playback_1.audio_blob = None
     self.call_js("showDecisionButtons", False)
 
   def discard_button_click(self, **event_args):
-    """Handles click on the Discard button."""
-    print("Offline Form: Discarding audio.")
+    """Handles the click on the 'Discard' button by resetting the UI."""
     self.reset_ui_to_recording()
 
   def queue_button_click(self, **event_args):
-    """Handles click on 'Put in Queue'. Opens the modal to ask for a title."""
-    # We now check for the stable Anvil Media Object.
+    """
+    Handles the click on the 'Put in Queue' button.
+    It checks for a valid recording and opens a modal for the user to name it.
+    """
     if self.current_audio_blob:
       self.call_js("openTitleModalForQueueing")
     else:
@@ -71,17 +84,17 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
 
   def save_to_queue_with_title(self, title, **event_args):
     """
-    Called from JS after the user enters a title.
-    Saves the audio blob and metadata to the IndexedDB queue.
+    Called from JavaScript after the user enters a title in the modal.
+    Saves the stabilized audio blob and metadata to the IndexedDB queue.
     """
-    # Check for the stored Anvil Media Object.
+    # Use the stabilized Anvil Media Object for saving.
     if not self.current_audio_blob:
       self.call_js("displayBanner", "Error: No audio data to save.", "error")
       return
 
     print(f"Offline Form: Queuing recording with title: {title}")
 
-    # Create metadata for the recording
+    # Create metadata for the recording.
     metadata = {
       "id": f"rec_{int(time.time())}_{uuid.uuid4().hex[:6]}",
       "timestamp": time.time(),
@@ -89,12 +102,11 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
       "title": title or "Untitled Recording",
     }
 
-    # Call the JS function to store the data in IndexedDB.
-    # We now pass the stable Anvil Media Object. Anvil's JS library
-    # can correctly handle this object and convert it back to a Blob for IndexedDB.
-    self.call_js("storeAudioInQueue", self.current_audio_blob, metadata)
+    # Call the JavaScript function to store the Anvil Media Object and metadata.
+    # Anvil's framework handles the conversion back to a JavaScript Blob for IndexedDB.
+    self.call_js("storeAudioInQueue", self.audio_playback_1.audio_blob, metadata)
 
-    # Provide feedback and reset the UI
+    # Provide user feedback and reset the UI for the next recording.
     self.call_js(
       "displayBanner", f"'{metadata['title']}' saved to offline queue.", "success"
     )

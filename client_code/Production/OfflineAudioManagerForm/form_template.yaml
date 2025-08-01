@@ -7,10 +7,6 @@ components:
   name: audio_playback_1
   properties: {}
   type: form:Components.AudioPlayback
-- layout_properties: {slot: default}
-  name: header_nav_1
-  properties: {active_tab: Production}
-  type: form:Components.HeaderNav
 container:
   properties:
     html: |-

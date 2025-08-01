@@ -65,6 +65,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     # When displaying the form, execute form_show
     self.add_event_handler("show", self.form_show)
+    self.audio_playback_1.visible = False
     print("[DEBUG] __init__ completed.")
 
   def update_ui_texts(self):
@@ -219,13 +220,22 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def handle_new_recording(self, audio_blob, **event_args):
     """
     Called when the RecordingWidget completes a recording.
-    Instead of processing immediately, this now hands the audio blob
-    to a JavaScript function to set up the decision UI.
+    This now shows the AudioPlayback component.
     """
-    print("AudioManagerForm: Received audio from widget. Setting up decision UI...")
-    # Call the new JavaScript function, passing the blob directly.
-    # Anvil will automatically handle passing the media object to JS.
-    anvil.js.call_js("setupDecisionUIForRecording", audio_blob)
+    print("AudioManagerForm: Received audio from widget.")
+    self.recording_widget.visible = False
+    self.audio_playback_1.audio_blob = audio_blob
+    self.audio_playback_1.visible = True
+    # You might need to hide/show other UI elements like the decision buttons here
+    anvil.js.call_js("setAudioWorkflowState", "decision")
+
+  def clear_recording_handler(self, **event_args):
+    """Handles the x-clear-recording event from the AudioPlayback component."""
+    print("AudioManagerForm: Clearing recording.")
+    self.audio_playback_1.visible = False
+    self.audio_playback_1.audio_blob = None
+    self.recording_widget.visible = True
+    anvil.js.call_js("setAudioWorkflowState", "input")
 
   def process_recording(self, audio_blob, **event_args):
     """

@@ -16,58 +16,43 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
     self.recording_widget_1.set_event_handler(
       "recording_complete", self.handle_recording_complete
     )
-    # REMOVED: self.current_audio_blob is no longer needed in Python
+    self.audio_playback_1.set_event_handler(
+      "x_clear_recording", self.reset_ui_to_recording
+    )
     self.add_event_handler("show", self.form_show)
 
   def form_show(self, **event_args):
-    self.reset_ui_to_recording()
+    """Initializes the UI and the offline database."""
+    self.call_js("setAudioWorkflowState", "input")
     self.call_js("initializeDBAndQueue")
 
   def handle_recording_complete(self, audio_blob, **event_args):
     """
-    MODIFIED: This function now tells JavaScript to store the original blob.
+    Shows the AudioPlayback component and moves the UI to the decision state.
+    The blob is now reliably stored in the component's property.
     """
-    print("Offline Form: Received audio. Storing blob in JavaScript.")
-    # NEW: Store the original, cloneable blob in the global JS variable.
-    self.call_js("clientSideAudioManager.storeBlob", audio_blob)
-
-    # Update the UI as before
+    print("Offline Form: Received audio. Showing decision UI.")
     self.recording_widget_1.visible = False
     self.audio_playback_1.visible = True
     self.audio_playback_1.audio_blob = audio_blob
-    self.call_js("showDecisionButtons", True)
+    self.call_js("setAudioWorkflowState", "decision")
 
-  def reset_ui_to_recording(
-    self, **event_args
-  ):  # Add **event_args to make it callable from JS
-    """Resets the UI. This is now a utility function called by JavaScript."""
-    print("Offline Form: Resetting UI via call from JavaScript.")
-    self.call_js("clientSideAudioManager.clearBlob")
-
+  def reset_ui_to_recording(self, **event_args):
+    """Resets the UI to the initial recording state."""
+    print("Offline Form: Resetting UI to recording state.")
     self.recording_widget_1.visible = True
     self.audio_playback_1.visible = False
     self.audio_playback_1.audio_blob = None
-    self.call_js("showDecisionButtons", False)
-
-  def discard_button_click(self, **event_args):
-    self.reset_ui_to_recording()
+    self.call_js("setAudioWorkflowState", "input")
 
   def queue_button_click(self, **event_args):
+    """Opens the modal to get a title for the recording."""
     self.call_js("openTitleModalForQueueing")
 
-  def save_to_queue_with_title(self, title, **event_args):
+  def get_current_audio_blob(self):
     """
-    MODIFIED: This function now ONLY creates and sends metadata.
-    The JavaScript side handles everything else.
+    A client-side relay function that returns the current Anvil Media object
+    from the playback component, making it accessible to JavaScript just before saving.
     """
-    print(f"Offline Form: Sending metadata for title: {title}")
-
-    metadata = {
-      "id": f"rec_{int(time.time())}_{uuid.uuid4().hex[:6]}",
-      "timestamp": time.time(),
-      "status": "queued",
-      "title": title or "Untitled Recording",
-    }
-
-    # Call the JS function. It will handle the rest.
-    self.call_js("storeAudioInQueue", metadata)
+    print("Python (Offline): get_current_audio_blob called from JavaScript.")
+    return self.audio_playback_1.audio_blob

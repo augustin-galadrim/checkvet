@@ -31,9 +31,23 @@ container:
             .scrollable-content { flex: 1; padding: 20px; text-align: center; overflow-y: auto; }
             .instructions { margin: 20px 0; color: #555; }
 
-            /* Decision Buttons */
-            #offline-decision-buttons { display: none; justify-content: center; gap: 15px; margin-top: 20px; }
-            .decision-button { padding: 10px 20px; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; font-size: 14px; font-weight: bold; }
+            /* NEW: Copied from AudioManagerForm */
+            #audioDecisionContainer {
+              display: none;
+              padding: 10px 0;
+              display: flex;
+              justify-content: center;
+              gap: 15px;
+              margin-top: 15px;
+            }
+            .decision-button {
+              padding: 10px 20px;
+              border-radius: 4px;
+              border: 1px solid #ddd;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: bold;
+            }
             .btn-discard { background-color: #f44336; color: white; border-color: #f44336; }
             .btn-queue { background-color: #4CAF50; color: white; border-color: #4CAF50; }
 
@@ -66,7 +80,7 @@ container:
           </style>
         </head>
         <body>
-          <div class="container"  id="offline-form-stable-anchor">
+          <div class="container" id="offline-form-stable-anchor">
             <div class="fixed-section">
               <div class="actions-row">
                 <button class="queue-button" id="viewQueueBtn">
@@ -80,12 +94,18 @@ container:
             <div class="scrollable-content">
               <h2>Offline Recorder</h2>
               <p class="instructions">Record your audio. It will be saved to your device's queue.</p>
-              <div anvil-slot="recorder_slot"></div>
-              <div anvil-slot="playback_slot"></div>
-              <div id="offline-decision-buttons">
+
+              <!-- REFACTORED: Copied structure from AudioManagerForm -->
+              <div id="audioInputContainer">
+                <div anvil-slot="recorder_slot"></div>
+              </div>
+
+              <div id="audioDecisionContainer">
+                <div anvil-slot="playback_slot"></div>
                 <button id="discard-audio-btn" class="decision-button btn-discard">Discard</button>
                 <button id="queue-audio-btn" class="decision-button btn-queue">Put in Queue</button>
               </div>
+
             </div>
           </div>
 
@@ -125,27 +145,6 @@ container:
             if (!window.__offline_form_globals) {
               window.__offline_form_globals = true;
 
-              window.clientSideAudioManager = {
-                _currentBlob: null,
-
-                // Called by Python to store the blob immediately after recording.
-                storeBlob: function(blob) {
-                  console.log("ClientSideManager: Storing blob of size:", blob ? blob.size : 'null');
-                  this._currentBlob = blob;
-                },
-
-                // Called by our own JS functions to get the blob for saving.
-                getBlob: function() {
-                  return this._currentBlob;
-                },
-
-                // Called by Python to clear the blob when the UI is reset.
-                clearBlob: function() {
-                  console.log("ClientSideManager: Clearing stored blob.");
-                  this._currentBlob = null;
-                }
-              };
-
               let db;
               // --- IndexedDB Functions ---
               function initDB() {
@@ -163,39 +162,36 @@ container:
                 });
               }
 
-              function storeAudioInQueue(metadata) {
+              // --- REFACTORED: Save function now pulls blob from Python ---
+              async function saveCurrentRecordingToQueue(title) {
                 if (!db) {
-                  displayBanner("Database not initialized.", "error");
-                  return;
+                  return displayBanner("Database not initialized.", "error");
                 }
 
-                const audioBlob = window.clientSideAudioManager.getBlob();
+                const stableAnchor = document.getElementById('offline-form-stable-anchor');
+                const audioBlob = await anvil.call(stableAnchor, 'get_current_audio_blob');
+
                 if (!audioBlob) {
-                  displayBanner("Error: No audio data to save.", "error");
-                  return;
+                  return displayBanner("Error: No audio data to save.", "error");
                 }
 
-                const transaction = db.transaction(['recordings'], 'readwrite');
-                const store = transaction.objectStore('recordings');
-                const request = store.add({ ...metadata, audioBlob: audioBlob });
+                const metadata = {
+                  id: `rec_${Date.now()}`,
+                  timestamp: Date.now(),
+                  status: "queued",
+                  title: title || "Untitled Recording",
+                };
 
-                // THIS IS THE CRITICAL CHANGE:
-                // We now define what happens on success and on error.
+                const request = db.transaction(['recordings'], 'readwrite')
+                  .objectStore('recordings')
+                  .add({ ...metadata, audioBlob: audioBlob });
 
                 request.onsuccess = () => {
                   console.log("Successfully saved to IndexedDB.");
-
-                  // 1. Show the success banner
                   displayBanner(`'${metadata.title}' saved to offline queue.`, "success");
-
-                  // 2. Call back to Python to reset the UI
-                  const stableAnchor = document.getElementById('offline-form-stable-anchor');
                   anvil.call(stableAnchor, 'reset_ui_to_recording');
-
-                  // 3. Update the badge
                   updateQueueBadge();
                 };
-
                 request.onerror = (event) => {
                   console.error("Error saving to IndexedDB:", event.target.error);
                   displayBanner("Failed to save recording to queue.", "error");
@@ -222,32 +218,26 @@ container:
               async function updateQueueBadge() {
                 const queue = await getQueuedRecordings();
                 const badge = document.getElementById('queueBadge');
-                if (queue.length > 0) {
-                  badge.textContent = queue.length;
-                  badge.style.display = 'inline-block';
-                } else {
-                  badge.style.display = 'none';
-                }
+                badge.style.display = queue.length > 0 ? 'inline-block' : 'none';
+                badge.textContent = queue.length;
               }
-
               async function renderQueue() {
                 const queue = await getQueuedRecordings();
                 const container = document.getElementById('queueListContainer');
                 container.innerHTML = queue.length === 0 ? '<p>No recordings in queue.</p>' : '';
-
                 queue.forEach(item => {
                   const div = document.createElement('div');
                   div.className = 'queue-item';
                   div.innerHTML = `
-                              <div>
-                                <div class="queue-item-title">${item.title}</div>
-                                <div class="queue-item-status">Status: <strong>${item.status}</strong></div>
-                              </div>
-                              <div class="queue-item-actions">
-                                <button class="button" disabled title="Import is only available in online mode">Import</button>
-                                <button class="button delete-btn" data-id="${item.id}">Delete</button>
-                              </div>
-                            `;
+                                    <div>
+                                      <div class="queue-item-title">${item.title}</div>
+                                      <div class="queue-item-status">Status: <strong>${item.status}</strong></div>
+                                    </div>
+                                    <div class="queue-item-actions">
+                                      <button class="button" disabled title="Import is only available in online mode">Import</button>
+                                      <button class="button delete-btn" data-id="${item.id}">Delete</button>
+                                    </div>
+                                  `;
                   container.appendChild(div);
                 });
                 document.getElementById('queueModal').style.display = 'flex';
@@ -262,8 +252,19 @@ container:
                 setTimeout(() => banner.remove(), 3000);
               };
 
-              window.showDecisionButtons = (show) => {
-                document.getElementById('offline-decision-buttons').style.display = show ? 'flex' : 'none';
+              // NEW: UI State Manager (from AudioManagerForm)
+              window.setAudioWorkflowState = (state) => {
+                console.log(`Setting audio workflow state to: ${state}`);
+                const inputContainer = document.getElementById('audioInputContainer');
+                const decisionContainer = document.getElementById('audioDecisionContainer');
+
+                if (state === 'decision') {
+                  if(inputContainer) inputContainer.style.display = 'none';
+                  if(decisionContainer) decisionContainer.style.display = 'flex';
+                } else { // 'input' state
+                  if(inputContainer) inputContainer.style.display = 'block';
+                  if(decisionContainer) decisionContainer.style.display = 'none';
+                }
               };
 
               window.openTitleModalForQueueing = () => {
@@ -278,25 +279,31 @@ container:
 
               // --- Event Listeners ---
               function attachOfflineEvents() {
-                const stableAnchor = document.querySelector('.container'); // <-- CORRECTED ANCHOR
+                const stableAnchor = document.getElementById('offline-form-stable-anchor');
 
-                // Header buttons
-                document.getElementById('viewQueueBtn').addEventListener('click', renderQueue);
-                document.getElementById('closeQueueModalBtn').addEventListener('click', () => document.getElementById('queueModal').style.display = 'none');
+                const reattach = (id, event, handler) => {
+                  const el = document.getElementById(id);
+                  if(el) {
+                    const newEl = el.cloneNode(true);
+                    el.parentNode.replaceChild(newEl, el);
+                    newEl.addEventListener(event, handler);
+                  }
+                };
 
-                // Decision buttons
-                document.getElementById('discard-audio-btn').addEventListener('click', () => anvil.call(stableAnchor, 'discard_button_click'));
-                document.getElementById('queue-audio-btn').addEventListener('click', () => anvil.call(stableAnchor, 'queue_button_click'));
+                reattach('viewQueueBtn', 'click', renderQueue);
+                reattach('closeQueueModalBtn', 'click', () => document.getElementById('queueModal').style.display = 'none');
 
-                // Title modal buttons
-                document.getElementById('cancelTitleBtn').addEventListener('click', () => document.getElementById('titleModal').style.display = 'none');
-                document.getElementById('confirmTitleBtn').addEventListener('click', () => {
+                reattach('discard-audio-btn', 'click', () => anvil.call(stableAnchor, 'reset_ui_to_recording'));
+                reattach('queue-audio-btn', 'click', () => anvil.call(stableAnchor, 'queue_button_click'));
+
+                // REFACTORED: Title modal button now calls the async JS function
+                reattach('cancelTitleBtn', 'click', () => document.getElementById('titleModal').style.display = 'none');
+                reattach('confirmTitleBtn', 'click', () => {
                   const title = document.getElementById('recordingTitle').value;
-                  anvil.call(stableAnchor, 'save_to_queue_with_title', title);
+                  saveCurrentRecordingToQueue(title);
                   document.getElementById('titleModal').style.display = 'none';
                 });
 
-                // Queue item delete buttons (event delegation)
                 document.getElementById('queueListContainer').addEventListener('click', (e) => {
                   if (e.target.classList.contains('delete-btn')) {
                     const id = e.target.dataset.id;
@@ -306,7 +313,6 @@ container:
                   }
                 });
 
-                // Clock
                 const timeElem = document.getElementById('timeDisplay');
                 const updateTime = () => {
                   const now = new Date();

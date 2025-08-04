@@ -3,3 +3,4 @@ openai
 PyPDF2
 weasyprint
 Markdown
+uuid

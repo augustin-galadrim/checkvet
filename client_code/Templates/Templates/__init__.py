@@ -7,6 +7,7 @@ import anvil.tables.query as q
 from anvil.tables import app_tables
 import base64
 
+
 class Templates(TemplatesTemplate):
   def __init__(self, **properties):
     print("Initialisation du formulaire Templates...")
@@ -32,25 +33,6 @@ class Templates(TemplatesTemplate):
     except Exception as e:
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
-
-  # ----------------------
-  # Méthodes de navigation
-  # ----------------------
-  def open_production_form(self, **event_args):
-    """Ouvrir le formulaire AudioManager depuis l'onglet 'Production'."""
-    open_form("Production.AudioManagerForm")
-
-  def open_archives_form(self, **event_args):
-    """Ouvrir le formulaire Archives depuis l'onglet 'Archives'."""
-    current_user = anvil.users.get_user()
-    if current_user['supervisor']:
-      open_form("Archives.ArchivesSecretariat")
-    else:
-      open_form("Archives.Archives")
-
-  def open_settings_form(self, **event_args):
-    """Ouvrir le formulaire Settings depuis l'onglet 'Paramètres'."""
-    open_form("Settings.Settings")
 
   def open_create_form(self, **event_args):
     """
@@ -88,7 +70,9 @@ class Templates(TemplatesTemplate):
         alert(f"Template avec ID {template_id} introuvable.")
         return
 
-      print(f"Ouverture de l'éditeur de template pour éditer: {found_template['template_name']}")
+      print(
+        f"Ouverture de l'éditeur de template pour éditer: {found_template['template_name']}"
+      )
       open_form("Templates.TemplateEditor", template=found_template)
     else:
       # Mode création
@@ -117,7 +101,9 @@ class Templates(TemplatesTemplate):
 
     # 1) Convertir la chaîne Base64 en BlobMedia PDF
     pdf_bytes = base64.b64decode(base64_pdf)
-    pdf_file = anvil.BlobMedia(content_type="application/pdf", content=pdf_bytes, name="uploaded.pdf")
+    pdf_file = anvil.BlobMedia(
+      content_type="application/pdf", content=pdf_bytes, name="uploaded.pdf"
+    )
 
     # 2) Définir les prompts
     first_prompt = """
@@ -219,7 +205,9 @@ Voici trois exemples de sections qui pourraient être demandées dans le *system
       print("Résultat du premier traitement (tronqué) :", initial_result[:100])
 
       # Retraiter avec le second prompt
-      final_result = anvil.server.call("reprocess_output_with_prompt", initial_result, second_prompt)
+      final_result = anvil.server.call(
+        "reprocess_output_with_prompt", initial_result, second_prompt
+      )
 
       # 3) Enregistrer le résultat final dans la base de données
       anvil.server.call("store_final_output_in_db", final_result, template_name)

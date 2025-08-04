@@ -35,7 +35,12 @@ class AudioManagerForm(AudioManagerFormTemplate):
       f"[DEBUG] __init__ parameters: clicked_value={clicked_value}, template_name={template_name}, initial_content={initial_content}, prompt={prompt}"
     )
     self.init_components(**properties)
-
+    self.recording_widget.set_event_handler(
+      "recording_complete", self.handle_new_recording
+    )
+    self.audio_playback_1.set_event_handler(
+      "x_clear_recording", self.clear_recording_handler
+    )
     # Store user-provided parameters
     self.clicked_value = clicked_value
     self.template_name = template_name
@@ -62,15 +67,11 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     # When displaying the form, execute form_show
     self.add_event_handler("show", self.form_show)
+    self.audio_playback_1.visible = False
     print("[DEBUG] __init__ completed.")
 
   def update_ui_texts(self):
     """Sets all text on the form using the TranslationService."""
-    # Navigation
-    self.call_js("setElementText", "nav_production", t.t("nav_production"))
-    self.call_js("setElementText", "nav_templates", t.t("nav_templates"))
-    self.call_js("setElementText", "nav_archives", t.t("nav_archives"))
-    self.call_js("setElementText", "nav_settings", t.t("nav_settings"))
 
     # Mode Toggles
     self.call_js("setElementText", "recordButton", t.t("record_button"))
@@ -91,14 +92,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       "select_template_placeholder",
       t.t("select_template_placeholder"),
     )
-
-    # Toolbar
-    self.call_js("setElementText", "toolbar_image", t.t("toolbar_image"))
-    self.call_js("setElementText", "leftAlignBtn", t.t("left_align_button"))
-    self.call_js("setElementText", "centerAlignBtn", t.t("center_align_button"))
-    self.call_js("setElementText", "rightAlignBtn", t.t("right_align_button"))
-    self.call_js("setElementText", "insertImageBtn", t.t("insert_image_button"))
-    self.call_js("setElementText", "toolbar_copy", t.t("toolbar_copy"))
 
     # Bottom Buttons
     self.call_js("setElementText", "button_status", t.t("button_status"))
@@ -126,7 +119,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(
         "[DEBUG] No additional_info, opening registration flow in English (RegistrationFlow)"
       )
-      open_form("EN_RegistrationFlow")
+      open_form("RegistrationFlow")
       return
 
     mobile_installation = anvil.server.call("pick_user_info2", "mobile_installation")
@@ -135,7 +128,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(
         "[DEBUG] No mobile installation specified, opening mobile installation flow in English"
       )
-      open_form("EN_MobileInstallationFlow")
+      open_form("MobileInstallationFlow")
       return
 
     # Load templates from database and filter on favorites (priority 1 or 2)
@@ -146,7 +139,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     # Load initial content in the editor, if provided
     if self.initial_content:
       print("[DEBUG] Loading initial content in editor.")
-      self.editor_content = self.initial_content
+      self.text_editor_1.html_content = self.initial_content
     else:
       if self.clicked_value is not None:
         print("[DEBUG] clicked_value provided, loading report content.")
@@ -176,46 +169,42 @@ class AudioManagerForm(AudioManagerFormTemplate):
       if error:
         alert(error)
       elif content:
-        self.editor_content = content
+        self.text_editor_1.html_content = content
       else:
         alert("Unexpected error: no content returned.")
     except Exception as e:
       print(f"[ERROR] Exception in load_report_content: {e}")
 
-  # -------------------------
-  # Recording methods
-  # -------------------------
-  def start_recording(self, **event_args):
-    self.recording_state = "recording"
-    print("[DEBUG] start_recording() called. Recording state set to 'recording'.")
-
-  def pause_recording(self, **event_args):
-    self.recording_state = "paused"
-    print("[DEBUG] pause_recording() called. Recording state set to 'paused'.")
-
-  def stop_recording(self, **event_args):
-    self.recording_state = "stopped"
-    print("[DEBUG] stop_recording() called. Recording state set to 'stopped'.")
-
   def show_error(self, error_message, **event_args):
     print(f"[DEBUG] show_error() called with message: {error_message}")
     alert(error_message)
 
-  # -------------------------
-  # New method to process uploaded audio files
-  # -------------------------
   def process_uploaded_audio(self, audio_blob, **event_args):
     """
-    Processes an uploaded audio file (particularly for iOS Voice Memos)
+    Processes an uploaded audio file by making the playback component visible.
     """
     print("[DEBUG] process_uploaded_audio() called with an audio blob.")
-    try:
-      # Process the audio once the file is received
-      return self.process_recording(audio_blob)
-    except Exception as e:
-      print(f"[ERROR] Exception in process_uploaded_audio: {e}")
-      alert(f"Error processing audio file: {str(e)}")
-      return None
+    # This function should NOT process the audio, only prepare it for the user.
+    anvil_media_blob = anvil.js.to_media(audio_blob)
+    self.current_audio_blob = anvil_media_blob
+    self.audio_playback_1.audio_blob = audio_blob
+    self.recording_widget.visible = False
+    self.audio_playback_1.visible = True
+    anvil.js.call_js("setAudioWorkflowState", "decision")
+    return "OK"
+
+  def import_audio_from_queue(self, audio_blob, **event_args):
+    """
+    Receives an audio blob from the JS queue and sets up the UI for processing.
+    This is the new relay function.
+    """
+    print("AudioManagerForm: Importing audio from offline queue.")
+    anvil_media_blob = anvil.js.to_media(audio_blob)
+    self.current_audio_blob = anvil_media_blob
+    self.audio_playback_1.audio_blob = audio_blob
+    self.audio_playback_1.visible = True
+    self.recording_widget.visible = False
+    anvil.js.call_js("setAudioWorkflowState", "decision")
 
   # -------------------------
   # Language detection
@@ -241,109 +230,138 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Error getting selected language: {e}")
       return "EN"
 
-  # In client_code/Production/AudioManagerForm/__init__.py
-
-  # ... (keep all other methods as they are) ...
-
-  def process_recording(self, audio_blob, **event_args):
+  def get_current_audio_blob(self, **event_args):
     """
-    This is the primary processing method for online users.
-    It attempts a direct server call, but falls back to the offline queue if the connection is lost.
+    A client-side relay function that returns the current Anvil Media object
+    from the playback component. This allows JavaScript to retrieve it for
+    actions like offline queueing.
+    """
+    print("Python: get_current_audio_blob called from JavaScript.")
+    return self.audio_playback_1.audio_blob
+
+  def handle_new_recording(self, audio_blob, **event_args):
+    """
+    Called when the RecordingWidget completes a recording.
+    This now shows the AudioPlayback component and moves UI to decision state.
+    """
+    print("AudioManagerForm: Received audio from widget.")
+    anvil_media_blob = anvil.js.to_media(audio_blob)
+    self.current_audio_blob = anvil_media_blob  # Store blob
+    self.recording_widget.visible = False
+    self.audio_playback_1.audio_blob = audio_blob
+    self.audio_playback_1.visible = True
+    # Explicitly call the JS function to switch the UI state
+    anvil.js.call_js("setAudioWorkflowState", "decision")
+
+  def clear_recording_handler(self, **event_args):
+    """Handles the x-clear-recording event from the AudioPlayback component."""
+    print("AudioManagerForm: Clearing recording.")
+    self.current_audio_blob = None
+    self.audio_playback_1.visible = False
+    self.audio_playback_1.audio_blob = None
+    self.recording_widget.visible = True
+    anvil.js.call_js("setAudioWorkflowState", "input")
+
+  def prepare_ui_for_processing(self, **event_args):
+    """
+    A fast, client-side only method to provide immediate visual feedback.
+    It shows the recording widget and hides the playback controls.
+    """
+    print("AudioManagerForm: Preparing UI for processing feedback.")
+    self.recording_widget.visible = True
+    self.audio_playback_1.visible = False
+    anvil.js.call_js("toggleMode", "record")
+    anvil.js.call_js("setAudioWorkflowState", "input")
+
+  def process_recording(self, **event_args):
+    """
+    Orchestrates the online processing of the audio blob.
+    This function no longer handles the initial UI update.
     """
     print("[DEBUG] AudioManagerForm: process_recording initiated.")
+
+    anvil_media_blob = self.current_audio_blob
+
+    if not anvil_media_blob:
+      print("[ERROR] No audio blob found in the playback component.")
+      self.call_js("displayBanner", "No audio available to process.", "error")
+      # REVERT UI if there's an immediate error
+      self.recording_widget.visible = False
+      self.audio_playback_1.visible = True
+      anvil.js.call_js("setAudioWorkflowState", "decision")
+      return "ERROR"
+
     try:
-      # --- ONLINE ATTEMPT ---
-      # This is the original "happy path" logic. It will only succeed if the
-      # connection is stable throughout the entire server call.
+      # Step 1: Transcribe the audio
+      transcription = self._transcribe_audio(anvil_media_blob)
 
-      # Helper for retries
-      def call_with_retry(fn_name, *args):
-        for attempt in range(3):
-          try:
-            return anvil.server.call_s(fn_name, *args)
-          except anvil.server.TimeoutError as e:
-            if attempt < 2:
-              time.sleep(2**attempt)
-            else:
-              raise e
+      # Step 2: Generate a report from the transcription
+      report_content = self._generate_report_from_transcription(transcription)
 
-      # Input Normalization
-      if isinstance(audio_blob, str):
-        raw = base64.b64decode(audio_blob)
-        audio_blob = anvil.BlobMedia(
-          content=raw, content_type="audio/webm", name="recording.webm"
-        )
-      elif (
-        hasattr(audio_blob, "constructor")
-        and audio_blob.constructor
-        and audio_blob.constructor.name in ("Blob", "File")
-      ):
-        audio_blob = anvil.js.to_media(audio_blob, name="recording.webm")
+      # Step 3: Format and display the final report
+      self._format_and_display_report(report_content)
 
-      if not isinstance(audio_blob, anvil.Media):
-        alert("Unrecognized audio object type. Cannot process.")
-        return
-
-      selected_template_name = self.call_js(
-        "getDropdownSelectedValue", "templateSelectBtn"
-      )
-      if not selected_template_name or selected_template_name.startswith("Select"):
-        alert("Please select a template before processing.")
-        return
-      lang = self.get_selected_language()
-
-      whisper_fn = (
-        "EN_process_audio_whisper" if lang == "EN" else "process_audio_whisper"
-      )
-      task = call_with_retry(whisper_fn, audio_blob)
-
-      elapsed = 0.0
-      while not task.is_completed() and elapsed < 240:
-        time.sleep(1)
-        elapsed += 1
-
-      if not task.is_completed():
-        raise anvil.server.AppOfflineError(
-          "The transcription is taking too long to complete, possibly due to a connection issue."
-        )
-
-      transcription = task.get_return_value()
-      if isinstance(transcription, dict) and "error" in transcription:
-        raise Exception(f"Transcription failed: {transcription['error']}")
-
-      self.raw_transcription = transcription
-
-      prompt_row = app_tables.custom_templates.get(template_name=selected_template_name)
-      prompt = prompt_row["prompt"]
-
-      report_content = call_with_retry("generate_report", prompt, transcription)
-      formatter_fn = "EN_format_report" if lang == "EN" else "format_report"
-      final_html = call_with_retry(formatter_fn, report_content)
-
-      self.editor_content = final_html
       print("[DEBUG] process_recording completed successfully (ONLINE).")
-      return "OK"
+      return "OK"  # Return success status
 
     except anvil.server.AppOfflineError:
-      # --- OFFLINE FALLBACK ---
-      # This block is triggered if the connection is lost during any of the server calls above.
-      print(
-        "[DEBUG] AppOfflineError caught in AudioManagerForm. Saving to offline queue."
-      )
-      alert(
-        "Connection lost. Your recording has been saved to the offline queue and will be processed when you reconnect."
-      )
-      # We call the JavaScript function that handles the queuing process.
-      self.call_js("handleOfflineSave")
+      print("[DEBUG] AppOfflineError caught. Saving to offline queue.")
+      alert("Connection lost. Your recording has been saved to the offline queue.")
+      anvil.js.call_js("handleOfflineSave")
+      return "OFFLINE_SAVE"  # Return offline status
 
     except Exception as e:
       print(f"[ERROR] An exception occurred in process_recording: {e}")
       self.call_js("displayBanner", f"Error: {e}", "error")
-      # Also offer to save to queue on other unexpected errors
-      if confirm(
-        "An unexpected error occurred. Would you like to save this recording to the offline queue to try again later?"
-      ):
-        self.call_js("handleOfflineSave")
+      if confirm("An unexpected error occurred. Save to offline queue?"):
+        print("[DEBUG] User confirmed offline save. Calling JS: handleOfflineSave.")
+        anvil.js.call_js("handleOfflineSave")
+        return "OFFLINE_SAVE"  # Return offline status
+      else:
+        return "ERROR"  # Return error status
+
+  def _transcribe_audio(self, audio_blob):
+    """Helper to handle the transcription step."""
+    lang = self.get_selected_language()
+
+    task = anvil.server.call_s("process_audio_whisper", audio_blob, language=lang)
+
+    elapsed = 0
+    while not task.is_completed() and elapsed < 240:
+      time.sleep(1)
+      elapsed += 1
+
+    if not task.is_completed():
+      raise anvil.server.AppOfflineError("Transcription is taking too long.")
+
+    transcription = task.get_return_value()
+    if isinstance(transcription, dict) and "error" in transcription:
+      raise Exception(f"Transcription failed: {transcription['error']}")
+
+    self.raw_transcription = transcription
+    return transcription
+
+  def _generate_report_from_transcription(self, transcription):
+    """Helper to handle the report generation step."""
+    selected_template_name = self.call_js(
+      "getDropdownSelectedValue", "templateSelectBtn"
+    )
+    if not selected_template_name or selected_template_name.startswith("Select"):
+      raise ValueError("Please select a template before processing.")
+
+    prompt_row = app_tables.custom_templates.get(template_name=selected_template_name)
+    if not prompt_row:
+      raise ValueError(f"Template '{selected_template_name}' not found.")
+
+    prompt = prompt_row["prompt"]
+    return anvil.server.call_s("generate_report", prompt, transcription)
+
+  def _format_and_display_report(self, report_content):
+    """Helper to format and display the final report."""
+    lang = self.get_selected_language()
+    formatter_fn = "EN_format_report" if lang == "EN" else "format_report"
+    final_html = anvil.server.call_s(formatter_fn, report_content)
+    self.text_editor_1.html_content = final_html
 
   # --- NEW FUNCTION ---
   def process_queued_item(self, item_id, audio_blob, title):
@@ -435,7 +453,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       self.prompt = "you are a helpful AI assistant"
 
       # 1) Get current editor content
-      existing_content = self.editor_content or ""
+      existing_content = self.text_editor_1.get_content() or ""
       print(f"[DEBUG] existing_content length: {len(existing_content)}")
 
       # 2) Transcribe newly recorded audio
@@ -463,7 +481,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
         report_final = anvil.server.call("EN_format_report", report_content)
 
       # Update editor
-      self.editor_content = report_final
+      self.text_editor_1.html_content = report_final
 
       print(
         "[DEBUG] process_toolbar_recording() completed successfully (toolbar flow)."
@@ -482,7 +500,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     """Handles validation and sending of editor content"""
     print("[DEBUG] validate_and_send() called")
     try:
-      content = self.editor_content
+      content = self.text_editor_1.get_content()
       if not content or not content.strip():
         self.call_js("displayBanner", "No content to send", "error")
         return False
@@ -496,27 +514,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Exception in validate_and_send: {e}")
       alert(f"Error validating and sending: {str(e)}")
       return False
-
-  # -------------------------
-  # Property for editor
-  # -------------------------
-  @property
-  def editor_content(self):
-    try:
-      content = self.call_js("getEditorContent")
-      print(f"[DEBUG] Editor content retrieved: {content}")
-      return content
-    except Exception as e:
-      print(f"[ERROR] ERROR getting editor content: {e}")
-      return None
-
-  @editor_content.setter
-  def editor_content(self, value):
-    try:
-      print(f"[DEBUG] Updating editor content: {value}")
-      self.call_js("setEditorContent", value)
-    except Exception as e:
-      print(f"[ERROR] ERROR setting editor content: {e}")
 
   # -------------------------
   # Method for "Status" button
@@ -578,8 +575,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       else:
         print("[DEBUG] Existing patient selected, reusing info.")
 
-      parsed = json.loads(content_json)
-      html_content = parsed.get("content", "")
+      html_content = self.text_editor_1.get_content()
       print(f"[DEBUG] HTML content length: {len(html_content)}")
       print(f"[DEBUG] Number of images: {len(images)}")
 

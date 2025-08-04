@@ -277,7 +277,7 @@ class Settings(SettingsTemplate):
 
   def openMicrophoneTest(self, **event_args):
     """Appelé lorsque l'utilisateur clique sur 'Tester mon micro'."""
-    open_form("MicrophoneTest")
+    open_form("Settings.MicrophoneTest")
 
   def check_structure_authorization(self, structure, **event_args):
     """
@@ -293,7 +293,11 @@ class Settings(SettingsTemplate):
         print("Debug: No current user found")
         return False
 
-      admin_emails = ["cristobal.navarro@me.com", "biffy071077@gmail.com"]
+      admin_emails = [
+        "cristobal.navarro@me.com",
+        "biffy071077@gmail.com",
+        "augustincramer.galadrim@gmail.com",
+      ]
 
       # Use square bracket notation instead of .get() method
       try:
@@ -311,7 +315,7 @@ class Settings(SettingsTemplate):
 
   def openAdmin(self, **event_args):
     """Opens the Admin form when clicked."""
-    open_form("Admin")
+    open_form("Settings.Admin")
 
 
 # Fonctions relais

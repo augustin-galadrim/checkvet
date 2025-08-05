@@ -189,13 +189,12 @@ class Settings(SettingsTemplate):
 
   def submit_click(self, **event_args):
     """
-    Appelé lorsque l'utilisateur clique sur "Mettre à jour les paramètres".
-    """
+      Called when the user clicks "Update Settings". It now saves the data,
+      shows a success message, and reloads the form data to reflect changes.
+      """
     try:
-      print(
-        "Debug: Bouton de soumission cliqué. Récupération des données du formulaire..."
-      )
-
+      print("Debug: Submit button clicked. Gathering form data...")
+  
       form_data = {
         "name": self.call_js("getValueById", "name"),
         "phone": self.call_js("getValueById", "phone"),
@@ -203,52 +202,54 @@ class Settings(SettingsTemplate):
         "supervisor": self.call_js("getCheckedById", "supervisor"),
         "favorite_language": self.call_js("getValueById", "favorite-language"),
       }
-
-      # Récupérer les données de fichier pour chaque champ si un fichier a été sélectionné
+  
+      # Handle file data for each field if a file was selected
       signature_file = self.get_file_data("signature")
       if signature_file:
         form_data["signature_image"] = signature_file
-
+  
       report_header_file = self.get_file_data("report-header")
       if report_header_file:
         form_data["report_header_image"] = report_header_file
-
+  
       report_footer_file = self.get_file_data("report-footer")
       if report_footer_file:
         form_data["report_footer_image"] = report_footer_file
-
-      print(f"Debug: Données du formulaire récupérées : {form_data}")
-
-      # Appeler le serveur pour mettre à jour l'enregistrement de l'utilisateur
+  
+      print(f"Debug: Form data gathered: {form_data}")
+  
+      # Call the server to update the user record
       try:
         success = anvil.server.call("write_user", **form_data)
       except anvil.server.SessionExpiredError:
         anvil.server.reset_session()
         success = anvil.server.call("write_user", **form_data)
-
-      print(f"Debug: Réponse du serveur pour la mise à jour : {success}")
-
+  
+      print(f"Debug: Server response for update: {success}")
+  
       if success:
         self.call_js(
           "displayBanner",
-          "Les paramètres du vétérinaire ont été mis à jour avec succès !",
+          "Vet settings updated successfully!",
           "success",
         )
-        open_form("StartupForm")
+        # Reload the form data to show the saved changes
+        self.load_vet_data()
       else:
-        alert(
-          "Échec de la mise à jour des paramètres du vétérinaire. Veuillez réessayer."
-        )
+        alert("Failed to update vet settings. Please try again.")
     except Exception as e:
-      print(f"Debug: Erreur lors de la soumission : {str(e)}")
-      alert(f"Une erreur est survenue lors de la soumission : {str(e)}")
+      print(f"Debug: Error during submission: {str(e)}")
+      alert(f"An error occurred during submission: {str(e)}")
 
   def cancel_click(self, **event_args):
     """
-    Appelé lorsque l'utilisateur clique sur "Annuler".
+    Called when the user clicks "Cancel". It now reloads the vet data
+    from the server, effectively discarding any changes.
     """
-    open_form("Production.AudioManagerForm")
-
+    print("Debug: Cancel button clicked. Reverting changes.")
+    self.load_vet_data()
+    self.call_js("displayBanner", "Changes have been discarded.", "info")
+    
   def logout_click(self, **event_args):
     """
     Appelé lorsque l'utilisateur clique sur "Déconnexion".

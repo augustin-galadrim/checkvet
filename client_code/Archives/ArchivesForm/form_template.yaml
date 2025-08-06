@@ -55,12 +55,43 @@ container:
             .trash-icon:hover svg { fill: #c00; }
 
             /* Status filter bar styles */
-            .status-nav { display: flex; align-items: center; background-color: white; border: 1px solid #e0e0e0; border-radius: 25px; padding: 5px; width: fit-content; }
-            .status-option { display: flex; align-items: center; padding: 8px 16px; gap: 8px; color: #666; cursor: pointer; text-decoration: none; font-family: system-ui, -apple-system, sans-serif; }
-            .status-option:hover { background-color: #f5f5f5; border-radius: 20px; }
-            .status-option.active { background-color: #e8f0fe; border-radius: 20px; color: #1a73e8; }
-            .icon { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; }
-
+            .status-nav {
+              display: flex;                 /* Aligne les boutons sur une ligne */
+              border: 1px solid #ddd;        /* Ajoute une bordure unifiée autour du groupe */
+              border-radius: 4px;            /* Arrondi léger, cohérent avec les autres boutons */
+              overflow: hidden;              /* Assure que les styles internes ne dépassent pas les coins arrondis */
+            }
+            .status-option {
+              display: flex;
+              align-items: center;
+              padding: 8px 16px;
+              gap: 8px;
+              color: #333;                   /* Couleur de texte légèrement plus foncée pour la lisibilité */
+              cursor: pointer;
+              text-decoration: none;
+              background-color: #f8f8f8;      /* Fond gris clair pour un aspect de bouton */
+              border-right: 1px solid #ddd;  /* Ligne de séparation entre les boutons */
+              transition: background-color 0.2s; /* Effet de survol fluide */
+            }
+            .status-option:last-child {
+              border-right: none;            /* Supprime la bordure du dernier bouton */
+            }
+            .status-option:hover {
+              background-color: #f0f0f0;      /* Changement de couleur au survol */
+            }
+            .status-option.active {
+              background-color: #fff;        /* Fond blanc pour le bouton actif */
+              color: #1a73e8;                 /* Texte en bleu pour indiquer la sélection */
+              font-weight: bold;               /* Met le texte en gras */
+              box-shadow: inset 0 -2px 0 #1a73e8; /* Ligne bleue en bas pour imiter un onglet actif */
+            }
+            .icon {
+              width: 18px;
+              height: 18px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+            }
             /* Vet filter modals */
             .vet-modal, .vet-add-modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
             .modal-content { background-color: #fff; width: 300px; margin: 100px auto; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); position: relative; }

@@ -5,6 +5,290 @@ components:
   type: form:Components.HeaderNav
 container:
   properties:
-    html: "<!DOCTYPE html>\n<html lang=\"fr\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <title>Gestion des Templates/IA</title>\n    <style>\n      /* ---------------------------\n      Global & Layout Styles\n      --------------------------- */\n      * {\n        box-sizing: border-box;\n        font-family: Arial, sans-serif;\n        margin: 0;\n        padding: 0;\n      }\n      body {\n        background-color: #f5f5f5;\n        height: 100vh;\n        overflow: hidden;\n      }\n      .container {\n        display: flex;\n        flex-direction: column;\n        height: 100vh;\n        max-width: 800px;\n        margin: 0 auto;\n        background-color: white;\n        box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n        position: relative;\n      }\n      .fixed-section {\n        background: white;\n        z-index: 10;\n      }\n      .nav-tabs {\n        display: flex;\n        width: 100%;\n        border-bottom: 1px solid #ddd;\n      }\n      .nav-tab {\n        flex: 1;\n        padding: 8px 16px;\n        cursor: pointer;\n        border: 1px solid #ccc;\n        border-bottom: none;\n        background: #f8f8f8;\n        font-size: 14px;\n        position: relative;\n        margin-right: -1px;\n        text-align: center;\n      }\n      .nav-tab.active {\n        background: #e5e5e5;\n        border-top: 1px solid #999;\n        border-left: 1px solid #999;\n        border-right: 1px solid #999;\n        border-bottom: 1px solid #e5e5e5;\n        margin-bottom: -1px;\n      }\n      .actions-row {\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        padding: 15px 20px;\n      }\n      .left-section {\n        display: flex;\n        align-items: center;\n        flex: 1;\n        justify-content: space-between;\n      }\n      /* Container for the two buttons */\n      .buttons-container {\n        display: flex;\n        gap: 10px;\n        align-items: center;\n      }\n      .create-button {\n        padding: 8px 16px;\n        background: #fff;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        cursor: pointer;\n        display: flex;\n        align-items: center;\n        gap: 5px;\n      }\n      .create-button:hover {\n        background: #f5f5f5;\n      }\n      /* Style for the new personalize button */\n      .personalize-button {\n        padding: 8px 16px;\n        background: #fff;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        cursor: pointer;\n      }\n      .personalize-button:hover {\n        background: #f5f5f5;\n      }\n      .time {\n        color: #666;\n        font-size: 14px;\n      }\n      .search-bar {\n        display: block;\n        width: calc(100% - 40px);\n        padding: 8px;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        margin: 0 20px 15px 20px;\n      }\n      .scrollable-content {\n        flex: 1;\n        overflow-y: auto;\n        padding: 20px;\n      }\n      /* ---------------------------\n      Template List Styles\n      --------------------------- */\n      .template-list {\n        list-style: none;\n        margin: 0;\n        padding: 0;\n      }\n      .template-item {\n        display: flex;\n        align-items: center;\n        justify-content: space-between;\n        padding: 12px;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        margin-bottom: 8px;\n        background: white;\n      }\n      .template-name {\n        flex-grow: 1;\n        margin-right: 10px;\n      }\n      .template-actions {\n        display: flex;\n        gap: 10px;\n        align-items: center;\n      }\n      .star-icon {\n        cursor: pointer;\n        font-size: 20px;\n      }\n      .edit-button {\n        padding: 4px 8px;\n        background: #f0f0f0;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        cursor: pointer;\n      }\n      .delete-icon {\n        color: #666;\n        cursor: pointer;\n      }\n      /* ---------------------------\n      Custom Scrollbar\n      --------------------------- */\n      .scrollable-content::-webkit-scrollbar {\n        width: 8px;\n      }\n      .scrollable-content::-webkit-scrollbar-track {\n        background: #f1f1f1;\n      }\n      .scrollable-content::-webkit-scrollbar-thumb {\n        background: #888;\n        border-radius: 4px;\n      }\n      .scrollable-content::-webkit-scrollbar-thumb:hover {\n        background: #555;\n      }\n      /* ---------------------------\n      Banner Message\n      --------------------------- */\n      .banner-message {\n        position: absolute;\n        top: 10px;\n        left: 50%;\n        transform: translateX(-50%);\n        background: #fffae6;\n        border: 1px solid #f0e68c;\n        padding: 10px 20px;\n        border-radius: 4px;\n        font-weight: bold;\n        color: #666;\n        z-index: 1000;\n        opacity: 0.95;\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"container\">\n      <!-- Ce conteneur de bannière affichera des messages temporaires -->\n      <div id=\"bannerContainer\"></div>\n\n      <!-- Section fixe : Navigation & Actions -->\n      <div class=\"fixed-section\">\n        <div anvil-slot=\"default\"></div>\n        <div class=\"actions-row\">\n          <div class=\"left-section\">\n            <div class=\"buttons-container\">\n              <button class=\"create-button\" id=\"createBtn\">+ Créer</button>\n              <button class=\"personalize-button\" id=\"personalizeBtn\">Personaliser votre IA</button>\n            </div>\n            <div class=\"time\">--:--</div>\n          </div>\n        </div>\n        <input type=\"text\" class=\"search-bar\" placeholder=\"Rechercher\">\n      </div>\n      <!-- Liste défilante des templates -->\n      <div class=\"scrollable-content\">\n        <ul class=\"template-list\" id=\"templateList\">\n          <!-- Injecté dynamiquement par JS -->\n        </ul>\n      </div>\n    </div>\n\n    <script>\n      // ------------------------------------------------------------\n      // Utilitaire : Afficher un message de bannière temporaire\n      // ------------------------------------------------------------\n      function showBanner(message) {\n        const bannerContainer = document.getElementById(\"bannerContainer\");\n        if (!bannerContainer) return;\n        const banner = document.createElement(\"div\");\n        banner.className = \"banner-message\";\n        banner.textContent = message;\n        bannerContainer.appendChild(banner);\n        setTimeout(() => {\n          bannerContainer.removeChild(banner);\n        }, 3000);\n      }\n\n      // ------------------------------------------------------------\n      // 1) Déclarations globales & fonction populateTemplates\n      // ------------------------------------------------------------\n      if (!window.__templates_globals) {\n        window.__templates_globals = true;\n\n        window.populateTemplates = function(templates) {\n          const list = document.getElementById(\"templateList\");\n          if (!list) {\n            console.log(\"populateTemplates: #templateList introuvable\");\n            return;\n          }\n          list.innerHTML = \"\";\n          templates.forEach(tpl => {\n            const li = document.createElement(\"li\");\n            li.className = \"template-item\";\n            li.dataset.id = tpl.id;\n\n            // Élément affichant le nom du template\n            const spanName = document.createElement(\"span\");\n            spanName.className = \"template-name\";\n            spanName.textContent = tpl.name || \"Untitled Template\";\n\n            // Conteneur des actions\n            const actionsDiv = document.createElement(\"div\");\n            actionsDiv.className = \"template-actions\";\n\n            // Bouton Modifier - now calls open_template_editor with the template name\n            const editBtn = document.createElement(\"button\");\n            editBtn.className = \"edit-button\";\n            editBtn.textContent = \"Modifier\";\n            editBtn.addEventListener(\"click\", (event) => {\n              // Get the template name and pass it to open_template_editor\n              const templateId = li.dataset.id;\n              console.log(\"Edit button clicked for template:\", templateId);\n              anvil.call(event.target, 'open_template_editor', templateId);\n            });\n\n            // Icône de suppression – affiche une bannière lorsqu'elle est cliquée.\n            const delIcon = document.createElement(\"span\");\n            delIcon.className = \"delete-icon\";\n            delIcon.textContent = \"🗑\";\n            delIcon.addEventListener(\"click\", (event) => {\n              // Prevent the click from bubbling up to other elements\n              event.stopPropagation(); \n              const templateId = li.dataset.id;\n              // Call the client-side Python function\n              anvil.call(event.target, 'delete_template', templateId);\n            });\n\n            actionsDiv.appendChild(editBtn);\n            actionsDiv.appendChild(delIcon);\n\n            li.appendChild(spanName);\n            li.appendChild(actionsDiv);\n            list.appendChild(li);\n          });\n        };\n      }\n\n      // ------------------------------------------------------------\n      // 3) Attacher les écouteurs d'événements pour la navigation, les boutons et la barre de recherche\n      // ------------------------------------------------------------\n      (function attachTemplatesEvents() {\n        console.log(\"TemplatesPage : Attachement des écouteurs d'événements...\");\n\n        // Onglets de navigation\n        const tabs = document.querySelectorAll('.nav-tab');\n        tabs.forEach(tab => {\n          tab.addEventListener('click', (event) => {\n            const currentActive = document.querySelector('.nav-tab.active');\n            if (currentActive) currentActive.classList.remove('active');\n            tab.classList.add('active');\n\n            const tabText = tab.getAttribute(\"data-tab\");\n            if (tabText === 'Production') {\n              anvil.call(event.target, 'open_production_form');\n            } else if (tabText === 'Archives') {\n              anvil.call(event.target, 'open_archives_form');\n            } else if (tabText === 'Paramètres') {\n              anvil.call(event.target, 'open_settings_form');\n            }\n            // Pour l'onglet Modèles/IA, nous sommes déjà sur cette page.\n          });\n        });\n\n        // Bouton Créer - now opens the template editor directly\n        const createBtn = document.getElementById('createBtn');\n        if (createBtn) {\n          createBtn.replaceWith(createBtn.cloneNode(true));\n          const newCreateBtn = document.getElementById('createBtn');\n          newCreateBtn.addEventListener('click', (event) => {\n            console.log(\"Create button clicked, opening template editor\");\n            anvil.call(event.target, 'open_template_editor');\n          });\n        }\n\n        // Bouton Personaliser votre IA – affiche une bannière lorsqu'il est cliqué\n        const personalizeBtn = document.getElementById('personalizeBtn');\n        if (personalizeBtn) {\n          personalizeBtn.replaceWith(personalizeBtn.cloneNode(true));\n          const newPersonalizeBtn = document.getElementById('personalizeBtn');\n          newPersonalizeBtn.addEventListener('click', (event) => {\n            showBanner(\"fonctionalité en cours de développement par les équipes Checkvet\");\n          });\n        }\n\n        // ------------------------------------------------------------------------\n        // Gestion de la barre de recherche pour les templates\n        // ------------------------------------------------------------------------\n        const searchInput = document.querySelector('.search-bar');\n        if (searchInput) {\n          searchInput.addEventListener('input', function(event) {\n            const query = event.target.value;\n            anvil.call(event.target, 'search_templates_client', query);\n          });\n        }\n\n        console.log(\"TemplatesPage : Écouteurs d'événements attachés.\");\n      })();\n\n      // ------------------------------------------------------------\n      // 4) Affichage de l'heure\n      // ------------------------------------------------------------\n      function updateTime() {\n        const now = new Date();\n        const hrs = now.getHours().toString().padStart(2, '0');\n        const mins = now.getMinutes().toString().padStart(2, '0');\n        document.querySelector('.time').textContent = `${hrs}h${mins}`;\n      }\n      updateTime();\n      setInterval(updateTime, 60000);\n    </script>\n    <!-- Add this simple script to your forms -->\n    <script>\n      // Initialize only once\n      if (!window.__session_handlers_initialized) {\n        window.__session_handlers_initialized = true;\n\n        // Session handler setup\n        window.setupSessionHandlers = function() {\n          // Tab visibility change\n          document.addEventListener('visibilitychange', function() {\n            if (document.visibilityState === 'visible') {\n              anvil.call(document.body, 'refresh_session_relay');\n            }\n          });\n\n          // Online status change\n          window.addEventListener('online', function() {\n            anvil.call(document.body, 'refresh_session_relay');\n          });\n        };\n      }\n    </script>\n  </body>\n</html>"
+    html: |-
+      <!DOCTYPE html>
+      <html lang="fr">
+        <head>
+          <meta charset="UTF-8" />
+          <title>Gestion des Templates/IA</title>
+          <style>
+            * {
+              box-sizing: border-box;
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              background-color: #f5f5f5;
+              height: 100vh;
+              overflow: hidden;
+            }
+            .container {
+              display: flex;
+              flex-direction: column;
+              height: 100vh;
+              max-width: 800px;
+              margin: 0 auto;
+              background-color: white;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              position: relative;
+            }
+            .fixed-section {
+              background: white;
+              z-index: 10;
+            }
+            .actions-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 15px 20px;
+            }
+            .left-section {
+              display: flex;
+              align-items: center;
+              flex: 1;
+              justify-content: space-between;
+            }
+            .buttons-container {
+              display: flex;
+              gap: 10px;
+              align-items: center;
+            }
+            .create-button {
+              padding: 8px 16px;
+              background: #fff;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 5px;
+            }
+            .create-button:hover {
+              background: #f5f5f5;
+            }
+            .personalize-button {
+              padding: 8px 16px;
+              background: #fff;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              cursor: pointer;
+            }
+            .personalize-button:hover {
+              background: #f5f5f5;
+            }
+            .time {
+              color: #666;
+              font-size: 14px;
+            }
+            .search-bar {
+              display: block;
+              width: calc(100% - 40px);
+              padding: 8px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              margin: 0 20px 15px 20px;
+            }
+            .scrollable-content {
+              flex: 1;
+              overflow-y: auto;
+              padding: 20px;
+            }
+            .template-list {
+              list-style: none;
+              margin: 0;
+              padding: 0;
+            }
+            .template-item {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 12px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              margin-bottom: 8px;
+              background: white;
+            }
+            .template-name {
+              flex-grow: 1;
+              margin-right: 10px;
+            }
+            .template-actions {
+              display: flex;
+              gap: 10px;
+              align-items: center;
+            }
+            .edit-button {
+              padding: 4px 8px;
+              background: #f0f0f0;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              cursor: pointer;
+            }
+            .delete-icon {
+              color: #666;
+              cursor: pointer;
+            }
+            .banner-message {
+              position: absolute;
+              top: 10px;
+              left: 50%;
+              transform: translateX(-50%);
+              background: #fffae6;
+              border: 1px solid #f0e68c;
+              padding: 10px 20px;
+              border-radius: 4px;
+              font-weight: bold;
+              color: #666;
+              z-index: 1000;
+              opacity: 0.95;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div id="bannerContainer"></div>
+            <div class="fixed-section">
+              <div anvil-slot="default"></div>
+              <div class="actions-row">
+                <div class="left-section">
+                  <div class="buttons-container">
+                    <button class="create-button" id="createBtn">+ Créer</button>
+                    <button class="personalize-button" id="personalizeBtn">Personaliser votre IA</button>
+                  </div>
+                  <div class="time">--:--</div>
+                </div>
+              </div>
+              <input type="text" class="search-bar" placeholder="Rechercher">
+            </div>
+            <div class="scrollable-content">
+              <ul class="template-list" id="templateList"></ul>
+            </div>
+          </div>
+
+          <script>
+            function showBanner(message) {
+              const bannerContainer = document.getElementById("bannerContainer");
+              if (!bannerContainer) return;
+              const banner = document.createElement("div");
+              banner.className = "banner-message";
+              banner.textContent = message;
+              bannerContainer.appendChild(banner);
+              setTimeout(() => {
+                bannerContainer.removeChild(banner);
+              }, 3000);
+            }
+
+            if (!window.__templates_globals) {
+              window.__templates_globals = true;
+
+              window.populateTemplates = function(templates, retryCount = 0) {
+                const list = document.getElementById("templateList");
+
+                if (list) {
+                  list.innerHTML = "";
+                  templates.forEach(tpl => {
+                    const li = document.createElement("li");
+                    li.className = "template-item";
+                    li.dataset.id = tpl.id;
+
+                    const spanName = document.createElement("span");
+                    spanName.className = "template-name";
+                    spanName.textContent = tpl.name || "Untitled Template";
+
+                    const actionsDiv = document.createElement("div");
+                    actionsDiv.className = "template-actions";
+
+                    const editBtn = document.createElement("button");
+                    editBtn.className = "edit-button";
+                    editBtn.textContent = "Modifier";
+                    editBtn.addEventListener("click", (event) => {
+                      const templateId = li.dataset.id;
+                      anvil.call(event.target, 'open_template_editor', templateId);
+                    });
+
+                    const delIcon = document.createElement("span");
+                    delIcon.className = "delete-icon";
+                    delIcon.textContent = "🗑️";
+                    delIcon.addEventListener("click", (event) => {
+                      event.stopPropagation();
+                      const templateId = li.dataset.id;
+                      anvil.call(event.target, 'delete_template', templateId);
+                    });
+
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(delIcon);
+
+                    li.appendChild(spanName);
+                    li.appendChild(actionsDiv);
+                    list.appendChild(li);
+                  });
+                  return;
+                }
+
+                if (retryCount >= 10) {
+                  console.error("populateTemplates: #templateList element could not be found after multiple retries.");
+                  return;
+                }
+
+                console.warn(`populateTemplates: #templateList not found. Retrying... (Attempt ${retryCount + 1})`);
+                setTimeout(() => {
+                  window.populateTemplates(templates, retryCount + 1);
+                }, 50);
+              };
+            }
+
+            (function attachTemplatesEvents() {
+              const createBtn = document.getElementById('createBtn');
+              if (createBtn) {
+                createBtn.replaceWith(createBtn.cloneNode(true));
+                document.getElementById('createBtn').addEventListener('click', (event) => {
+                  anvil.call(event.target, 'open_template_editor');
+                });
+              }
+
+              const personalizeBtn = document.getElementById('personalizeBtn');
+              if (personalizeBtn) {
+                personalizeBtn.replaceWith(personalizeBtn.cloneNode(true));
+                document.getElementById('personalizeBtn').addEventListener('click', (event) => {
+                  showBanner("fonctionalité en cours de développement par les équipes Checkvet");
+                });
+              }
+
+              const searchInput = document.querySelector('.search-bar');
+              if (searchInput) {
+                searchInput.addEventListener('input', function(event) {
+                  const query = event.target.value;
+                  anvil.call(event.target, 'search_templates_client', query);
+                });
+              }
+            })();
+
+            function updateTime() {
+              const now = new Date();
+              const hrs = now.getHours().toString().padStart(2, '0');
+              const mins = now.getMinutes().toString().padStart(2, '0');
+              document.querySelector('.time').textContent = `${hrs}h${mins}`;
+            }
+            updateTime();
+            setInterval(updateTime, 60000);
+
+            if (!window.__session_handlers_initialized) {
+              window.__session_handlers_initialized = true;
+              window.setupSessionHandlers = function() {
+                document.addEventListener('visibilitychange', function() {
+                  if (document.visibilityState === 'visible') {
+                    anvil.call(document.body, 'refresh_session_relay');
+                  }
+                });
+                window.addEventListener('online', function() {
+                  anvil.call(document.body, 'refresh_session_relay');
+                });
+              };
+              setupSessionHandlers();
+            }
+          </script>
+        </body>
+      </html>
   type: HtmlTemplate
 is_package: true

@@ -83,6 +83,9 @@ class TemplateEditor(TemplateEditorTemplate):
       print(f"Debug: Number of images: {len(images)}")
 
       # Use the existing write_template server function with updated parameters
+      print(
+        f"calling write_template with the following args : name={name}, html={html_content}, id={self.template_id}"
+      )
       result = anvil.server.call(
         "write_template",
         name=name,

@@ -26,17 +26,22 @@ def write_template(
   html=None,
   display=None,
 ):
+  print(
+    f"writing template with the following args : name={name}, html={html}, id={template_id}"
+  )
   current_user = anvil.users.get_user()
 
   if template_id:
-    # EDIT mode
-    template_row = app_tables.custom_templates.get_by_id(template_id)
+    print("writing template : entered EDIT mode")
+    template_row = app_tables.custom_templates.get(id=template_id)
+    print(template_row)
     if not template_row or template_row["owner"] != current_user:
       raise anvil.server.PermissionDenied(
         "You do not have permission to edit this template or it does not exist."
       )
   else:
     # CREATE mode
+    print("writing template : entered CREATE mode")
     template_row = app_tables.custom_templates.add_row(
       id=str(uuid.uuid4()), owner=current_user
     )
@@ -161,7 +166,7 @@ def delete_template(template_id):
     )
 
   # Find the template that matches the id and is owned by the current user.
-  template_row = app_tables.custom_templates.get_by_id(template_id)
+  template_row = app_tables.custom_templates.get(id=template_id)
 
   if template_row and template_row["owner"] == current_user:
     # If the template is found, delete it.

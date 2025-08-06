@@ -8,16 +8,6 @@ from anvil.tables import app_tables
 import base64
 
 
-from ._anvil_designer import TemplatesTemplate
-from anvil import *
-import anvil.server
-import anvil.users
-import anvil.tables as tables
-import anvil.tables.query as q
-from anvil.tables import app_tables
-import base64
-
-
 class Templates(TemplatesTemplate):
   def __init__(self, **properties):
     print("Initialisation du formulaire Templates...")

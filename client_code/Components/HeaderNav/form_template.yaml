@@ -7,35 +7,42 @@ container:
         <head>
           <meta charset="utf-8">
           <style>
-            /* Copied from your theme.css to make the component self-contained */
             .fixed-section {
               background: white;
               z-index: 10;
+              padding: 10px 20px; /* Ajoute un peu d'espace autour de la barre */
+              border-bottom: 1px solid #ddd;
             }
             .nav-tabs {
               display: flex;
               width: 100%;
-              border-bottom: 1px solid #ddd;
+              border: 1px solid #ddd; /* Bordure unifiée autour du groupe */
+              border-radius: 4px;   /* Coins arrondis */
+              overflow: hidden;     /* Pour que les coins arrondis s'appliquent correctement */
             }
             .nav-tab {
-              flex: 1;
-              padding: 8px 16px;
+              flex: 1;              /* Permet aux boutons de remplir l'espace disponible */
+              padding: 10px 16px;   /* Augmente légèrement le padding vertical pour un meilleur confort visuel */
               cursor: pointer;
-              border: 1px solid #ccc;
-              border-bottom: none;
-              background: #f8f8f8;
+              background: #f8f8f8;  /* Fond gris clair par défaut */
               font-size: 14px;
-              position: relative;
-              margin-right: -1px;
               text-align: center;
+              border: none;         /* Supprime les bordures individuelles */
+              border-right: 1px solid #ddd; /* Ajoute un séparateur vertical */
+              transition: background-color 0.2s;
+              color: #333;
+            }
+            .nav-tab:last-child {
+              border-right: none;   /* Supprime le dernier séparateur */
+            }
+            .nav-tab:hover {
+              background-color: #f0f0f0;
             }
             .nav-tab.active {
-              background: #e5e5e5;
-              border-top: 1px solid #999;
-              border-left: 1px solid #999;
-              border-right: 1px solid #999;
-              border-bottom: 1px solid #e5e5e5;
-              margin-bottom: -1px;
+              background: #fff;              /* Fond blanc pour l'onglet actif */
+              color: #1a73e8;                 /* Couleur du texte pour l'onglet actif */
+              font-weight: bold;               /* Texte en gras pour l'onglet actif */
+              box-shadow: inset 0 -2px 0 #1a73e8; /* Ligne de surbrillance en bas */
             }
             .actions-row {
               display: flex;
@@ -48,14 +55,15 @@ container:
               font-size: 14px;
             }
 
-            /* Responsive adjustments for smaller screens */
+            /* --- AMÉLIORATIONS POUR L'AFFICHAGE SUR MOBILE --- */
             @media (max-width: 800px) {
-              .nav-tab {
-                font-size: 12px;
-                padding: 6px 8px;
+              .fixed-section {
+                padding: 8px; /* Réduit légèrement l'espacement autour de la barre */
               }
-              .actions-row {
-                padding: 10px 15px;
+              .nav-tab {
+                padding: 14px 6px;  /* AUGMENTE LA HAUTEUR des boutons (14px) et ajuste l'horizontal (6px) */
+                font-size: 13px;    /* Taille de police optimisée pour les petits écrans */
+                white-space: nowrap;/* Empêche le texte de passer à la ligne de manière non désirée */
               }
             }
           </style>

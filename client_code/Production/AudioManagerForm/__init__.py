@@ -93,11 +93,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       t.t("select_template_placeholder"),
     )
 
-    # Bottom Buttons
-    self.call_js("setElementText", "button_status", t.t("button_status"))
-    self.call_js("setElementText", "button_archive", t.t("button_archive"))
-    self.call_js("setElementText", "button_share", t.t("button_share"))
-
     # Modals
     self.call_js("setElementText", "select_patient_title", t.t("select_patient_title"))
     self.call_js("setElementText", "newPatientBtn", t.t("new_patient_button"))
@@ -112,39 +107,38 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def form_show(self, **event_args):
     print("[DEBUG] Starting form_show in AudioManagerForm")
     self.update_ui_texts()
-    # Check if user has provided additional info
+
+    # Check user info and mobile installation
     additional_info = anvil.server.call("pick_user_info", "additional_info")
-    print(f"[DEBUG] additional_info from pick_user_info: {additional_info}")
     if not additional_info:
-      print(
-        "[DEBUG] No additional_info, opening registration flow in English (RegistrationFlow)"
-      )
       open_form("RegistrationFlow")
       return
 
     mobile_installation = anvil.server.call("pick_user_info2", "mobile_installation")
-    print(f"[DEBUG] mobile_installation from pick_user_info2: {mobile_installation}")
     if not mobile_installation:
-      print(
-        "[DEBUG] No mobile installation specified, opening mobile installation flow in English"
-      )
       open_form("MobileInstallationFlow")
       return
+
+    # Set the default language based on user preference
+    try:
+      user_lang = anvil.server.call("pick_user_favorite_language")
+      print(f"[DEBUG] User's favorite language is: {user_lang}")
+      self.call_js("setLanguageDropdown", user_lang)
+    except Exception as e:
+      print(f"[ERROR] Could not set user's language: {e}")
+      self.call_js("setLanguageDropdown", "EN")  # Default to EN on error
 
     templates = anvil.server.call("read_templates")
     print(f"Found {len(templates)} templates")
     self.call_js("populateTemplateModal", templates)
 
-    # Load initial content in the editor, if provided
     if self.initial_content:
       print("[DEBUG] Loading initial content in editor.")
       self.text_editor_1.html_content = self.initial_content
-    else:
-      if self.clicked_value is not None:
-        print("[DEBUG] clicked_value provided, loading report content.")
-        self.load_report_content()
+    elif self.clicked_value is not None:
+      print("[DEBUG] clicked_value provided, loading report content.")
+      self.load_report_content()
 
-    # Recreate patient search field (like in archive modal).
     print("[DEBUG] Rebuilding patient search field.")
     self.call_js("rebuildPatientSearchInput")
 
@@ -507,25 +501,47 @@ class AudioManagerForm(AudioManagerFormTemplate):
   # -------------------------
   # Method for "Status" button
   # -------------------------
-  def on_statut_clicked(self, **event_args):
-    print("[DEBUG] on_statut_clicked() called")
-    choice = alert(
-      "Choose status:", buttons=["to correct", "validated", "sent", "Cancel"]
-    )
-    print(f"[DEBUG] Selected status: {choice}")
-    if choice in ["to correct", "validated", "sent"]:
-      self.selected_statut = choice
-      self.call_js("displayBanner", f"Status chosen: {choice}", "success")
-      return choice
-    else:
-      return None
+  def report_footer_1_status_clicked(self, **event_args):
+    print("[DEBUG] report_footer_1_status_clicked called")
+    status_options = anvil.server.call("get_status_options")
 
-  # -------------------------
-  # Save and generate PDF
-  # -------------------------
+    buttons = [(opt.replace("_", " ").title(), opt) for opt in status_options]
+    buttons.append(("Cancel", None))
+
+    choice = alert("Choose status:", buttons=buttons)
+
+    if choice:
+      self.selected_statut = choice
+      self.report_footer_1.update_status_display(choice)
+      self.call_js(
+        "displayBanner", f"Status chosen: {choice.replace('_', ' ').title()}", "success"
+      )
+    return choice
+
+  def report_footer_1_save_clicked(self, **event_args):
+    """
+    This method is called when the 'Archive' button in the footer is clicked.
+    It starts the save process by opening the patient selection modal.
+    """
+    print(
+      "DEBUG: AudioManagerForm -> report_footer_1_save_clicked: Event handler triggered."
+    )
+    print("DEBUG: AudioManagerForm -> Getting content from text_editor_1...")
+    html_content = self.text_editor_1.get_content()
+    print(f"DEBUG: AudioManagerForm -> Content received (length: {len(html_content)}).")
+    print("DEBUG: AudioManagerForm -> Calling JS function 'openPatientModalForSave'.")
+    self.call_js("openPatientModalForSave", html_content)
+    print("DEBUG: AudioManagerForm -> JS call to 'openPatientModalForSave' finished.")
+
   def save_report(self, content_json, images, selected_patient, **event_args):
-    print("[DEBUG] save_report() called from JS")
+    """
+    This method is now called by the JavaScript `continueSave` function AFTER a
+    patient has been selected from the modal.
+    """
+    print("[DEBUG] save_report() called from JS after patient selection.")
     try:
+      # This logic is mostly the same as your original save function.
+
       # Check that selected_patient is a dict
       if not isinstance(selected_patient, dict):
         print(
@@ -534,7 +550,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
         matches = self.search_patients_relay(selected_patient)
         if len(matches) == 1:
           selected_patient = matches[0]
-          print(f"[DEBUG] Patient found: {selected_patient}")
         elif len(matches) > 1:
           alert("Multiple patients found. Please select one from the list.")
           return
@@ -544,9 +559,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
       animal_name = selected_patient.get("name")
       unique_id = selected_patient.get("unique_id")
-      print(
-        f"[DEBUG] Extracting patient: animal_name={animal_name}, unique_id={unique_id}"
-      )
 
       if unique_id is None:
         print("[DEBUG] New patient detected, creating via write_animal_first_time")
@@ -559,17 +571,11 @@ class AudioManagerForm(AudioManagerFormTemplate):
           type=type_val,
           proprietaire=proprietaire_val,
         )
-        print(f"[DEBUG] write_animal_first_time returned unique_id: {new_unique_id}")
         unique_id = new_unique_id
-      else:
-        print("[DEBUG] Existing patient selected, reusing info.")
 
-      html_content = self.text_editor_1.get_content()
-      print(f"[DEBUG] HTML content length: {len(html_content)}")
-      print(f"[DEBUG] Number of images: {len(images)}")
-
-      statut = self.selected_statut or "Not specified"
-      print(f"[DEBUG] Status used: {statut}")
+        # The content is passed in as a JSON string from JS, so we parse it.
+      html_content = json.loads(content_json).get("content", "")
+      statut = self.selected_statut or "not_specified"
 
       print("[DEBUG] Calling write_report_first_time with unique_id.")
       result = anvil.server.call(
@@ -580,7 +586,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
         unique_id=unique_id,
         transcript=self.raw_transcription,
       )
-      print(f"[DEBUG] Return from write_report_first_time: {result}")
 
       if result:
         self.call_js("displayBanner", "Report saved successfully", "success")
@@ -591,7 +596,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Exception in save_report: {e}")
       raise
 
-    print("[DEBUG] save_report() completed successfully.")
     return True
 
   def get_new_patient_details(self):

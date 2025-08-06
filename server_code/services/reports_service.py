@@ -9,6 +9,15 @@ import openai
 
 
 @anvil.server.callable
+def get_status_options():
+  """
+  Returns the list of valid, English-keyed report statuses.
+  This acts as a single source of truth for the application.
+  """
+  return ["pending_correction", "validated", "sent", "not_specified"]
+
+
+@anvil.server.callable
 def get_user_reports():
   current_user = anvil.users.get_user()
   if not current_user:

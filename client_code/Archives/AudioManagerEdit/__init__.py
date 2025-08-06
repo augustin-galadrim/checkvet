@@ -135,22 +135,30 @@ class AudioManagerEdit(AudioManagerEditTemplate):
   # ----------------------------------------------------------
   # Sélection du Statut
   # ----------------------------------------------------------
-  def on_statut_clicked(self, **event_args):
-    """Invite l'utilisateur à sélectionner un nouveau statut pour le rapport."""
-    choice = alert(
-      "Choisir le statut :", buttons=["à corriger", "validé", "envoyé", "Annuler"]
-    )
-    if choice in ["à corriger", "validé", "envoyé"]:
-      self.statut = choice
-      self.call_js("displayBanner", f"Statut sélectionné : {choice}", "success")
-      return choice
-    else:
-      return None
+
+  def report_footer_1_status_clicked(self, **event_args):
+    print("[DEBUG] report_footer_1_status_clicked called")
+    status_options = anvil.server.call("get_status_options")
+
+    buttons = [(opt.replace("_", " ").title(), opt) for opt in status_options]
+    buttons.append(("Cancel", None))
+
+    choice = alert("Choose status:", buttons=buttons)
+
+    if choice:
+      self.selected_statut = choice
+      self.report_footer_1.update_status_display(choice)
+      self.call_js(
+        "displayBanner", f"Status chosen: {choice.replace('_', ' ').title()}", "success"
+      )
+    return choice
 
   # ----------------------------------------------------------
   # Mise à jour du rapport (Sauvegarder)
   # ----------------------------------------------------------
-  def update_report(self, ignored_file_name, content_json, images, **event_args):
+  def report_footer_1_save_clicked(
+    self, ignored_file_name, content_json, images, **event_args
+  ):
     """
     Appelé lorsque l'utilisateur clique sur "Archiver". Met à jour l'enregistrement
     existant du rapport en appelant la fonction serveur write_report.
@@ -160,7 +168,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       html_content = self.text_editor_1.get_content()
       print(f"Longueur du contenu HTML : {len(html_content)}")
       print(f"Nombre d'images : {len(images)}")
-      statut = self.statut or "Non spécifié"
+      statut = self.statut or "not_specified"
       file_name_to_use = self.file_name
 
       result = anvil.server.call(

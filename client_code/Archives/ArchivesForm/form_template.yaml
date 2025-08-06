@@ -122,10 +122,10 @@ container:
                 <div class="left-section">
                   <button class="create-button" id="createBtn">+ Créer</button>
                   <nav class="status-nav">
-                    <a href="#" class="status-option active" data-filter="Afficher tout"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></span>Afficher tout</a>
-                    <a href="#" class="status-option" data-filter="à corriger"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>A corriger</a>
-                    <a href="#" class="status-option" data-filter="validé"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>Validé</a>
-                    <a href="#" class="status-option" data-filter="envoyé"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></span>Envoyé</a>
+                    <a href="#" class="status-option active" data-filter="all"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></span>Afficher tout</a>
+                    <a href="#" class="status-option" data-filter="pending_correction"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>A corriger</a>
+                    <a href="#" class="status-option" data-filter="validated"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>Validé</a>
+                    <a href="#" class="status-option" data-filter="sent"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></span>Envoyé</a>
                   </nav>
                 </div>
                 <div class="time">--:--</div>
@@ -234,7 +234,7 @@ container:
                 statusDiv.textContent = report.statut || "(Non spécifié)";
                 const trashDiv = document.createElement("div");
                 trashDiv.className = "trash-icon";
-                trashDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 4V3c0-1.11-.89-2-2-2h-2c-1.11 0-2 .89-2 2v1H5v2h14V4h-4zm-6 0V3h2v1h-2zm-1 4v12a2 2 0 002 2h4a2 2 0 002-2V8H8z"/></svg>`;
+                trashDiv.textContent = '🗑️';
                 trashDiv.addEventListener("click", ev => {
                 ev.stopPropagation();
                 anvil.call(ev.currentTarget, "delete_report", report.report_rich, window.activeSubTab);

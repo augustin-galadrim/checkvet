@@ -28,7 +28,7 @@ class ArchivesForm(ArchivesFormTemplate):
     self.affiliated_vets = []
 
     # --- Filter states ---
-    self.current_status_filter = "Afficher tout"
+    self.current_status_filter = "all"
     self.selected_vets_emails = []
 
   def form_show(self, **event_args):
@@ -95,7 +95,7 @@ class ArchivesForm(ArchivesFormTemplate):
     )
 
     # 1. Filter by status
-    if self.current_status_filter == "Afficher tout":
+    if self.current_status_filter == "all":
       status_filtered = source_reports
     else:
       status_filtered = [

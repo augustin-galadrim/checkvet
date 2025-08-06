@@ -1,4 +1,10 @@
 components:
+- data_bindings:
+  - {code: '', property: items, writeback: false}
+  layout_properties: {slot: template_list}
+  name: repeating_panel_templates
+  properties: {item_template: Components.TemplateListItem}
+  type: RepeatingPanel
 - layout_properties: {slot: default}
   name: header_nav_1
   properties: {active_tab: Templates/AI}
@@ -222,9 +228,7 @@ container:
             </div>
             <!-- Liste défilante des templates -->
             <div class="scrollable-content">
-              <ul class="template-list" id="templateList">
-                <!-- Injecté dynamiquement par JS -->
-              </ul>
+              <div anvil-slot="template_list"></div>
             </div>
           </div>
 

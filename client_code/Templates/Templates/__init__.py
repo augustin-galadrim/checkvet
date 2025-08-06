@@ -10,21 +10,28 @@ import base64
 
 class Templates(TemplatesTemplate):
   def __init__(self, **properties):
-    print("Initialisation du formulaire Templates...")
-    # Initialiser les composants du formulaire
     self.init_components(**properties)
-    print("Composants du formulaire initialisés.")
-
-    # Attacher le gestionnaire d'événement "show"
     self.add_event_handler("show", self.form_show)
 
+    # Set up the event handler for our custom event from the item template
+    self.repeating_panel_templates.set_event_handler(
+      "x-edit-template", self.open_template_editor_from_event
+    )
+
   def form_show(self, **event_args):
-    """Une fois le formulaire affiché, lire les modèles depuis le serveur et remplir la liste HTML."""
-    print("Déclenchement de form_show du formulaire Templates.")
-    templates = anvil.server.call("read_templates")
-    print(f"Le serveur a renvoyé {len(templates)} modèles.")
-    # Pousser la liste des modèles dans le code JavaScript
-    self.call_js("populateTemplates", templates)
+    """Load templates from the server and display them."""
+    self.templates = anvil.server.call("read_templates")
+    self.repeating_panel_templates.items = self.templates
+
+  def open_template_editor_from_event(self, template, **event_args):
+    """Event handler for the x_edit_template event."""
+    open_form("Templates.TemplateEditor", template=template)
+
+  def search_bar_change(self, **event_args):
+    """Handle the search bar input."""
+    query = self.search_bar.text
+    results = anvil.server.call("search_templates", query)
+    self.repeating_panel_templates.items = results
 
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS"""
@@ -251,3 +258,7 @@ Voici trois exemples de sections qui pourraient être demandées dans le *system
       self.call_js("populateTemplates", results)
     except Exception as e:
       print("Échec de la recherche :", e)
+
+  def create_btn_click(self, **event_args):
+    # This now opens the editor for a new template directly
+    open_form("Templates.TemplateEditor")

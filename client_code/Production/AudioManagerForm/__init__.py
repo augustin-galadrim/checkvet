@@ -131,7 +131,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
       open_form("MobileInstallationFlow")
       return
 
-    templates = anvil.server.call("read_templates")  # returns a list of dictionaries
+    templates = anvil.server.call("read_templates")
+    print(f"Found {len(templates)} templates")
     self.call_js("populateTemplateModal", templates)
 
     # Load initial content in the editor, if provided
@@ -341,18 +342,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def _generate_report_from_transcription(self, transcription):
     """Helper to handle the report generation step."""
-    selected_template_name = self.call_js(
-      "getDropdownSelectedValue", "templateSelectBtn"
-    )
-    if not selected_template_name or selected_template_name.startswith("Select"):
-      raise ValueError("Please select a template before processing.")
-
-    prompt_row = app_tables.custom_templates.get(template_name=selected_template_name)
-    if not prompt_row:
-      raise ValueError(f"Template '{selected_template_name}' not found.")
-
-    prompt = prompt_row["prompt"]
-    return anvil.server.call_s("generate_report", prompt, transcription)
+    lang = self.get_selected_language()
+    return anvil.server.call_s("generate_report", transcription, lang)
 
   def _format_and_display_report(self, report_content):
     """Helper to format and display the final report."""
@@ -656,9 +647,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Error in search_patients_relay: {e}")
       return []
 
-  # -------------------------
-  # Front-end relay for template search
-  # -------------------------
   def search_template_relay(self, search_term, **event_args):
     print(f"[DEBUG] search_template_relay called with search_term: {search_term}")
     try:
@@ -671,9 +659,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
           continue
         transformed_result = {
           "id": safe_value(template, "id", ""),
-          "template_name": safe_value(template, "template_name", "Untitled template"),
-          "display_template": safe_value(template, "display_template", False),
-          "text_to_display": safe_value(template, "text_to_display", ""),
+          "name": safe_value(template, "name", "Untitled template"),
+          "display": safe_value(template, "display", False),
+          "html": safe_value(template, "html", ""),
         }
         transformed_results.append(transformed_result)
       print(f"[DEBUG] Transformed template results: {transformed_results}")

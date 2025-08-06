@@ -4,129 +4,82 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
+import uuid
 
 
 @anvil.server.callable
 def read_templates():
   current_user = anvil.users.get_user()
-  print(f"Reading templates for user: {current_user}")
-
   templates = app_tables.custom_templates.search(owner=current_user)
-  print(f"Found {len(templates)} templates")
-
-  result = []
-  for template in templates:
-    print(f"Processing template: {template['template_name']}")
-    template_dict = {
-      "template_name": template["template_name"],
-      "owner": template["owner"],
-      "prompt": template["prompt"],
-      "human_readable": template["human_readable"],
-      "display_template": template["display_template"],
-      "text_to_display": template["text_to_display"],
-      "prompt_fr": template["prompt_fr"],  # Added French prompt
-      "prompt_en": template["prompt_en"],  # Added English prompt
-    }
-    result.append(template_dict)
-
-  print(f"Returning {len(result)} templates")
+  # Return dictionaries with the new schema: id, name, html, display
+  result = [
+    {"id": t["id"], "name": t["name"], "html": t["html"], "display": t["display"]}
+    for t in templates
+  ]
   return result
 
 
 @anvil.server.callable
 def write_template(
-  template_name,
-  prompt=None,
-  human_readable=None,
-  text_to_display=None,
-  display_template=None,
-  prompt_fr=None,
-  prompt_en=None,
+  template_id=None,
+  name=None,
+  html=None,
+  display=None,
 ):
   current_user = anvil.users.get_user()
-  print(f"Writing template '{template_name}' for user: {current_user}")
 
-  template_row = app_tables.custom_templates.get(
-    template_name=template_name, owner=current_user
-  )
-  print(f"Existing template found: {template_row is not None}")
-
-  if template_row is None:
-    print("Creating new template record")
-    # Default lorem ipsum values for new templates
-    default_prompt_fr = """Tu es un assistant IA expert dans l'édition de rapports vétérinaires selon les commandes orales du vétérinaire utilisateur.
-Accomplis la demande du vétérinaire utilisateur en respectant la précision de la médecine vétérinaire et l'orthographe des termes techniques. Assure-toi que ton output inclue toujours l'intégralité du rapport.
-
-Exemples:
-- Si le vétérinaire demande des ajouts, renvoie le compte rendu entier avec les ajouts
-- Si le vétérinaire demande des modifications, renvoie le compte rendu entier avec les modifications
-- Si le vétérinaire demande des suppressions, renvoie le compte rendu entier sans les éléments à supprimer"""
-    default_prompt_en = """You are an AI assistant specialized in editing veterinary reports according to the verbal commands of the veterinary user.
-Complete the veterinary user's request while maintaining accuracy in veterinary medicine and correct spelling of technical terms. Make sure your output always includes the entire report.
-Examples:
-
-If the veterinarian requests additions, return the entire report with the additions
-If the veterinarian requests modifications, return the entire report with the modifications
-If the veterinarian requests deletions, return the entire report without the elements to be deleted"""
-
+  if template_id:
+    # EDIT mode
+    template_row = app_tables.custom_templates.get_by_id(template_id)
+    if not template_row or template_row["owner"] != current_user:
+      raise anvil.server.PermissionDenied(
+        "You do not have permission to edit this template or it does not exist."
+      )
+  else:
+    # CREATE mode
     template_row = app_tables.custom_templates.add_row(
-      template_name=template_name,
-      owner=current_user,
-      prompt_fr=default_prompt_fr,  # Set default lorem ipsum for French
-      prompt_en=default_prompt_en,  # Set default lorem ipsum for English
+      id=str(uuid.uuid4()), owner=current_user
     )
 
-  # Update only the fields that were provided
-  updates = []
-  if human_readable is not None:
-    template_row["human_readable"] = human_readable
-    updates.append("human_readable")
-  if prompt is not None:
-    template_row["prompt"] = prompt
-    updates.append("prompt")
-  if text_to_display is not None:
-    template_row["text_to_display"] = text_to_display
-    updates.append("text_to_display")
-  if display_template is not None:
-    template_row["display_template"] = display_template
-    updates.append("display_template")
-  if prompt_fr is not None:
-    template_row["prompt_fr"] = prompt_fr
-    updates.append("prompt_fr")
-  if prompt_en is not None:
-    template_row["prompt_en"] = prompt_en
-    updates.append("prompt_en")
+  # Update the row's properties (works for both edit and create)
+  if name is not None:
+    template_row["name"] = name
+  if html is not None:
+    template_row["html"] = html
+  if display is not None:
+    template_row["display"] = display
 
-  print(f"Updated fields: {', '.join(updates)}")
   return True
 
 
 @anvil.server.callable
-def pick_template(template_name, header):
+def pick_template(template_id, header):
   """
   Updated debug version of pick_template.
-  We retrieve the Data Tables row, iterate over the items (which return [key, value] pairs),
-  then build a list of just the keys. Finally, we check if `header` is in that list.
+  We retrieve the Data Tables row by id.
   """
-  print(f"DEBUG: pick_template() -> template_name='{template_name}', header='{header}'")
+  print(f"DEBUG: pick_template() -> template_id='{template_id}', header='{header}'")
   try:
     current_user = anvil.users.get_user()
     print(f"Current user: {current_user}")
 
-    template = app_tables.custom_templates.get(
-      template_name=template_name, owner=current_user
-    )
+    template = app_tables.custom_templates.get_by_id(template_id)
+
+    if not template or template["owner"] != current_user:
+      # Fallback for old templates that might be searched by name, though we are moving away from this.
+      template = app_tables.custom_templates.get(name=template_id, owner=current_user)
+
     print(f"Retrieved template: {template}")
 
     if not template:
       print("No template found - returning None")
       return None
 
-      # Attempt to iterate over the row items,
-      # which appear as [key, value] pairs in your logs.
+    # Attempt to iterate over the row items,
+    # which appear as [key, value] pairs in your logs.
     column_pairs = []
     for item in template:
-      # item should be something like ["prompt", "...text..."]
+      # item should be something like ["html", "...text..."]
       column_pairs.append(item)
 
     print(f"Discovered pairs in row: {column_pairs}")
@@ -150,12 +103,12 @@ def pick_template(template_name, header):
 
 
 @anvil.server.callable
-def assign_template_to_users(template_name, user_ids):
+def assign_template_to_users(template_id, user_ids):
   """
   Assigns a template to multiple users.
 
   Args:
-      template_name: The name of the template to assign
+      template_id: The id of the template to assign
       user_ids: A list of user IDs to assign the template to
 
   Returns:
@@ -167,31 +120,26 @@ def assign_template_to_users(template_name, user_ids):
     if not admin_user:
       return False
       # Get the template
-    template = app_tables.custom_templates.get(
-      template_name=template_name, owner=admin_user
-    )
-    if not template:
+    template = app_tables.custom_templates.get_by_id(template_id)
+    if not template or template["owner"] != admin_user:
       return False
       # Process each user ID
     for user_id in user_ids:
       try:
         user = app_tables.users.get_by_id(user_id)
         if user:
-          # Check if user already has this template
+          # Check if user already has this template by name
           existing_template = app_tables.custom_templates.get(
-            template_name=template_name, owner=user
+            name=template["name"], owner=user
           )
           if not existing_template:
             # Create a copy of the template for this user
             app_tables.custom_templates.add_row(
-              template_name=template_name,
+              id=str(uuid.uuid4()),
+              name=template["name"],
               owner=user,
-              prompt=template["prompt"],
-              human_readable=template["human_readable"],
-              display_template=template["display_template"],
-              text_to_display=template["text_to_display"],
-              prompt_fr=template["prompt_fr"],  # Copy French prompt
-              prompt_en=template["prompt_en"],  # Copy English prompt
+              display=template["display"],
+              html=template["html"],
             )
       except Exception as e:
         print(f"Error assigning template to user {user_id}: {str(e)}")
@@ -202,7 +150,7 @@ def assign_template_to_users(template_name, user_ids):
 
 
 @anvil.server.callable
-def delete_template(template_name):
+def delete_template(template_id):
   """
   Deletes a template for the currently logged-in user.
   """
@@ -212,19 +160,19 @@ def delete_template(template_name):
       "You must be logged in to delete a template."
     )
 
-  # Find the template that matches the name and is owned by the current user.
-  template_row = app_tables.custom_templates.get(
-    template_name=template_name, owner=current_user
-  )
+  # Find the template that matches the id and is owned by the current user.
+  template_row = app_tables.custom_templates.get_by_id(template_id)
 
-  if template_row:
+  if template_row and template_row["owner"] == current_user:
     # If the template is found, delete it.
     template_row.delete()
     print(
-      f"Template '{template_name}' deleted successfully for user '{current_user['email']}'."
+      f"Template with id '{template_id}' deleted successfully for user '{current_user['email']}'."
     )
     return True
   else:
     # If no template is found for this user, do nothing and report failure.
-    print(f"Template '{template_name}' not found for user '{current_user['email']}'.")
+    print(
+      f"Template with id '{template_id}' not found for user '{current_user['email']}'."
+    )
     return False

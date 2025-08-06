@@ -11,7 +11,7 @@ from . import (
   DEFAULT_TEMPERATURE,
   DEFAULT_MAX_TOKENS,
 )
-from .prompts_service import get_prompt
+from ..prompts_service import get_prompt
 
 
 @anvil.server.callable

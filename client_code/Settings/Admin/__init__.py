@@ -17,6 +17,7 @@ class Admin(AdminTemplate):
     self.current_structure_id = None
     self.current_user_id = None
     self.current_template_name = None  # Added for template management
+    self.current_template_id = None
 
     # Add show event handler
     self.add_event_handler("show", self.on_form_show)
@@ -300,25 +301,23 @@ class Admin(AdminTemplate):
       print(f"Debug: Erreur lors du chargement des templates: {str(e)}")
       alert(f"Une erreur est survenue lors du chargement des templates: {str(e)}")
 
-  def get_template_details(self, template_name, **event_args):
+  def get_template_details(self, template_id, **event_args):
     """
     Récupère les détails d'un template et les affiche dans le formulaire.
     """
     try:
       templates = relay_read_templates()
-      template = next(
-        (t for t in templates if t["template_name"] == template_name), None
-      )
+      template = next((t for t in templates if t["id"] == template_id), None)
 
       if template:
-        self.current_template_name = template_name
+        self.current_template_id = template_id
 
         # Get users for assignment
         users = relay_search_users("")
 
         self.call_js("displayTemplateDetails", template, users)
       else:
-        alert(f"Template '{template_name}' non trouvé.")
+        alert(f"Template '{template_id}' non trouvé.")
     except Exception as e:
       print(f"Debug: Erreur lors de la récupération des détails du template: {str(e)}")
       alert(f"Une erreur est survenue: {str(e)}")
@@ -327,7 +326,7 @@ class Admin(AdminTemplate):
     """
     Prépare le formulaire pour créer un nouveau template.
     """
-    self.current_template_name = None
+    self.current_template_id = None
 
     # Get users for assignment
     users = relay_search_users("")
@@ -342,22 +341,19 @@ class Admin(AdminTemplate):
     try:
       print(f"Debug: Sauvegarde du template: {template_data}")
 
-      template_name = template_data.get("template_name")
-      prompt = template_data.get("prompt")
-      human_readable = template_data.get("human_readable")
-      text_to_display = template_data.get("text_to_display")
-      display_template = template_data.get("display_template")
+      name = template_data.get("name")
+      html = template_data.get("html")
+      display = template_data.get("display")
 
-      if not template_name:
+      if not name:
         alert("Le nom du template est obligatoire.")
         return False
 
       success = relay_write_template(
-        template_name=template_name,
-        prompt=prompt,
-        human_readable=human_readable,
-        text_to_display=text_to_display,
-        display_template=display_template,
+        template_id=self.current_template_id,
+        name=name,
+        html=html,
+        display=display,
       )
 
       if success:
@@ -372,16 +368,16 @@ class Admin(AdminTemplate):
       alert(f"Une erreur est survenue: {str(e)}")
       return False
 
-  def assign_template_to_users(self, template_name, user_ids, **event_args):
+  def assign_template_to_users(self, template_id, user_ids, **event_args):
     """
     Assigne un template à plusieurs utilisateurs.
     """
     try:
-      if not template_name:
+      if not template_id:
         alert("Aucun template sélectionné.")
         return False
 
-      success = relay_assign_template(template_name, user_ids)
+      success = relay_assign_template(template_id, user_ids)
       if success:
         alert("Template assigné avec succès aux utilisateurs sélectionnés.")
         return True
@@ -510,10 +506,10 @@ def relay_write_template(**kwargs):
     return anvil.server.call("write_template", **kwargs)
 
 
-def relay_assign_template(template_name, user_ids):
+def relay_assign_template(template_id, user_ids):
   """Relay method for assign_template server function"""
   try:
-    return anvil.server.call("assign_template_to_users", template_name, user_ids)
+    return anvil.server.call("assign_template_to_users", template_id, user_ids)
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("assign_template_to_users", template_name, user_ids)
+    return anvil.server.call("assign_template_to_users", template_id, user_ids)

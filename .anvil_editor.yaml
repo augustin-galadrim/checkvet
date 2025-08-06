@@ -53,7 +53,7 @@ unique_ids:
     services.ai.transcription: '1754039298590204533436423.41492'
     services.en_service: '173998294320743587860081.62896'
     services.pdf_service: '1737666754250422899485864.8633'
-    services.prompt_service: '1754475006837677496397816.3076'
+    services.prompts_service: '1754475006837677496397816.3076'
     services.reports_service: '1737666835725319552995469.37866'
     services.search_service: '1737715161418816547474478.1394'
     services.structures_service: '1738779919445740028792595.802'

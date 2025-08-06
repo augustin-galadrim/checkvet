@@ -8,6 +8,16 @@ from anvil.tables import app_tables
 import base64
 
 
+from ._anvil_designer import TemplatesTemplate
+from anvil import *
+import anvil.server
+import anvil.users
+import anvil.tables as tables
+import anvil.tables.query as q
+from anvil.tables import app_tables
+import base64
+
+
 class Templates(TemplatesTemplate):
   def __init__(self, **properties):
     print("Initialisation du formulaire Templates...")
@@ -34,45 +44,27 @@ class Templates(TemplatesTemplate):
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
 
-  def open_create_form(self, **event_args):
-    """
-    Ancienne méthode qui ouvrait AudioManager,
-    mais nous ne l'utiliserons plus maintenant que nous avons un modal personnalisé.
-    (Conservée à titre de référence.)
-    """
-    open_form("Production.AudioManagerForm")
-
   # --------------------
   # Ouverture de l'éditeur de template
   # --------------------
   def open_template_editor(self, template_id=None, **event_args):
     """
     Ouvre le formulaire TemplateEditor avec les paramètres appropriés.
-    Si template_id est fourni, cherche le template correspondant par son nom.
+    Si template_id est fourni, cherche le template correspondant par son id.
     Sinon, crée un nouveau template.
     """
     print(f"open_template_editor appelé avec template_id={template_id}")
 
     if template_id:
-      # Mode édition - Rechercher le template par nom
+      # Mode édition - Rechercher le template par id
       templates = anvil.server.call("read_templates")
-      found_template = None
-
-      # template_id contient en fait le nom du template dans notre cas
-      template_name = template_id
-
-      for template in templates:
-        if template.get("template_name") == template_name:
-          found_template = template
-          break
+      found_template = next((t for t in templates if t.get("id") == template_id), None)
 
       if not found_template:
         alert(f"Template avec ID {template_id} introuvable.")
         return
 
-      print(
-        f"Ouverture de l'éditeur de template pour éditer: {found_template['template_name']}"
-      )
+      print(f"Ouverture de l'éditeur de template pour éditer: {found_template['name']}")
       open_form("Templates.TemplateEditor", template=found_template)
     else:
       # Mode création
@@ -145,13 +137,13 @@ class Templates(TemplatesTemplate):
     except Exception as e:
       print("Échec de la recherche :", e)
 
-  def delete_template(self, template_name, **event_args):
+  def delete_template(self, template_id, **event_args):
     """Called from JavaScript when a user clicks the delete icon."""
     # Show a confirmation dialog to the user.
-    if confirm(f"Are you sure you want to delete the template '{template_name}'?"):
+    if confirm(f"Are you sure you want to delete this template?"):
       try:
         # Call the server function to delete the template.
-        success = anvil.server.call("delete_template", template_name)
+        success = anvil.server.call("delete_template", template_id)
         if success:
           # If deletion was successful, refresh the template list.
           self.form_show()

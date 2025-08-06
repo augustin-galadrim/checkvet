@@ -65,15 +65,14 @@ db_schema:
       name: owner
       target: users
       type: link_single
-    - admin_ui: {order: 7, width: 200}
-      name: base_template
-      target: base_templates
-      type: link_single
-    - admin_ui: {order: 8, width: 200}
-      name: display_template
+    - admin_ui: {width: 200}
+      name: display
       type: bool
-    - admin_ui: {order: 9, width: 200}
-      name: text_to_display
+    - admin_ui: {width: 200}
+      name: html
+      type: string
+    - admin_ui: {order: -1, width: 404}
+      name: id
       type: string
     server: full
     title: Custom_templates

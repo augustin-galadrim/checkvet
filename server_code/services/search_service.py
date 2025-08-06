@@ -8,10 +8,13 @@ import anvil.server
 
 from anvil.tables import order_by
 
+
 @anvil.server.callable
 def search_reports_for_all_vets_in_structure(search_input):
   try:
-    print("search_reports_for_all_vets_in_structure called with search_input:", search_input)
+    print(
+      "search_reports_for_all_vets_in_structure called with search_input:", search_input
+    )
 
     # Validate input type.
     if not isinstance(search_input, str):
@@ -47,16 +50,16 @@ def search_reports_for_all_vets_in_structure(search_input):
     if search_term:
       # First, filter by file_name.
       filtered_reports = [
-          r for r in reports_rows
-          if search_term.lower() in (r["file_name"] or "").lower()
+        r for r in reports_rows if search_term.lower() in (r["file_name"] or "").lower()
       ]
       print(f"Reports matching file_name: {len(filtered_reports)}")
 
       # If none match by file_name, try filtering by the animal's name.
       if not filtered_reports:
         filtered_reports = [
-            r for r in reports_rows
-            if r["animal"] and search_term.lower() in (r["animal"]["name"] or "").lower()
+          r
+          for r in reports_rows
+          if r["animal"] and search_term.lower() in (r["animal"]["name"] or "").lower()
         ]
         print(f"Reports matching animal name: {len(filtered_reports)}")
     else:
@@ -79,16 +82,18 @@ def search_reports_for_all_vets_in_structure(search_input):
           dt_str = "N/A"
 
       results.append({
-          "id": r.get_id(),
-          "file_name": r["file_name"],
-          "name": patient_name,  # Patient name returned as 'name'
-          "last_modified": dt_str,
-          "owner_email": r["vet"]["email"] if r["vet"] else None,
-          "report_rich": r["report_rich"],
-          "statut": r["statut"],
+        "id": r.get_id(),
+        "file_name": r["file_name"],
+        "name": patient_name,  # Patient name returned as 'name'
+        "last_modified": dt_str,
+        "owner_email": r["vet"]["email"] if r["vet"] else None,
+        "report_rich": r["report_rich"],
+        "statut": r["statut"],
       })
 
-    print(f"Returning {len(results)} report(s) for search input '{search_input}' in structure '{structure_name}'")
+    print(
+      f"Returning {len(results)} report(s) for search input '{search_input}' in structure '{structure_name}'"
+    )
     return results
 
   except Exception as e:
@@ -96,11 +101,9 @@ def search_reports_for_all_vets_in_structure(search_input):
     return []
 
 
-
-
 @anvil.server.callable
 def search_reports(search_input):
-  print('received search input:')
+  print("received search input:")
   print(search_input)
   try:
     # Validate the input type.
@@ -121,37 +124,38 @@ def search_reports(search_input):
     else:
       # First, try to find reports by searching within the file_name field.
       rows = [
-          r for r in app_tables.reports.search(vet=current_user)
-          if search_term.lower() in r['file_name'].lower()
+        r
+        for r in app_tables.reports.search(vet=current_user)
+        if search_term.lower() in r["file_name"].lower()
       ]
 
       # If no results were found, then search within the animal field.
       if not rows:
         rows = [
-            r for r in app_tables.reports.search(vet=current_user)
-            # Check that r['animal'] exists before accessing ['name']
-            if r['animal'] and search_term.lower() in r['animal']['name'].lower()
+          r
+          for r in app_tables.reports.search(vet=current_user)
+          # Check that r['animal'] exists before accessing ['name']
+          if r["animal"] and search_term.lower() in r["animal"]["name"].lower()
         ]
 
     # Format the result rows into a list of dictionaries.
-    return [{
+    return [
+      {
         "id": r.get_id(),
-        "file_name": r['file_name'],
-        "name": r['animal']['name'] if r['animal'] else None,
-        "statut": r['statut'],
-        "report_rich": r['report_rich'],
-        "last_modified": r['last_modified'].strftime("%Y-%m-%d %H:%M:%S") if r['last_modified'] else "N/A"
-    } for r in rows]
+        "file_name": r["file_name"],
+        "name": r["animal"]["name"] if r["animal"] else None,
+        "statut": r["statut"],
+        "report_rich": r["report_rich"],
+        "last_modified": r["last_modified"].strftime("%Y-%m-%d %H:%M:%S")
+        if r["last_modified"]
+        else "N/A",
+      }
+      for r in rows
+    ]
 
   except Exception as e:
     print(f"Search error: {str(e)}")
     return []
-
-
-
-
-
-
 
 
 @anvil.server.callable
@@ -178,28 +182,32 @@ def search_patients(search_input):
       search_lower = search_term.lower()
       # First search in the 'name' field.
       rows = [
-          r for r in app_tables.animals.search(vet=current_user)
-          if search_lower in (r['name'] or "").lower()
+        r
+        for r in app_tables.animals.search(vet=current_user)
+        if search_lower in (r["name"] or "").lower()
       ]
 
       # If no results, then search in 'proprietaire'.
       if not rows:
         rows = [
-            r for r in app_tables.animals.search(vet=current_user)
-            if search_lower in (r['proprietaire'] or "").lower()
+          r
+          for r in app_tables.animals.search(vet=current_user)
+          if search_lower in (r["proprietaire"] or "").lower()
         ]
 
-    return [{
+    return [
+      {
         "id": r.get_id(),
-        "name": r['name'],
-        "type": r['type'],
-        "proprietaire": r['proprietaire'],
-        "unique_id": r['unique_id']
-    } for r in rows]
+        "name": r["name"],
+        "type": r["type"],
+        "proprietaire": r["proprietaire"],
+        "unique_id": r["unique_id"],
+      }
+      for r in rows
+    ]
   except Exception as e:
     print(f"Search error: {str(e)}")
     return []
-
 
 
 @anvil.server.callable
@@ -219,25 +227,28 @@ def search_templates(search_input):
     if not search_term:
       rows = app_tables.custom_templates.search(owner=current_user)
     else:
-      # Search for the term within template_name, limited to records owned by the current user.
+      # Search for the term within name, limited to records owned by the current user.
       rows = [
-          r for r in app_tables.custom_templates.search(owner=current_user)
-          if search_term.lower() in r['template_name'].lower()
+        r
+        for r in app_tables.custom_templates.search(owner=current_user)
+        if search_term.lower() in r["name"].lower()
       ]
 
     # Build the return structure.
-    return [{
+    return [
+      {
         "id": r.get_id(),
-        "template_name": r['template_name'],
-        "owner": r['owner'],           # Link to the users' row
-        "prompt": r['prompt'],
-        "human_readable": r['human_readable'],
-    } for r in rows]
+        "name": r["name"],
+        "owner": r["owner"],
+        "html": r["html"],
+        "display": r["display"],
+      }
+      for r in rows
+    ]
 
   except Exception as e:
     print(f"Search error: {str(e)}")
     return []
-
 
 
 @anvil.server.callable
@@ -256,33 +267,34 @@ def search_users(search_input):
       # Pull all users and filter them in Python for case-insensitive name/email matches
       all_users = app_tables.users.search()
       rows = [
-          u for u in all_users
-          if (u['name'] and search_term in u['name'].lower())
-             or (u['email'] and search_term in u['email'].lower())
+        u
+        for u in all_users
+        if (u["name"] and search_term in u["name"].lower())
+        or (u["email"] and search_term in u["email"].lower())
       ]
 
     # Return a list of hard-coded dictionaries for each row
     return [
-        {
-            "id":          user_row.get_id(),          # Anvil row ID
-            "email":       user_row['email'],
-            "enabled":     user_row['enabled'],
-            "last_login":  user_row['last_login'],
-            "password_hash": user_row['password_hash'],
-            "n_password_failures": user_row['n_password_failures'],
-            "confirmed_email": user_row['confirmed_email'],
-            "signed_up":   user_row['signed_up'],
-            "name":        user_row['name'],
-            "phone":       user_row['phone'],
-            "additional_info": user_row['additional_info'],
-            "signature_image": user_row['signature_image'],
-            "report_header_image": user_row['report_header_image'],
-            "report_footer_image": user_row['report_footer_image'],
-            "structure":   user_row['structure'],
-            "supervisor":  user_row['supervisor'],
-            "specialite":  user_row['specialite'],
-        }
-        for user_row in rows
+      {
+        "id": user_row.get_id(),  # Anvil row ID
+        "email": user_row["email"],
+        "enabled": user_row["enabled"],
+        "last_login": user_row["last_login"],
+        "password_hash": user_row["password_hash"],
+        "n_password_failures": user_row["n_password_failures"],
+        "confirmed_email": user_row["confirmed_email"],
+        "signed_up": user_row["signed_up"],
+        "name": user_row["name"],
+        "phone": user_row["phone"],
+        "additional_info": user_row["additional_info"],
+        "signature_image": user_row["signature_image"],
+        "report_header_image": user_row["report_header_image"],
+        "report_footer_image": user_row["report_footer_image"],
+        "structure": user_row["structure"],
+        "supervisor": user_row["supervisor"],
+        "specialite": user_row["specialite"],
+      }
+      for user_row in rows
     ]
 
   except Exception as e:

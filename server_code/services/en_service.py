@@ -23,14 +23,13 @@ def EN_read_templates():
       # Direct access to the owner's email property.
       owner_email = owner["email"]
       if owner_email in [current_user["email"], "en_su@checkvet.com"]:
-        print(
-          f"Processing template: {template['template_name']} (Owner: {owner_email})"
-        )
+        print(f"Processing template: {template['name']} (Owner: {owner_email})")
         template_dict = {
-          "template_name": template["template_name"],
+          "id": template["id"],
+          "name": template["name"],
           "owner": owner,
-          "prompt": template["prompt"],
-          "human_readable": template["human_readable"],
+          "html": template["html"],
+          "display": template["display"],
         }
         result.append(template_dict)
 
@@ -69,11 +68,11 @@ def EN_search_templates(search_input):
         if r["owner"] == current_user or (en_su_user and r["owner"] == en_su_user)
       ]
     else:
-      # Search for term within template_name, limited to records owned by current user or en_su
+      # Search for term within name, limited to records owned by current user or en_su
       rows = [
         r
         for r in app_tables.custom_templates.search()
-        if search_term.lower() in r["template_name"].lower()
+        if search_term.lower() in r["name"].lower()
         and (r["owner"] == current_user or (en_su_user and r["owner"] == en_su_user))
       ]
 
@@ -81,10 +80,10 @@ def EN_search_templates(search_input):
     return [
       {
         "id": r.get_id(),
-        "template_name": r["template_name"],
+        "name": r["name"],
         "owner": r["owner"],  # Link to the users' row
-        "prompt": r["prompt"],
-        "human_readable": r["human_readable"],
+        "html": r["html"],
+        "display": r["display"],
       }
       for r in rows
     ]
@@ -121,7 +120,7 @@ def EN_pick_template(template_name, header):
     template = next(
       (
         t
-        for t in app_tables.custom_templates.search(template_name=template_name)
+        for t in app_tables.custom_templates.search(name=template_name)
         if t["owner"] == current_user or (en_su_user and t["owner"] == en_su_user)
       ),
       None,

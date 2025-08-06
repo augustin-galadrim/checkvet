@@ -641,7 +641,7 @@ secrets:
     value: {JYDDKHKPSWZ5AZHX: KVp41Rl7SjzvCZum/C8cftteLUTI17U18HzNkCFFylPyBxjS8VYGTdeX81iBW3gmUc7xATsQDci49UK0SzH75w4U6gZqho+Y9kz1LvUEvkfcwi6rDDaW8/WyEguSHmyHYWy2H28pajWrcxmjXr3SOxWt3IjsAcQfHL3jxn0MNmoGhQR9bztEZqBl+npk7AniwBtcw9hovFKPQ/mQ/0hRLEtBEWAcWjP3T1A5YI5cSFylj2nB/06uqknZI9Dn/ijuJ4rcSi8cDHovUegqgOCQ0tyr6smQ0JkDQuvqiUWcghShHUxaM/Mtj8zK7KEKyApjcKZzC4UlbmkJxxmQvoWWUc+rgw==}
 services:
 - client_config: {}
-  server_config: {}
+  server_config: {auto_create_missing_columns: false}
   source: /runtime/services/tables.yml
 - client_config: {allow_remember_me: true, allow_signup: true, confirm_email: false, enable_automatically: true, remember_me_days: 30, use_email: true}
   server_config: {user_table: users}

@@ -167,9 +167,9 @@ def list_base_templates():
     for template in templates:
       template_dict = {
         "id": template.get_id(),  # Added row ID
-        "template_name": template["template_name"],
-        "prompt": template["prompt"],
-        # Include other fields as needed
+        "name": template["name"],
+        "html": template["html"],
+        "display": template["display"],
       }
       result.append(template_dict)
 

@@ -130,7 +130,6 @@ def affect_base_template(base_template, user):
         prompt_fr=prompt_fr,
         prompt_en=prompt_en,
         base_template=base_template,
-        priority=2,
         human_readable=human_readable
     )
 

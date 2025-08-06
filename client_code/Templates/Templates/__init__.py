@@ -219,21 +219,6 @@ Voici trois exemples de sections qui pourraient être demandées dans le *system
     # 4) Afficher la bannière de succès dans le modal
     self.call_js("showSuccessBanner")
 
-  # ----------------------
-  # Nouveau : Gestion de la priorité
-  # ----------------------
-  def set_priority(self, template_name, new_priority, **event_args):
-    """
-    Appelé depuis JavaScript lors du clic sur l'icône étoile d'un template.
-    Cette méthode met à jour la priorité du template dans la base de données.
-    """
-    print(f"Mise à jour de la priorité du template {template_name} vers {new_priority}")
-    try:
-      anvil.server.call("set_priority", template_name, new_priority)
-      print("Priorité mise à jour avec succès sur le serveur.")
-    except Exception as e:
-      print("Erreur lors de la mise à jour de la priorité :", e)
-      alert(f"Erreur lors de la mise à jour de la priorité : {str(e)}")
 
   # ----------------------
   # Nouveau : Fonctionnalité de recherche
@@ -251,3 +236,18 @@ Voici trois exemples de sections qui pourraient être demandées dans le *system
       self.call_js("populateTemplates", results)
     except Exception as e:
       print("Échec de la recherche :", e)
+
+  def delete_template(self, template_name, **event_args):
+    """Called from JavaScript when a user clicks the delete icon."""
+    # Show a confirmation dialog to the user.
+    if confirm(f"Are you sure you want to delete the template '{template_name}'?"):
+      try:
+        # Call the server function to delete the template.
+        success = anvil.server.call("delete_template", template_name)
+        if success:
+          # If deletion was successful, refresh the template list.
+          self.form_show()
+        else:
+          alert("Could not delete the template. It may have already been removed.")
+      except Exception as e:
+        alert(f"An error occurred while deleting the template: {e}")

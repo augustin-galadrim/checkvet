@@ -6,6 +6,7 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 
+
 class Admin(AdminTemplate):
   def __init__(self, **properties):
     print("Debug: Initialisation du formulaire Admin...")
@@ -60,7 +61,9 @@ class Admin(AdminTemplate):
     """
     try:
       structures = relay_read_structures()
-      structure = next((s for s in structures if s['structure'] == structure_name), None)
+      structure = next(
+        (s for s in structures if s["structure"] == structure_name), None
+      )
 
       if structure:
         self.current_structure_id = structure_name
@@ -68,7 +71,9 @@ class Admin(AdminTemplate):
       else:
         alert(f"Structure '{structure_name}' non trouvée.")
     except Exception as e:
-      print(f"Debug: Erreur lors de la récupération des détails de la structure: {str(e)}")
+      print(
+        f"Debug: Erreur lors de la récupération des détails de la structure: {str(e)}"
+      )
       alert(f"Une erreur est survenue: {str(e)}")
 
   def new_structure(self, **event_args):
@@ -86,20 +91,17 @@ class Admin(AdminTemplate):
     try:
       print(f"Debug: Sauvegarde de la structure: {structure_data}")
 
-      name = structure_data.get('name')
-      phone = structure_data.get('phone')
-      email = structure_data.get('email')
-      address = structure_data.get('address')
+      name = structure_data.get("name")
+      phone = structure_data.get("phone")
+      email = structure_data.get("email")
+      address = structure_data.get("address")
 
       if not name:
         alert("Le nom de la structure est obligatoire.")
         return False
 
       success = relay_write_structure(
-        name=name,
-        phone=phone,
-        email=email,
-        address=address
+        name=name, phone=phone, email=email, address=address
       )
 
       if success:
@@ -121,7 +123,9 @@ class Admin(AdminTemplate):
     Charge la liste des utilisateurs depuis le serveur.
     """
     try:
-      users = relay_search_users("")  # Recherche sans filtres pour obtenir tous les utilisateurs
+      users = relay_search_users(
+        ""
+      )  # Recherche sans filtres pour obtenir tous les utilisateurs
       print(f"Debug: Utilisateurs récupérés: {len(users) if users else 0}")
       self.call_js("populateUsers", users)
     except Exception as e:
@@ -130,46 +134,50 @@ class Admin(AdminTemplate):
 
   def get_user_details(self, user_id, **event_args):
     """
-      Récupère les détails d'un utilisateur et les affiche dans le formulaire.
-      """
+    Récupère les détails d'un utilisateur et les affiche dans le formulaire.
+    """
     try:
       users = relay_search_users("")
-      user = next((u for u in users if u['id'] == user_id), None)
+      user = next((u for u in users if u["id"] == user_id), None)
 
       if user:
         self.current_user_id = user_id
 
         # Get the list of structures for the dropdown
         structures = relay_read_structures()
-        structure_names = ["Indépendant"] + [s['structure'] for s in structures]
+        structure_names = ["Indépendant"] + [s["structure"] for s in structures]
 
         # Create a modified user object with the correct structure name
         modified_user = dict(user)
 
         # Handle structure - LiveObjectProxy uses dict-like access with []
-        if user.get('structure'):
+        if user.get("structure"):
           try:
             # Try to get the structure name using dict-like access
-            structure_obj = user.get('structure')
+            structure_obj = user.get("structure")
 
             # Try different possible attribute names one by one
             try:
-              structure_name = structure_obj['name']
-              modified_user['structure'] = structure_name
-              print(f"DEBUG: Set structure name to {structure_name} from 'name' attribute")
+              structure_name = structure_obj["name"]
+              modified_user["structure"] = structure_name
+              print(
+                f"DEBUG: Set structure name to {structure_name} from 'name' attribute"
+              )
             except (KeyError, TypeError):
               try:
-                structure_name = structure_obj['structure']
-                modified_user['structure'] = structure_name
-                print(f"DEBUG: Set structure name to {structure_name} from 'structure' attribute")
+                structure_name = structure_obj["structure"]
+                modified_user["structure"] = structure_name
+                print(
+                  f"DEBUG: Set structure name to {structure_name} from 'structure' attribute"
+                )
               except (KeyError, TypeError):
                 print("DEBUG: Could not find structure name in structure object")
-                modified_user['structure'] = "Indépendant"
+                modified_user["structure"] = "Indépendant"
           except Exception as e:
             print(f"DEBUG: General error extracting structure name: {str(e)}")
-            modified_user['structure'] = "Indépendant"
+            modified_user["structure"] = "Indépendant"
         else:
-          modified_user['structure'] = "Indépendant"
+          modified_user["structure"] = "Indépendant"
           print(f"DEBUG: No structure found, defaulting to Indépendant")
 
           # Send the modified user data to JavaScript
@@ -177,7 +185,9 @@ class Admin(AdminTemplate):
       else:
         alert(f"Utilisateur avec ID '{user_id}' non trouvé.")
     except Exception as e:
-      print(f"Debug: Erreur lors de la récupération des détails de l'utilisateur: {str(e)}")
+      print(
+        f"Debug: Erreur lors de la récupération des détails de l'utilisateur: {str(e)}"
+      )
       alert(f"Une erreur est survenue: {str(e)}")
 
   def new_user(self, **event_args):
@@ -189,25 +199,26 @@ class Admin(AdminTemplate):
 
       # Get the list of structures for the dropdown
       structures = relay_read_structures()
-      structure_names = ["Indépendant"] + [s['structure'] for s in structures]
+      structure_names = ["Indépendant"] + [s["structure"] for s in structures]
 
       self.call_js("clearUserForm")
       self.call_js("showUserForm", True, structure_names)
     except Exception as e:
-      print(f"Debug: Erreur lors de la préparation du formulaire d'utilisateur: {str(e)}")
+      print(
+        f"Debug: Erreur lors de la préparation du formulaire d'utilisateur: {str(e)}"
+      )
       alert(f"Une erreur est survenue: {str(e)}")
-
 
   def save_user(self, user_data, **event_args):
     """
-      Sauvegarde les données d'un utilisateur (nouveau ou modifié).
-      """
+    Sauvegarde les données d'un utilisateur (nouveau ou modifié).
+    """
     try:
       print(f"Debug: Sauvegarde de l'utilisateur: {user_data}")
 
       # Required fields
-      email = user_data.get('email')
-      name = user_data.get('name')
+      email = user_data.get("email")
+      name = user_data.get("name")
 
       if not email or not name:
         alert("L'email et le nom sont obligatoires.")
@@ -223,7 +234,9 @@ class Admin(AdminTemplate):
             alert("Erreur lors de la création de l'utilisateur.")
             return False
             # After creating, we need to get the user to update it
-          self.current_user_id = user_created  # Assuming relay_create_user returns the new user ID
+          self.current_user_id = (
+            user_created  # Assuming relay_create_user returns the new user ID
+          )
         except Exception as e:
           print(f"Debug: Erreur lors de la création de l'utilisateur: {str(e)}")
           alert(f"Une erreur est survenue lors de la création: {str(e)}")
@@ -234,10 +247,10 @@ class Admin(AdminTemplate):
       success = relay_update_user(
         user_id=self.current_user_id,  # Use the user ID instead of email
         name=name,
-        phone=user_data.get('phone'),
-        structure=user_data.get('structure'),
-        supervisor=user_data.get('supervisor', False),
-        favorite_language=user_data.get('favorite_language', 'EN')
+        phone=user_data.get("phone"),
+        structure=user_data.get("structure"),
+        supervisor=user_data.get("supervisor", False),
+        favorite_language=user_data.get("favorite_language", "EN"),
       )
 
       if success:
@@ -293,7 +306,9 @@ class Admin(AdminTemplate):
     """
     try:
       templates = relay_read_templates()
-      template = next((t for t in templates if t['template_name'] == template_name), None)
+      template = next(
+        (t for t in templates if t["template_name"] == template_name), None
+      )
 
       if template:
         self.current_template_name = template_name
@@ -327,12 +342,11 @@ class Admin(AdminTemplate):
     try:
       print(f"Debug: Sauvegarde du template: {template_data}")
 
-      template_name = template_data.get('template_name')
-      prompt = template_data.get('prompt')
-      human_readable = template_data.get('human_readable')
-      priority = template_data.get('priority', 0)
-      text_to_display = template_data.get('text_to_display')
-      display_template = template_data.get('display_template')
+      template_name = template_data.get("template_name")
+      prompt = template_data.get("prompt")
+      human_readable = template_data.get("human_readable")
+      text_to_display = template_data.get("text_to_display")
+      display_template = template_data.get("display_template")
 
       if not template_name:
         alert("Le nom du template est obligatoire.")
@@ -342,9 +356,8 @@ class Admin(AdminTemplate):
         template_name=template_name,
         prompt=prompt,
         human_readable=human_readable,
-        priority=priority,
         text_to_display=text_to_display,
-        display_template=display_template
+        display_template=display_template,
       )
 
       if success:
@@ -388,7 +401,9 @@ class Admin(AdminTemplate):
     """
     open_form("StartupForm")
 
+
 # ----- Relay Methods for Server Calls -----
+
 
 def relay_read_structures():
   """Relay method for read_structures server function"""
@@ -398,6 +413,7 @@ def relay_read_structures():
     anvil.server.reset_session()
     return anvil.server.call("read_structures")
 
+
 def relay_write_structure(**kwargs):
   """Relay method for write_structure server function"""
   try:
@@ -405,6 +421,7 @@ def relay_write_structure(**kwargs):
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
     return anvil.server.call("write_structure", **kwargs)
+
 
 def relay_search_users(search_term):
   """Relay method for search_users server function"""
@@ -414,25 +431,26 @@ def relay_search_users(search_term):
     anvil.server.reset_session()
     return anvil.server.call("search_users", search_term)
 
+
 def relay_write_user(**kwargs):
   """Relay method for write_user server function"""
   try:
     # Handle structure separately
-    if 'email' in kwargs:
+    if "email" in kwargs:
       # We need to get user by email first
-      email = kwargs.pop('email')
+      email = kwargs.pop("email")
       users = anvil.server.call("search_users", "")
-      user = next((u for u in users if u['email'] == email), None)
+      user = next((u for u in users if u["email"] == email), None)
 
       if not user:
         print(f"Debug: User with email {email} not found")
         return False
 
         # Handle structure field
-      if 'structure' in kwargs:
-        structure_value = kwargs.pop('structure')
+      if "structure" in kwargs:
+        structure_value = kwargs.pop("structure")
         if structure_value == "Indépendant":
-          kwargs['structure'] = None
+          kwargs["structure"] = None
 
           # Now use the existing write_user function with the correct parameters
       return anvil.server.call("write_user", **kwargs)
@@ -445,6 +463,7 @@ def relay_write_user(**kwargs):
     print(f"DEBUG: Error in relay_write_user: {str(e)}")
     return False
 
+
 def relay_add_authorized_vet(user_email):
   """Relay method for add_authorized_vet server function"""
   try:
@@ -454,6 +473,7 @@ def relay_add_authorized_vet(user_email):
     anvil.server.reset_session()
     return anvil.server.call("add_authorized_vet", None, user_email)
 
+
 def relay_create_user(**kwargs):
   """Relay method for create_user server function"""
   try:
@@ -461,6 +481,7 @@ def relay_create_user(**kwargs):
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
     return anvil.server.call("create_user", **kwargs)
+
 
 def relay_update_user(**kwargs):
   """Relay method for update_user server function"""
@@ -470,6 +491,7 @@ def relay_update_user(**kwargs):
     anvil.server.reset_session()
     return anvil.server.call("update_user", **kwargs)
 
+
 def relay_read_templates():
   """Relay method for read_templates server function"""
   try:
@@ -478,6 +500,7 @@ def relay_read_templates():
     anvil.server.reset_session()
     return anvil.server.call("read_templates")
 
+
 def relay_write_template(**kwargs):
   """Relay method for write_template server function"""
   try:
@@ -485,6 +508,7 @@ def relay_write_template(**kwargs):
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
     return anvil.server.call("write_template", **kwargs)
+
 
 def relay_assign_template(template_name, user_ids):
   """Relay method for assign_template server function"""

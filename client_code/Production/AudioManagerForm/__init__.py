@@ -131,10 +131,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
       open_form("MobileInstallationFlow")
       return
 
-    # Load templates from database and filter on favorites (priority 1 or 2)
     templates = anvil.server.call("read_templates")  # returns a list of dictionaries
-    filtered_templates = [t for t in templates if t.get("priority") in (1, 2)]
-    self.call_js("populateTemplateModal", filtered_templates)
+    self.call_js("populateTemplateModal", templates)
 
     # Load initial content in the editor, if provided
     if self.initial_content:
@@ -674,7 +672,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
         transformed_result = {
           "id": safe_value(template, "id", ""),
           "template_name": safe_value(template, "template_name", "Untitled template"),
-          "priority": safe_value(template, "priority", 0),
           "display_template": safe_value(template, "display_template", False),
           "text_to_display": safe_value(template, "text_to_display", ""),
         }

@@ -232,7 +232,6 @@ def search_templates(search_input):
         "owner": r['owner'],           # Link to the users' row
         "prompt": r['prompt'],
         "human_readable": r['human_readable'],
-        "priority": r['priority'],
     } for r in rows]
 
   except Exception as e:

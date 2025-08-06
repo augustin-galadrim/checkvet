@@ -5,6 +5,7 @@ import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
 
+
 @anvil.server.callable
 def read_templates():
   current_user = anvil.users.get_user()
@@ -17,27 +18,37 @@ def read_templates():
   for template in templates:
     print(f"Processing template: {template['template_name']}")
     template_dict = {
-      'template_name': template['template_name'],
-      'owner': template['owner'],
-      'prompt': template['prompt'],
-      'human_readable': template['human_readable'],
-      'priority': template['priority'],
-      'display_template': template['display_template'],
-      'text_to_display': template['text_to_display'],
-      'prompt_fr': template['prompt_fr'],  # Added French prompt
-      'prompt_en': template['prompt_en']   # Added English prompt
+      "template_name": template["template_name"],
+      "owner": template["owner"],
+      "prompt": template["prompt"],
+      "human_readable": template["human_readable"],
+      "display_template": template["display_template"],
+      "text_to_display": template["text_to_display"],
+      "prompt_fr": template["prompt_fr"],  # Added French prompt
+      "prompt_en": template["prompt_en"],  # Added English prompt
     }
     result.append(template_dict)
 
   print(f"Returning {len(result)} templates")
   return result
 
+
 @anvil.server.callable
-def write_template(template_name, prompt=None, human_readable=None, priority=None, text_to_display=None, display_template=None, prompt_fr=None, prompt_en=None):
+def write_template(
+  template_name,
+  prompt=None,
+  human_readable=None,
+  text_to_display=None,
+  display_template=None,
+  prompt_fr=None,
+  prompt_en=None,
+):
   current_user = anvil.users.get_user()
   print(f"Writing template '{template_name}' for user: {current_user}")
 
-  template_row = app_tables.custom_templates.get(template_name=template_name, owner=current_user)
+  template_row = app_tables.custom_templates.get(
+    template_name=template_name, owner=current_user
+  )
   print(f"Existing template found: {template_row is not None}")
 
   if template_row is None:
@@ -61,53 +72,49 @@ If the veterinarian requests deletions, return the entire report without the ele
     template_row = app_tables.custom_templates.add_row(
       template_name=template_name,
       owner=current_user,
-      priority=0,  # Default priority to 0
       prompt_fr=default_prompt_fr,  # Set default lorem ipsum for French
-      prompt_en=default_prompt_en   # Set default lorem ipsum for English
+      prompt_en=default_prompt_en,  # Set default lorem ipsum for English
     )
 
   # Update only the fields that were provided
   updates = []
   if human_readable is not None:
-    template_row['human_readable'] = human_readable
-    updates.append('human_readable')
+    template_row["human_readable"] = human_readable
+    updates.append("human_readable")
   if prompt is not None:
-    template_row['prompt'] = prompt
-    updates.append('prompt')
-  if priority is not None:
-    template_row['priority'] = priority
-    updates.append('priority')
+    template_row["prompt"] = prompt
+    updates.append("prompt")
   if text_to_display is not None:
-    template_row['text_to_display'] = text_to_display
-    updates.append('text_to_display')
+    template_row["text_to_display"] = text_to_display
+    updates.append("text_to_display")
   if display_template is not None:
-    template_row['display_template'] = display_template
-    updates.append('display_template')
+    template_row["display_template"] = display_template
+    updates.append("display_template")
   if prompt_fr is not None:
-    template_row['prompt_fr'] = prompt_fr
-    updates.append('prompt_fr')
+    template_row["prompt_fr"] = prompt_fr
+    updates.append("prompt_fr")
   if prompt_en is not None:
-    template_row['prompt_en'] = prompt_en
-    updates.append('prompt_en')
+    template_row["prompt_en"] = prompt_en
+    updates.append("prompt_en")
 
   print(f"Updated fields: {', '.join(updates)}")
   return True
 
+
 @anvil.server.callable
 def pick_template(template_name, header):
   """
-    Updated debug version of pick_template.
-    We retrieve the Data Tables row, iterate over the items (which return [key, value] pairs),
-    then build a list of just the keys. Finally, we check if `header` is in that list.
-    """
+  Updated debug version of pick_template.
+  We retrieve the Data Tables row, iterate over the items (which return [key, value] pairs),
+  then build a list of just the keys. Finally, we check if `header` is in that list.
+  """
   print(f"DEBUG: pick_template() -> template_name='{template_name}', header='{header}'")
   try:
     current_user = anvil.users.get_user()
     print(f"Current user: {current_user}")
 
     template = app_tables.custom_templates.get(
-      template_name=template_name,
-      owner=current_user
+      template_name=template_name, owner=current_user
     )
     print(f"Retrieved template: {template}")
 
@@ -141,57 +148,28 @@ def pick_template(template_name, header):
     print(f"Exception in pick_template: {e}")
     raise
 
-@anvil.server.callable
-def set_priority(template_name, new_priority):
-  """
-  Updates the priority value (0, 1, or 2) for the template with the given template_name
-  for the current user.
-  Enforces:
-    - Only one template can have priority 2 (green).
-    - At most two templates can have priority 1 (yellow).
-  """
-  # Get the current user
-  current_user = anvil.users.get_user()
-  if not current_user:
-    raise Exception("User not logged in.")
-  # Get the template row from the custom_templates table for the current user.
-  row = app_tables.custom_templates.get(template_name=template_name, owner=current_user)
-  if not row:
-    raise Exception("Template not found for current user.")
-  # For priority 2, automatically demote any other template that is green for the current user.
-  if new_priority == 2:
-    for r in app_tables.custom_templates.search(owner=current_user, priority=2):
-      if r['template_name'] != template_name:
-        r['priority'] = 0
-  # For priority 1, enforce a maximum of two yellow templates for the current user.
-  if new_priority == 1:
-    yellow_templates = [r for r in app_tables.custom_templates.search(owner=current_user, priority=1)
-                        if r['template_name'] != template_name]
-    if len(yellow_templates) >= 2:
-      raise Exception("Maximum yellow favorites reached.")
-  # Update the row's priority
-  row['priority'] = new_priority
-  return "OK"
 
 @anvil.server.callable
 def assign_template_to_users(template_name, user_ids):
   """
-    Assigns a template to multiple users.
+  Assigns a template to multiple users.
 
-    Args:
-        template_name: The name of the template to assign
-        user_ids: A list of user IDs to assign the template to
+  Args:
+      template_name: The name of the template to assign
+      user_ids: A list of user IDs to assign the template to
 
-    Returns:
-        Boolean indicating success
-    """
+  Returns:
+      Boolean indicating success
+  """
   try:
     # Get the current user (admin)
     admin_user = anvil.users.get_user()
     if not admin_user:
       return False
       # Get the template
-    template = app_tables.custom_templates.get(template_name=template_name, owner=admin_user)
+    template = app_tables.custom_templates.get(
+      template_name=template_name, owner=admin_user
+    )
     if not template:
       return False
       # Process each user ID
@@ -201,25 +179,52 @@ def assign_template_to_users(template_name, user_ids):
         if user:
           # Check if user already has this template
           existing_template = app_tables.custom_templates.get(
-            template_name=template_name,
-            owner=user
+            template_name=template_name, owner=user
           )
           if not existing_template:
             # Create a copy of the template for this user
             app_tables.custom_templates.add_row(
               template_name=template_name,
               owner=user,
-              prompt=template['prompt'],
-              human_readable=template['human_readable'],
-              priority=template['priority'],
-              display_template=template['display_template'],
-              text_to_display=template['text_to_display'],
-              prompt_fr=template['prompt_fr'],  # Copy French prompt
-              prompt_en=template['prompt_en']   # Copy English prompt
+              prompt=template["prompt"],
+              human_readable=template["human_readable"],
+              display_template=template["display_template"],
+              text_to_display=template["text_to_display"],
+              prompt_fr=template["prompt_fr"],  # Copy French prompt
+              prompt_en=template["prompt_en"],  # Copy English prompt
             )
       except Exception as e:
         print(f"Error assigning template to user {user_id}: {str(e)}")
     return True
   except Exception as e:
     print(f"Error in assign_template_to_users: {str(e)}")
+    return False
+
+
+@anvil.server.callable
+def delete_template(template_name):
+  """
+  Deletes a template for the currently logged-in user.
+  """
+  current_user = anvil.users.get_user()
+  if not current_user:
+    raise anvil.users.AuthenticationFailed(
+      "You must be logged in to delete a template."
+    )
+
+  # Find the template that matches the name and is owned by the current user.
+  template_row = app_tables.custom_templates.get(
+    template_name=template_name, owner=current_user
+  )
+
+  if template_row:
+    # If the template is found, delete it.
+    template_row.delete()
+    print(
+      f"Template '{template_name}' deleted successfully for user '{current_user['email']}'."
+    )
+    return True
+  else:
+    # If no template is found for this user, do nothing and report failure.
+    print(f"Template '{template_name}' not found for user '{current_user['email']}'.")
     return False

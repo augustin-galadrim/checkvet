@@ -37,7 +37,6 @@ class TemplateEditor(TemplateEditorTemplate):
         "template_name": "Untitled Template",
         "text_to_display": "",
         "prompt": "",
-        "priority": 0,
       }
 
     # Use safe_value to ensure each field is defined
@@ -45,7 +44,6 @@ class TemplateEditor(TemplateEditorTemplate):
       "template_name": safe_value(template, "template_name", "Untitled Template"),
       "text_to_display": safe_value(template, "text_to_display", ""),
       "prompt": safe_value(template, "prompt", ""),
-      "priority": safe_value(template, "priority", 0),
     }
 
     self.original_template_name = self.template.get("template_name")
@@ -90,7 +88,6 @@ class TemplateEditor(TemplateEditorTemplate):
         name,  # template_name
         None,  # prompt (not modified in this editor)
         None,  # human_readable (not modified in this editor)
-        None,  # priority (not modified in this editor)
         html_content,  # text_to_display
         True,  # display_template
       )

@@ -106,99 +106,8 @@ class Templates(TemplatesTemplate):
     )
 
     # 2) Définir les prompts
-    first_prompt = """
-Rôle
-
-Vous êtes un expert en analyse de documents structurés, spécialisé dans l'extraction de la structure et de l'organisation des informations dans des rapports techniques et médicaux. Votre mission est de décortiquer et de restituer la structure détaillée d'un rapport vétérinaire en identifiant ses sections, titres et la manière dont les informations sont organisées, sans inclure de détails spécifiques au cas traité.
-Tâche
-
-    Identification des sections principales : Repérer et nommer les grandes parties du rapport (ex. : Introduction, Examen clinique, Diagnostic, etc.).
-    Analyse de l'organisation interne : Déterminer la hiérarchie des informations dans chaque section (ex. : sous-titres, paragraphes, tableaux).
-    Définition des catégories d'informations : Classifier les données contenues dans chaque section (ex. : informations administratives, symptômes observés, traitements prescrits).
-    Restitution sous forme de structure : Fournir une vue claire et organisée du rapport en listant ses sections et leur contenu attendu, sans divulguer de données spécifiques.
-
-Contexte
-
-L'analyse de la structure d'un rapport vétérinaire est essentielle pour garantir une compréhension rapide et efficace des informations qu'il contient. Ce travail est réalisé avec la plus grande rigueur et une expertise reconnue, en respectant les standards de documentation vétérinaire. Il permet d'assurer une organisation logique et fluide des données, facilitant ainsi leur utilisation par les professionnels du domaine. Cette analyse est utile pour améliorer la standardisation des rapports médicaux et optimiser leur lisibilité.
-Exemples
-
-Voici trois structures types de rapports vétérinaires qui pourraient correspondre à votre demande :
-Exemple 1 : Structure d'un rapport vétérinaire général
-
-    Informations générales (Nom du patient, espèce, race, âge, propriétaire)
-    Motif de consultation
-    Antécédents médicaux
-    Examen clinique (Observations générales, constantes physiologiques, examen des organes)
-    Examens complémentaires (Analyses sanguines, imagerie, tests spécifiques)
-    Diagnostic
-    Plan de traitement (Médicaments, recommandations, interventions nécessaires)
-    Pronostic
-    Conclusions et suivi
-
-Exemple 2 : Structure d'un rapport d'urgence vétérinaire
-
-    Identification du patient et du propriétaire
-    Nature de l'urgence et circonstances
-    Évaluation initiale (signes vitaux, état général)
-    Actions immédiates effectuées
-    Examens complémentaires réalisés
-    Diagnostic provisoire
-    Traitement administré
-    Recommandations de suivi
-
-Exemple 3 : Structure d'un rapport de chirurgie vétérinaire
-
-    Informations administratives
-    Motif de l'intervention
-    Examen pré-opératoire
-    Détails de l'anesthésie utilisée
-    Description de l'intervention chirurgicale
-    Résultats immédiats et complications éventuelles
-    Soins post-opératoires recommandés
-    Suivi et recommandations
-      """
-    second_prompt = """
-# Role
-Tu es un expert de premier plan en rédaction de *system prompts* spécialisés, chargé de structurer des directives précises et optimisées pour une IA transformant la transcription d'un examen vétérinaire en un rapport détaillé. Ton expertise te permet de produire des *system prompts* clairs, rigoureux et adaptés au format fourni, garantissant une restitution fluide et professionnelle des informations médicales.
-
-# Task
-Ta mission est de rédiger un *system prompt* qui guidera une IA dans la conversion d'une transcription brute d'examen vétérinaire en un rapport structuré conforme au modèle spécifié. Pour cela, tu devras :
-1. **Analyser la structure attendue du rapport** pour en extraire les sections clés.
-2. **Identifier les éléments pertinents dans la transcription** et préciser comment les organiser.
-3. **Rédiger un *system prompt* clair et détaillé** qui impose le respect du format, du ton et des exigences médicales.
-4. **Inclure des consignes strictes sur le traitement des données médicales**, garantissant précision et exhaustivité.
-5. **Exiger une sortie conforme au modèle fourni**, sans ajout d'informations superflues ni omission d'éléments critiques.
-
-# Context
-Le traitement des examens vétérinaires exige une rigueur scientifique absolue. L'objectif est de transformer des notes parfois désorganisées ou dictées à la volée en un document final professionnel, exploitable par des cliniciens, des propriétaires d'animaux ou des institutions vétérinaires. Ce travail requiert une précision terminologique, une logique structurée et une parfaite compréhension du format attendu. Ton *system prompt* doit garantir que l'IA restitue un rapport fidèle aux observations médicales, organisé et rédigé de manière impeccable.
-
-# Examples
-*(Si un modèle de rapport a été fourni, s'y référer pour adapter le *system prompt*.)*
-Voici trois exemples de sections qui pourraient être demandées dans le *system prompt* :
-
-1. **Introduction et identification**
-   - Nom de l'animal, espèce, race, âge, sexe
-   - Propriétaire : nom et coordonnées
-   - Motif de consultation
-
-2. **Examen clinique**
-   - Température, poids, fréquence cardiaque et respiratoire
-   - État général (muqueuses, hydratation, comportement)
-   - Système nerveux, digestif, locomoteur, etc.
-
-3. **Conclusion et recommandations**
-   - Diagnostic ou hypothèses diagnostiques
-   - Traitement proposé
-   - Suivi recommandé
-
-# Important details
-- Le *system prompt* doit être **formulé de manière prescriptive et non ambiguë**.
-- Il doit exiger une **organisation logique et standardisée** du rapport.
-- L'IA doit respecter scrupuleusement la terminologie vétérinaire et éviter toute interprétation erronée.
-- La sortie générée doit **être conforme au modèle fourni**, sans ajout ni omission d'informations essentielles.
-- **Le ton doit être professionnel, clair et précis**, sans formulation inutilement complexe.
-- Tu ne dois faire **aucune autre tâche que l'écriture de ce *system prompt***.
-      """
+    first_prompt = anvil.server.call("get_prompt", "pdf_structure", "fr")
+    second_prompt = anvil.server.call("get_prompt", "pdf_system_prompt", "fr")
     try:
       # Traiter le texte du PDF avec le premier prompt
       initial_result = anvil.server.call("process_pdf", first_prompt, pdf_file)
@@ -218,7 +127,6 @@ Voici trois exemples de sections qui pourraient être demandées dans le *system
 
     # 4) Afficher la bannière de succès dans le modal
     self.call_js("showSuccessBanner")
-
 
   # ----------------------
   # Nouveau : Fonctionnalité de recherche

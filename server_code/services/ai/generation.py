@@ -12,10 +12,11 @@ from . import (
   DEFAULT_TEMPERATURE,
   DEFAULT_MAX_TOKENS,
 )
+from .prompts_service import get_prompt
 
 
 @anvil.server.callable
-def generate_report(prompt, transcription):
+def generate_report(transcription, language):
   """
   Generate report using GPT-4.
   Includes retry mechanism with exponential backoff for API failures.
@@ -50,8 +51,10 @@ def generate_report(prompt, transcription):
     raise Exception("GPT-4 report generation failed after multiple attempts")
 
   try:
-    # Call the GPT-4 API with retry mechanism
-    result = _gpt4_generate(prompt, transcription)
+    generation_prompt = get_prompt("generation", language)
+    if not generation_prompt:
+      raise Exception("Could not find the 'generation' prompt in the database.")
+    result = _gpt4_generate(generation_prompt, transcription)
     print("[DEBUG] Report generation done")
     return result
 

@@ -59,24 +59,12 @@ db_schema:
     client: search
     columns:
     - admin_ui: {order: 0, width: 200}
-      name: template_name
+      name: name
       type: string
     - admin_ui: {order: 1, width: 200}
       name: owner
       target: users
       type: link_single
-    - admin_ui: {order: 2, width: 200}
-      name: prompt
-      type: string
-    - admin_ui: {order: 3, width: 200}
-      name: human_readable
-      type: simpleObject
-    - admin_ui: {order: 5, width: 200}
-      name: prompt_fr
-      type: string
-    - admin_ui: {order: 6, width: 200}
-      name: prompt_en
-      type: string
     - admin_ui: {order: 7, width: 200}
       name: base_template
       target: base_templates
@@ -123,6 +111,20 @@ db_schema:
       type: datetime
     server: full
     title: microphone_tests
+  prompts:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: task
+      type: string
+    - admin_ui: {order: 1, width: 200}
+      name: language
+      type: string
+    - admin_ui: {order: 2, width: 200}
+      name: text
+      type: string
+    server: full
+    title: Prompts
   reports:
     client: none
     columns:

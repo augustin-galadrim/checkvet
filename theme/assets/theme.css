@@ -1,0 +1,19 @@
+/* First, hide the default spinner image */
+.anvil-spinner-image {
+  display: none !important;
+}
+
+/* Then, style the container to use your GIF as the background */
+.anvil-spinner {
+  background-image: url('_/theme/beautiful-running-horse-sprite-animation.gif') !important; /* Make sure the filename matches what you uploaded */
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-color: transparent !important; /* Make sure there is no white box behind it */
+
+  width: 100px;  /* Set this to your GIF's width */
+  height: 100px; /* Set this to your GIF's height */
+
+  /* Remove default Anvil border and shadow */
+  border: none !important;
+  box-shadow: none !important;
+}

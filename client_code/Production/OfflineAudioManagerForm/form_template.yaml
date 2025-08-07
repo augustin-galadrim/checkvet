@@ -113,145 +113,9 @@ container:
           <!-- Banner container for notifications -->
           <div id="bannerContainer"></div>
 
-          <!-- Modal for Naming the Recording -->
-          <div class="modal" id="titleModal">
-            <div class="modal-content">
-              <div class="modal-header">Name Your Recording</div>
-              <div class="modal-body">
-                <p>Provide a title for this recording to identify it in the queue.</p>
-                <label for="recordingTitle">Recording Title:</label>
-                <input type="text" id="recordingTitle" placeholder="e.g., Exam of 'Fido'">
-              </div>
-              <div class="modal-footer">
-                <button class="button" id="cancelTitleBtn">Cancel</button>
-                <button class="button button-primary" id="confirmTitleBtn">Save to Queue</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Modal for Viewing the Queue -->
-          <div class="modal" id="queueModal">
-            <div class="modal-content">
-              <div class="modal-header">Offline Recordings Queue</div>
-              <div class="modal-body">
-                <div class="queue-list" id="queueListContainer"></div>
-              </div>
-              <div class="modal-footer">
-                <button class="button" id="closeQueueModalBtn">Close</button>
-              </div>
-            </div>
-          </div>
-
           <script>
             if (!window.__offline_form_globals) {
               window.__offline_form_globals = true;
-
-              let db;
-
-              // --- IndexedDB Functions ---
-              function initDB() {
-                return new Promise((resolve, reject) => {
-                  const request = indexedDB.open('audioQueueDB', 1);
-                  request.onerror = event => reject("IndexedDB error: " + event.target.errorCode);
-                  request.onsuccess = event => {
-                    db = event.target.result;
-                    console.log("Database initialized successfully.");
-                    resolve(db);
-                  };
-                  request.onupgradeneeded = event => {
-                    event.target.result.createObjectStore('recordings', { keyPath: 'id' });
-                  };
-                });
-              }
-
-              // *** FIX IS HERE: Modified save function ***
-              async function saveCurrentRecordingToQueue(title) {
-                if (!db) {
-                  return displayBanner("Database not initialized.", "error");
-                }
-
-                const stableAnchor = document.getElementById('offline-form-stable-anchor');
-                // get_current_audio_blob() returns the Anvil Media Object, which wraps the JS Blob
-                const audioBlob = await anvil.call(stableAnchor, 'get_current_audio_blob');
-
-                if (!audioBlob) {
-                  return displayBanner("Error: No audio data to save.", "error");
-                }
-
-                // Convert the Blob to an ArrayBuffer for safe storage.
-                const audioData = await audioBlob.arrayBuffer();
-                const mimeType = audioBlob.type; // e.g., 'audio/mp4'
-
-                const metadata = {
-                  id: `rec_${Date.now()}`,
-                  timestamp: Date.now(),
-                  status: "queued",
-                  title: title || "Untitled Recording",
-                };
-
-                // Store the ArrayBuffer and mimeType, NOT the Blob object itself.
-                const record = { ...metadata, audioData: audioData, mimeType: mimeType };
-
-                const request = db.transaction(['recordings'], 'readwrite')
-                  .objectStore('recordings')
-                  .add(record);
-
-                request.onsuccess = () => {
-                  console.log("Successfully saved raw audio data to IndexedDB.");
-                  displayBanner(`'${metadata.title}' saved to offline queue.`, "success");
-                  anvil.call(stableAnchor, 'reset_ui_to_recording');
-                  updateQueueBadge();
-                };
-                request.onerror = (event) => {
-                  console.error("Error saving to IndexedDB:", event.target.error);
-                  displayBanner("Failed to save recording to queue.", "error");
-                };
-              }
-              // *** END OF FIX ***
-
-              function getQueuedRecordings() {
-                return new Promise((resolve) => {
-                  if (!db) return resolve([]);
-                  const request = db.transaction(['recordings'], 'readonly').objectStore('recordings').getAll();
-                  request.onsuccess = () => resolve(request.result);
-                  request.onerror = () => resolve([]);
-                });
-              }
-
-              function deleteRecordingFromQueue(id) {
-                if (!db) return;
-                db.transaction(['recordings'], 'readwrite').objectStore('recordings').delete(id);
-                updateQueueBadge();
-                renderQueue();
-              }
-
-              async function updateQueueBadge() {
-                const queue = await getQueuedRecordings();
-                const badge = document.getElementById('queueBadge');
-                badge.style.display = queue.length > 0 ? 'inline-block' : 'none';
-                badge.textContent = queue.length;
-              }
-              async function renderQueue() {
-                const queue = await getQueuedRecordings();
-                const container = document.getElementById('queueListContainer');
-                container.innerHTML = queue.length === 0 ? '<p>No recordings in queue.</p>' : '';
-                queue.forEach(item => {
-                  const div = document.createElement('div');
-                  div.className = 'queue-item';
-                  div.innerHTML = `
-                                <div>
-                                  <div class="queue-item-title">${item.title}</div>
-                                  <div class="queue-item-status">Status: <strong>${item.status}</strong></div>
-                                </div>
-                                <div class="queue-item-actions">
-                                  <button class="button" disabled title="Import is only available in online mode">Import</button>
-                                  <button class="button delete-btn" data-id="${item.id}">Delete</button>
-                                </div>
-                              `;
-                  container.appendChild(div);
-                });
-                document.getElementById('queueModal').style.display = 'flex';
-              }
 
               window.displayBanner = function(message, type) {
                 const container = document.getElementById('bannerContainer');
@@ -281,10 +145,6 @@ container:
                 document.getElementById('titleModal').style.display = 'flex';
               };
 
-              window.initializeDBAndQueue = async () => {
-                await initDB();
-                updateQueueBadge();
-              };
 
               function attachOfflineEvents() {
                 const stableAnchor = document.getElementById('offline-form-stable-anchor');

@@ -348,21 +348,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
     final_html = anvil.server.call_s(formatter_fn, report_content)
     self.text_editor_1.html_content = final_html
 
-  # --- NEW FUNCTION ---
-  def process_queued_item(self, item_id, audio_blob, title):
-    """
-    Relay function to process a single item from the offline queue.
-    """
-    print(f"[DEBUG] Processing queued item: ID={item_id}, Title='{title}'")
-    try:
-      # Call the new dedicated server function
-      success = anvil.server.call(
-        "process_and_archive_offline_recording", audio_blob, title
-      )
-      return {"success": success}
-    except Exception as e:
-      print(f"[ERROR] Failed to process queued item {item_id}: {e}")
-      return {"success": False, "error": str(e)}
 
   # 1) called for each chunk
   def receive_audio_chunk(self, b64_chunk, index, total, **event_args):

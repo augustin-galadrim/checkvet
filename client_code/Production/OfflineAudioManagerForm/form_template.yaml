@@ -1,4 +1,8 @@
 components:
+- layout_properties: {slot: queue_slot}
+  name: queue_manager_1
+  properties: {disable_import: 'True'}
+  type: form:Components.QueueManager
 - layout_properties: {slot: recorder_slot}
   name: recording_widget_1
   properties: {}
@@ -83,10 +87,7 @@ container:
           <div class="container" id="offline-form-stable-anchor">
             <div class="fixed-section">
               <div class="actions-row">
-                <button class="queue-button" id="viewQueueBtn">
-                  <span>Queue</span>
-                  <span class="queue-badge" id="queueBadge">0</span>
-                </button>
+                <div anvil-slot="queue_slot"></div>
                 <div class="time" id="timeDisplay">--:--</div>
               </div>
             </div>

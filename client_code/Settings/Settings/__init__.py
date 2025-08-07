@@ -6,6 +6,7 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 
+
 class Settings(SettingsTemplate):
   def __init__(self, **properties):
     print("Debug: Initialisation du formulaire Settings...")
@@ -18,7 +19,9 @@ class Settings(SettingsTemplate):
     S'exécute après que le formulaire est visible. Nous allons récupérer les données utilisateur,
     remplir les champs via self.call_js(...), et charger les modaux.
     """
-    print("Debug: Le formulaire Settings est maintenant visible. Chargement des données du vétérinaire...")
+    print(
+      "Debug: Le formulaire Settings est maintenant visible. Chargement des données du vétérinaire..."
+    )
     self.load_vet_data()
     print("Debug: Données du vétérinaire chargées dans le formulaire.")
     print("Debug: Chargement des données du modal de structure...")
@@ -87,17 +90,25 @@ class Settings(SettingsTemplate):
 
         # Libellés de fichiers pour les images existantes
         if user_data.get("signature_image"):
-          self.call_js("setFileNameById", "signature", user_data["signature_image"].name)
+          self.call_js(
+            "setFileNameById", "signature", user_data["signature_image"].name
+          )
         if user_data.get("report_header_image"):
-          self.call_js("setFileNameById", "report-header", user_data["report_header_image"].name)
+          self.call_js(
+            "setFileNameById", "report-header", user_data["report_header_image"].name
+          )
         if user_data.get("report_footer_image"):
-          self.call_js("setFileNameById", "report-footer", user_data["report_footer_image"].name)
+          self.call_js(
+            "setFileNameById", "report-footer", user_data["report_footer_image"].name
+          )
 
         # Check if the user is an admin and show/hide button accordingly
         is_admin = self.is_admin_user()
         self.call_js("showAdminButton", is_admin)
       else:
-        alert("Impossible de récupérer les données utilisateur. Veuillez contacter le support.")
+        alert(
+          "Impossible de récupérer les données utilisateur. Veuillez contacter le support."
+        )
     except Exception as e:
       print(f"Debug: Erreur dans load_vet_data : {str(e)}")
       alert(f"Une erreur est survenue lors du chargement des données : {str(e)}")
@@ -116,7 +127,7 @@ class Settings(SettingsTemplate):
 
       print(f"Debug: Structures récupérées : {structures}")
       # Extraire le nom de la structure pour chaque structure
-      options = [s['structure'] for s in structures]
+      options = [s["structure"] for s in structures]
       # S'assurer que "Indépendant" est toujours disponible
       if "Indépendant" not in options:
         options.append("Indépendant")
@@ -128,7 +139,11 @@ class Settings(SettingsTemplate):
         anvil.server.reset_session()
         user_data = anvil.server.call("read_user")
 
-      current_structure = user_data.get("structure") if user_data and user_data.get("structure") else "Indépendant"
+      current_structure = (
+        user_data.get("structure")
+        if user_data and user_data.get("structure")
+        else "Indépendant"
+      )
       # Mettre à jour l'input caché et le bouton de structure
       self.call_js("setValueById", "structure", current_structure)
       self.call_js("setButtonTextById", "structure-button", current_structure)
@@ -147,7 +162,7 @@ class Settings(SettingsTemplate):
         {"display": "Français", "value": "FR"},
         {"display": "Anglais", "value": "EN"},
         {"display": "Español", "value": "ES"},
-        {"display": "Deutsch", "value": "DE"}
+        {"display": "Deutsch", "value": "DE"},
       ]
 
       try:
@@ -156,7 +171,11 @@ class Settings(SettingsTemplate):
         anvil.server.reset_session()
         user_data = anvil.server.call("read_user")
 
-      current_fav = user_data.get("favorite_language") if user_data and user_data.get("favorite_language") else "EN"
+      current_fav = (
+        user_data.get("favorite_language")
+        if user_data and user_data.get("favorite_language")
+        else "EN"
+      )
       mapping = {"FR": "Français", "EN": "Anglais", "ES": "Español", "DE": "Deutsch"}
       display_text = mapping.get(current_fav, "Anglais")
       self.call_js("setValueById", "favorite-language", current_fav)
@@ -164,15 +183,18 @@ class Settings(SettingsTemplate):
       self.call_js("populateFavoriteLanguageModal", options, current_fav)
     except Exception as e:
       print(f"Debug: Erreur lors du chargement du modal de langue préférée : {str(e)}")
-      alert(f"Une erreur est survenue lors du chargement des langues préférées : {str(e)}")
+      alert(
+        f"Une erreur est survenue lors du chargement des langues préférées : {str(e)}"
+      )
 
   def submit_click(self, **event_args):
     """
-    Appelé lorsque l'utilisateur clique sur "Mettre à jour les paramètres".
-    """
+      Called when the user clicks "Update Settings". It now saves the data,
+      shows a success message, and reloads the form data to reflect changes.
+      """
     try:
-      print("Debug: Bouton de soumission cliqué. Récupération des données du formulaire...")
-
+      print("Debug: Submit button clicked. Gathering form data...")
+  
       form_data = {
         "name": self.call_js("getValueById", "name"),
         "phone": self.call_js("getValueById", "phone"),
@@ -180,52 +202,60 @@ class Settings(SettingsTemplate):
         "supervisor": self.call_js("getCheckedById", "supervisor"),
         "favorite_language": self.call_js("getValueById", "favorite-language"),
       }
-
-      # Récupérer les données de fichier pour chaque champ si un fichier a été sélectionné
+  
+      # Handle file data for each field if a file was selected
       signature_file = self.get_file_data("signature")
       if signature_file:
         form_data["signature_image"] = signature_file
-
+  
       report_header_file = self.get_file_data("report-header")
       if report_header_file:
         form_data["report_header_image"] = report_header_file
-
+  
       report_footer_file = self.get_file_data("report-footer")
       if report_footer_file:
         form_data["report_footer_image"] = report_footer_file
-
-      print(f"Debug: Données du formulaire récupérées : {form_data}")
-
-      # Appeler le serveur pour mettre à jour l'enregistrement de l'utilisateur
+  
+      print(f"Debug: Form data gathered: {form_data}")
+  
+      # Call the server to update the user record
       try:
         success = anvil.server.call("write_user", **form_data)
       except anvil.server.SessionExpiredError:
         anvil.server.reset_session()
         success = anvil.server.call("write_user", **form_data)
-
-      print(f"Debug: Réponse du serveur pour la mise à jour : {success}")
-
+  
+      print(f"Debug: Server response for update: {success}")
+  
       if success:
-        self.call_js("displayBanner", "Les paramètres du vétérinaire ont été mis à jour avec succès !", "success")
-        open_form("StartupForm")
+        self.call_js(
+          "displayBanner",
+          "Vet settings updated successfully!",
+          "success",
+        )
+        # Reload the form data to show the saved changes
+        self.load_vet_data()
       else:
-        alert("Échec de la mise à jour des paramètres du vétérinaire. Veuillez réessayer.")
+        alert("Failed to update vet settings. Please try again.")
     except Exception as e:
-      print(f"Debug: Erreur lors de la soumission : {str(e)}")
-      alert(f"Une erreur est survenue lors de la soumission : {str(e)}")
+      print(f"Debug: Error during submission: {str(e)}")
+      alert(f"An error occurred during submission: {str(e)}")
 
   def cancel_click(self, **event_args):
     """
-    Appelé lorsque l'utilisateur clique sur "Annuler".
+    Called when the user clicks "Cancel". It now reloads the vet data
+    from the server, effectively discarding any changes.
     """
-    open_form("Production.AudioManagerForm")
-
+    print("Debug: Cancel button clicked. Reverting changes.")
+    self.load_vet_data()
+    self.call_js("displayBanner", "Changes have been discarded.", "info")
+    
   def logout_click(self, **event_args):
     """
     Appelé lorsque l'utilisateur clique sur "Déconnexion".
     """
     anvil.users.logout()
-    open_form('StartupForm')
+    open_form("StartupForm")
 
   def get_file_data(self, input_id):
     """
@@ -238,31 +268,17 @@ class Settings(SettingsTemplate):
         return anvil.BlobMedia(
           content_type=file_data["content_type"],
           content=file_data["content"],
-          name=file_data["name"]
+          name=file_data["name"],
         )
       except Exception as e:
-        print(f"Debug: Erreur lors de la lecture des données du fichier pour {input_id} : {e}")
+        print(
+          f"Debug: Erreur lors de la lecture des données du fichier pour {input_id} : {e}"
+        )
     return None
-
-  def openProduction(self, **event_args):
-    """Appelé depuis l'onglet supérieur 'Production'"""
-    open_form("Production.AudioManagerForm")
-
-  def openTemplates(self, **event_args):
-    """Appelé depuis l'onglet supérieur 'Modèles/IA'"""
-    open_form("Templates.Templates")
-
-  def openArchives(self, **event_args):
-    """Appelé depuis l'onglet supérieur 'Archives'"""
-    current_user = anvil.users.get_user()
-    if current_user['supervisor']:
-      open_form("Archives.EN_ArchivesSecretariat")
-    else:
-      open_form("Archives.Archives")
 
   def openMicrophoneTest(self, **event_args):
     """Appelé lorsque l'utilisateur clique sur 'Tester mon micro'."""
-    open_form("MicrophoneTest")
+    open_form("Settings.MicrophoneTest")
 
   def check_structure_authorization(self, structure, **event_args):
     """
@@ -278,7 +294,11 @@ class Settings(SettingsTemplate):
         print("Debug: No current user found")
         return False
 
-      admin_emails = ["cristobal.navarro@me.com", "biffy071077@gmail.com"]
+      admin_emails = [
+        "cristobal.navarro@me.com",
+        "biffy071077@gmail.com",
+        "augustincramer.galadrim@gmail.com",
+      ]
 
       # Use square bracket notation instead of .get() method
       try:
@@ -296,7 +316,8 @@ class Settings(SettingsTemplate):
 
   def openAdmin(self, **event_args):
     """Opens the Admin form when clicked."""
-    open_form("Admin")
+    open_form("Settings.Admin")
+
 
 # Fonctions relais
 def relay_read_structures():
@@ -305,6 +326,7 @@ def relay_read_structures():
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
     return anvil.server.call("read_structures")
+
 
 def relay_check_vet_authorization(structure):
   try:

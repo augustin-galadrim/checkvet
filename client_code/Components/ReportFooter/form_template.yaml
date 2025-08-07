@@ -1,0 +1,105 @@
+components: []
+container:
+  properties:
+    html: |-
+      <style>
+        /* Styles for the footer button container */
+        .bottom-buttons {
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 800px;
+          max-width: 100%;
+          background: #fff;
+          padding: 15px 20px;
+          display: flex;
+          justify-content: center;
+          gap: 20px;
+          border-top: 1px solid #ddd;
+          box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+          z-index: 10;
+        }
+
+        /* General style for all buttons in the footer */
+        .bottom-button {
+          padding: 10px 30px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          background: #fff;
+          cursor: pointer;
+          font-size: 14px;
+          transition: all 0.2s ease;
+        }
+
+        /* Hover effect for all buttons */
+        .bottom-button:hover {
+          background: #f5f5f5;
+          border-color: #999;
+        }
+
+        /* Specific style for the primary action button (Archive/Save) */
+        .primary-button {
+          background-color: #4CAF50;
+          color: white;
+          border-color: #4CAF50;
+        }
+        .primary-button:hover {
+          background-color: #45a049;
+        }
+      </style>
+      <div class="bottom-buttons">
+        <button class="bottom-button" id="footer-status-btn">Status</button>
+        <button class="bottom-button" id="footer-archive-btn">Archive</button>
+        <button class="bottom-button" id="footer-share-btn">Share</button>
+      </div>
+
+      <script>
+        // Use a guard to prevent re-defining functions and attaching duplicate listeners
+        if (!window.__report_footer_globals) {
+          window.__report_footer_globals = true;
+
+          // Function to be called from Python to update the status button's text
+          window.setFooterStatusText = function(newStatusText) {
+            const statusBtn = document.getElementById('footer-status-btn');
+            if (statusBtn) {
+              statusBtn.textContent = newStatusText || 'Status';
+            }
+          };
+
+          // Function to attach event listeners. This will be called from Python.
+          window.attachFooterEvents = function() {
+            const statusBtn = document.getElementById('footer-status-btn');
+            const archiveBtn = document.getElementById('footer-archive-btn');
+            const shareBtn = document.getElementById('footer-share-btn');
+
+            // Use the cloneNode trick to ensure listeners aren't duplicated
+            if (statusBtn) {
+              const newStatusBtn = statusBtn.cloneNode(true);
+              statusBtn.parentNode.replaceChild(newStatusBtn, statusBtn);
+              newStatusBtn.addEventListener('click', (e) => anvil.call(e.target, 'status_button_click'));
+            }
+            if (archiveBtn) {
+              const newArchiveBtn = archiveBtn.cloneNode(true);
+              archiveBtn.parentNode.replaceChild(newArchiveBtn, archiveBtn);
+              newArchiveBtn.addEventListener('click', (e) => anvil.call(e.target, 'save_button_click'));
+            }
+            if (shareBtn) {
+              const newShareBtn = shareBtn.cloneNode(true);
+              shareBtn.parentNode.replaceChild(newShareBtn, shareBtn);
+              newShareBtn.addEventListener('click', (e) => anvil.call(e.target, 'share_button_click'));
+            }
+          };
+        }
+      </script>
+  type: HtmlTemplate
+custom_component: true
+events:
+- default_event: true
+  name: x_status_clicked
+  parameters:
+  - {name: status_key}
+- {name: x_save_clicked}
+- {name: x_share_clicked}
+is_package: true
+properties: []

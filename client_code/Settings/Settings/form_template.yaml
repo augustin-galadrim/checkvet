@@ -1,6 +1,679 @@
-components: []
+components:
+- layout_properties: {slot: default}
+  name: header_nav_1
+  properties: {active_tab: Settings}
+  type: form:Components.HeaderNav
 container:
   properties:
-    html: "<!DOCTYPE html>\n<html>\n  <head>\n    <meta charset=\"utf-8\">\n    <style>\n      /* Global styles */\n      * {\n        box-sizing: border-box;\n        font-family: Arial, sans-serif;\n        margin: 0;\n        padding: 0;\n      }\n      body {\n        background-color: #f5f5f5;\n        height: 100vh;\n        overflow: hidden;\n      }\n      .container {\n        display: flex;\n        flex-direction: column;\n        height: 100vh;\n        max-width: 800px;\n        margin: 0 auto;\n        background-color: white;\n        box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n      }\n      .fixed-section {\n        background: white;\n        z-index: 10;\n      }\n      .nav-tabs {\n        display: flex;\n        width: 100%;\n        border-bottom: 1px solid #ddd;\n      }\n      .nav-tab {\n        flex: 1;\n        padding: 8px 16px;\n        cursor: pointer;\n        border: 1px solid #ccc;\n        border-bottom: none;\n        background: #f8f8f8;\n        font-size: 14px;\n        position: relative;\n        margin-right: -1px;\n        text-align: center;\n      }\n      .nav-tab.active {\n        background: #e5e5e5;\n        border-top: 1px solid #999;\n        border-left: 1px solid #999;\n        border-right: 1px solid #999;\n        border-bottom: 1px solid #e5e5e5;\n        margin-bottom: -1px;\n      }\n      .actions-row {\n        display: flex;\n        justify-content: flex-end;\n        align-items: center;\n        padding: 15px 20px;\n      }\n      .time {\n        color: #666;\n        font-size: 14px;\n      }\n      .scrollable-content {\n        flex: 1;\n        overflow-y: auto;\n        padding: 20px;\n      }\n      /* Settings Form Styling */\n      .settings-form {\n        background-color: white;\n        border-radius: 8px;\n        padding: 20px;\n      }\n      .form-group {\n        margin-bottom: 20px;\n      }\n      .form-group label {\n        display: block;\n        margin-bottom: 8px;\n        font-weight: 500;\n        color: #333;\n      }\n      .form-group input[type=\"text\"],\n      .form-group input[type=\"email\"],\n      .form-group input[type=\"tel\"],\n      .form-group textarea,\n      .form-group select {\n        width: 100%;\n        padding: 10px;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        font-size: 14px;\n      }\n      .form-group textarea {\n        height: 100px;\n        resize: vertical;\n      }\n      .form-group input[type=\"checkbox\"] {\n        margin-right: 8px;\n      }\n      .file-input-wrapper {\n        display: flex;\n        align-items: center;\n        gap: 10px;\n      }\n      .file-input-wrapper input[type=\"file\"] {\n        display: none;\n      }\n      .file-input-wrapper label.file-upload-btn {\n        padding: 8px 16px;\n        background-color: #f0f0f0;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        cursor: pointer;\n        font-size: 14px;\n        display: inline-block;\n      }\n      .file-input-wrapper label.file-name-label {\n        flex: 1;\n        overflow: hidden;\n        text-overflow: ellipsis;\n        white-space: nowrap;\n        color: #666;\n        font-size: 14px;\n      }\n      .button-group {\n        display: flex;\n        gap: 10px;\n        margin-top: 30px;\n      }\n      .custom-button {\n        flex: 1;\n        padding: 12px 24px;\n        border: none;\n        border-radius: 4px;\n        cursor: pointer;\n        font-size: 14px;\n        text-align: center;\n        transition: background-color 0.3s;\n      }\n      #submit-btn {\n        background-color: #4CAF50;\n        color: white;\n      }\n      #submit-btn:hover {\n        background-color: #45a049;\n      }\n      #cancel-btn {\n        background-color: #f44336;\n        color: white;\n      }\n      #cancel-btn:hover {\n        background-color: #d32f2f;\n      }\n      .custom-structure-button {\n        width: 100%;\n        padding: 10px;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        font-size: 14px;\n        background-color: #fff;\n        cursor: pointer;\n      }\n      /* Modal styling */\n      .modal {\n        display: none;\n        position: fixed;\n        z-index: 20;\n        left: 0;\n        top: 0;\n        width: 100%;\n        height: 100%;\n        overflow: auto;\n        background-color: rgba(0,0,0,0.5);\n      }\n      .modal-content {\n        background-color: #fefefe;\n        margin: 10% auto;\n        padding: 20px;\n        border: 1px solid #888;\n        width: 80%;\n        max-width: 400px;\n        border-radius: 8px;\n      }\n      .modal-close {\n        color: #aaa;\n        float: right;\n        font-size: 28px;\n        font-weight: bold;\n        cursor: pointer;\n      }\n      .modal-close:hover,\n      .modal-close:focus {\n        color: black;\n        text-decoration: none;\n      }\n      .structure-option {\n        padding: 10px;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        margin: 5px 0;\n        cursor: pointer;\n        background-color: #fff;\n      }\n      .structure-option:hover {\n        background-color: #f0f0f0;\n      }\n      .structure-option.selected {\n        background-color: #d0ebff;\n        border-color: #66b0ff;\n      }\n      /* Logout footer styling */\n      .logout-footer {\n        padding: 15px 20px;\n        border-top: 1px solid #ddd;\n        background-color: #f8f8f8;\n        text-align: center;\n        margin-top: 20px;\n      }\n      #logout-btn, #admin-btn {\n        background-color: #f44336;\n        color: white;\n        border: none;\n        border-radius: 4px;\n        padding: 12px 24px;\n        cursor: pointer;\n        font-size: 14px;\n        transition: background-color 0.3s;\n        width: 100%;\n      }\n      #admin-btn {\n        background-color: #007bff; \n        margin-bottom: 10px;\n        display: none; /* Initially hidden */\n        font-weight: bold;\n        border: 2px solid #0056b3;\n      }\n      #admin-btn:hover {\n        background-color: #0056b3;\n      }\n      #logout-btn:hover {\n        background-color: #d32f2f;\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"container\">\n      <!-- En-tête fixe avec onglets -->\n      <div class=\"fixed-section\">\n        <div class=\"nav-tabs\">\n          <button class=\"nav-tab\" data-tab=\"Production\">Production</button>\n          <button class=\"nav-tab\" data-tab=\"Modèles/IA\">Modèles/IA</button>\n          <button class=\"nav-tab\" data-tab=\"Archives\">Archives</button>\n          <button class=\"nav-tab active\" data-tab=\"Paramètres\">Paramètres</button>\n        </div>\n        <div class=\"actions-row\">\n          <div class=\"time\">--:--</div>\n        </div>\n      </div>\n      <div class=\"scrollable-content\">\n        <div class=\"settings-form\">\n          <form id=\"vet-settings-form\" enctype=\"multipart/form-data\">\n            <div class=\"form-group\">\n              <label for=\"name\">Nom</label>\n              <input type=\"text\" id=\"name\" name=\"name_input\" required>\n            </div>\n            <div class=\"form-group\">\n              <label for=\"email\">Email</label>\n              <input type=\"email\" id=\"email\" name=\"email_input\" readonly>\n            </div>\n            <div class=\"form-group\">\n              <label for=\"phone\">Téléphone</label>\n              <input type=\"tel\" id=\"phone\" name=\"phone_input\">\n            </div>\n            <div class=\"form-group\">\n              <label for=\"structure\">Structure</label>\n              <!-- L'input caché contient la valeur de la structure -->\n              <input type=\"hidden\" id=\"structure\" name=\"structure_input\">\n              <!-- Le bouton affiche la structure actuelle -->\n              <button type=\"button\" id=\"structure-button\" class=\"custom-structure-button\">Indépendant</button>\n            </div>\n            <!-- Nouveau champ Langue préférée -->\n            <div class=\"form-group\">\n              <label for=\"favorite-language\">Langue préférée</label>\n              <input type=\"hidden\" id=\"favorite-language\" name=\"favorite_language_input\">\n              <button type=\"button\" id=\"favorite-language-button\" class=\"custom-structure-button\">Anglais</button>\n            </div>\n            <!-- Nouveau bouton Tester mon micro -->\n            <div class=\"form-group\">\n              <button type=\"button\" id=\"microphone-test-button\" class=\"custom-structure-button\">Tester mon micro</button>\n            </div>\n            <div class=\"form-group\">\n              <label for=\"signature\">Signature</label>\n              <div class=\"file-input-wrapper\">\n                <input type=\"file\" id=\"signature\" name=\"signature_input\" accept=\"image/*\">\n                <label for=\"signature\" class=\"file-upload-btn\">Choisir un fichier</label>\n                <label class=\"file-name-label\">Aucun fichier choisi</label>\n              </div>\n            </div>\n            <div class=\"form-group\">\n              <label for=\"report-header\">En-tête du rapport</label>\n              <div class=\"file-input-wrapper\">\n                <input type=\"file\" id=\"report-header\" name=\"report_header_input\" accept=\"image/*\">\n                <label for=\"report-header\" class=\"file-upload-btn\">Choisir un fichier</label>\n                <label class=\"file-name-label\">Aucun fichier choisi</label>\n              </div>\n            </div>\n            <div class=\"form-group\">\n              <label for=\"report-footer\">Pied de page du rapport</label>\n              <div class=\"file-input-wrapper\">\n                <input type=\"file\" id=\"report-footer\" name=\"report_footer_input\" accept=\"image/*\">\n                <label for=\"report-footer\" class=\"file-upload-btn\">Choisir un fichier</label>\n                <label class=\"file-name-label\">Aucun fichier choisi</label>\n              </div>\n            </div>\n            <div class=\"form-group\">\n              <label style=\"display: flex; align-items: center;\">\n                <input type=\"checkbox\" id=\"supervisor\" name=\"supervisor_checkbox\">\n                <span style=\"margin-left: 8px;\">Superviseur</span>\n              </label>\n            </div>\n            <div class=\"button-group\">\n              <div id=\"submit-btn\" class=\"custom-button\">Mettre à jour les paramètres</div>\n              <div id=\"cancel-btn\" class=\"custom-button\">Annuler</div>\n            </div>\n          </form>\n        </div>\n        <div class=\"logout-footer\">\n          <!-- Admin button only shown for admin users -->\n          <button id=\"admin-btn\" class=\"custom-button\">Administration</button>\n          <button id=\"logout-btn\" class=\"custom-button\">Déconnexion</button>\n        </div>\n      </div>\n    </div>\n\n    <!-- Modal pour la sélection de structure -->\n    <div id=\"structure-modal\" class=\"modal\">\n      <div class=\"modal-content\">\n        <span id=\"structure-modal-close\" class=\"modal-close\">&times;</span>\n        <h3>Sélectionner une structure</h3>\n        <div id=\"structure-options\">\n          <!-- Les options seront insérées dynamiquement ici -->\n        </div>\n      </div>\n    </div>\n\n    <!-- Modal pour la sélection de la langue préférée -->\n    <div id=\"favorite-language-modal\" class=\"modal\">\n      <div class=\"modal-content\">\n        <span id=\"favorite-language-modal-close\" class=\"modal-close\">&times;</span>\n        <h3>Sélectionner la langue préférée</h3>\n        <div id=\"favorite-language-options\">\n          <!-- Les options seront insérées dynamiquement ici -->\n        </div>\n      </div>\n    </div>\n\n    <script>\n      // Function to show/hide admin button - defined OUTSIDE conditional block\n      window.showAdminButton = function(isAdmin) {\n        const adminBtn = document.getElementById(\"admin-btn\");\n        console.log(\"showAdminButton called with isAdmin =\", isAdmin);\n        if (adminBtn) {\n          adminBtn.style.display = isAdmin ? \"block\" : \"none\";\n          console.log(\"Admin button display set to:\", adminBtn.style.display);\n        } else {\n          console.log(\"Admin button element not found!\");\n        }\n      };\n\n      // ---------------------------------------\n      // 1) Exécuter une seule fois par session\n      // ---------------------------------------\n      if (!window.__my_vet_settings_globals) {\n        window.__my_vet_settings_globals = true;\n        console.log(\"Initializing settings globals\");\n\n        // Function to display success/error banners\n        window.displayBanner = function(message, type) {\n          console.log(\"Display banner:\", message, type);\n          const bannerDiv = document.createElement('div');\n          bannerDiv.textContent = message;\n          bannerDiv.style.padding = '10px';\n          bannerDiv.style.margin = '10px 0';\n          bannerDiv.style.borderRadius = '4px';\n          bannerDiv.style.textAlign = 'center';\n          bannerDiv.style.position = 'fixed';\n          bannerDiv.style.top = '20px';\n          bannerDiv.style.left = '50%';\n          bannerDiv.style.transform = 'translateX(-50%)';\n          bannerDiv.style.zIndex = '1000';\n          bannerDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';\n\n          if (type === 'success') {\n            bannerDiv.style.backgroundColor = '#4CAF50';\n            bannerDiv.style.color = 'white';\n          } else {\n            bannerDiv.style.backgroundColor = '#f44336';\n            bannerDiv.style.color = 'white';\n          }\n\n          document.body.appendChild(bannerDiv);\n\n          // Remove banner after 3 seconds\n          setTimeout(() => {\n            if (document.body.contains(bannerDiv)) {\n              document.body.removeChild(bannerDiv);\n            }\n          }, 3000);\n        };\n\n        // Fonctions de base pour get/set des champs de texte\n        window.getValueById = function(id) {\n          const element = document.getElementById(id);\n          return element ? element.value : \"\";\n        };\n        window.setValueById = function(id, value) {\n          const element = document.getElementById(id);\n          if (element) {\n            element.value = value;\n          }\n        };\n\n        window.setButtonTextById = function(id, text) {\n          const element = document.getElementById(id);\n          if (element) {\n            element.textContent = text;\n          }\n        };\n\n        // Pour les cases à cocher\n        window.getCheckedById = function(id) {\n          const element = document.getElementById(id);\n          return element ? element.checked : false;\n        };\n        window.setCheckedById = function(id, checked) {\n          const element = document.getElementById(id);\n          if (element) {\n            element.checked = checked;\n          }\n        };\n\n        // Pour les libellés de noms de fichiers\n        window.setFileNameById = function(id, fileName) {\n          const input = document.getElementById(id);\n          if (input && input.type === 'file') {\n            const label = input.nextElementSibling.nextElementSibling;\n            if (label && label.classList.contains('file-name-label')) {\n              label.textContent = fileName || 'Aucun fichier choisi';\n            }\n          }\n        };\n\n        // Pour lire les données d'un fichier (renvoie une Promise ou null)\n        window.getFileData = function(inputId) {\n          const input = document.getElementById(inputId);\n          if (input && input.files && input.files.length > 0) {\n            const file = input.files[0];\n            return new Promise((resolve, reject) => {\n              const reader = new FileReader();\n              reader.onload = function(e) {\n                resolve({\n                  name: file.name,\n                  content_type: file.type,\n                  content: new Uint8Array(e.target.result)\n                });\n              };\n              reader.onerror = reject;\n              reader.readAsArrayBuffer(file);\n            });\n          }\n          return null;\n        };\n\n        // Remplir le modal de structure avec des options.\n        window.populateStructureModal = function(options, current) {\n          const optionsContainer = document.getElementById(\"structure-options\");\n          optionsContainer.innerHTML = \"\";\n          options.forEach(opt => {\n            const optionElem = document.createElement(\"div\");\n            optionElem.classList.add(\"structure-option\");\n            optionElem.textContent = opt;\n            if (current && opt === current) {\n              optionElem.classList.add(\"selected\");\n            }\n            optionElem.addEventListener(\"click\", function(event) {\n              if (opt !== \"Indépendant\") {\n                anvil.call(document.getElementById('vet-settings-form'), 'check_structure_authorization', opt)\n                  .then(function(isAuthorized) {\n                    if (!isAuthorized) {\n                      alert(\"Vous n'êtes pas autorisé(e) pour cette structure.\");\n                      return;\n                    }\n                    let confirmMsg = \"Êtes-vous sûr de vouloir changer votre structure pour \" + opt + \" ?\";\n                    if(opt !== current && !confirm(confirmMsg)) {\n                      return;\n                    }\n                    document.getElementById(\"structure\").value = opt;\n                    setButtonTextById(\"structure-button\", opt);\n                    const allOptions = optionsContainer.querySelectorAll(\".structure-option\");\n                    allOptions.forEach(elem => elem.classList.remove(\"selected\"));\n                    optionElem.classList.add(\"selected\");\n                    current = opt;\n                    window.closeStructureModal();\n                  })\n                  .catch(function(error) {\n                    alert(\"Erreur lors de la vérification de l'autorisation: \" + error);\n                  });\n              } else {\n                let confirmMsg = \"Voulez-vous vraiment quitter votre structure actuelle ?\";\n                if(opt !== current && !confirm(confirmMsg)) {\n                  return;\n                }\n                document.getElementById(\"structure\").value = opt;\n                setButtonTextById(\"structure-button\", opt);\n                const allOptions = optionsContainer.querySelectorAll(\".structure-option\");\n                allOptions.forEach(elem => elem.classList.remove(\"selected\"));\n                optionElem.classList.add(\"selected\");\n                current = opt;\n                window.closeStructureModal();\n              }\n            });\n            optionsContainer.appendChild(optionElem);\n          });\n        };\n\n        // Remplir le modal de langue préférée avec des options.\n        window.populateFavoriteLanguageModal = function(options, current) {\n          const optionsContainer = document.getElementById(\"favorite-language-options\");\n          optionsContainer.innerHTML = \"\";\n          options.forEach(opt => {\n            const optionElem = document.createElement(\"div\");\n            optionElem.classList.add(\"structure-option\");\n            optionElem.textContent = opt.display;\n            if (current && opt.value === current) {\n              optionElem.classList.add(\"selected\");\n            }\n            optionElem.addEventListener(\"click\", function(event) {\n              document.getElementById(\"favorite-language\").value = opt.value;\n              setButtonTextById(\"favorite-language-button\", opt.display);\n              const allOptions = optionsContainer.querySelectorAll(\".structure-option\");\n              allOptions.forEach(elem => elem.classList.remove(\"selected\"));\n              optionElem.classList.add(\"selected\");\n              current = opt.value;\n              window.closeFavoriteLanguageModal();\n            });\n            optionsContainer.appendChild(optionElem);\n          });\n        };\n\n        // Ouvrir et fermer les modaux\n        window.openStructureModal = function() {\n          const modal = document.getElementById(\"structure-modal\");\n          modal.style.display = \"block\";\n        };\n        window.closeStructureModal = function() {\n          const modal = document.getElementById(\"structure-modal\");\n          modal.style.display = \"none\";\n        };\n        window.openFavoriteLanguageModal = function() {\n          const modal = document.getElementById(\"favorite-language-modal\");\n          modal.style.display = \"block\";\n        };\n        window.closeFavoriteLanguageModal = function() {\n          const modal = document.getElementById(\"favorite-language-modal\");\n          modal.style.display = \"none\";\n        };\n\n        // Attacher les écouteurs d'événements\n        window.__attachVetSettingsEvents = function() {\n          console.log(\"Attaching vet settings events\");\n          const vetSettingsForm = document.getElementById('vet-settings-form');\n          const submitBtn = document.getElementById('submit-btn');\n          const cancelBtn = document.getElementById('cancel-btn');\n          const structureButton = document.getElementById(\"structure-button\");\n          const modalClose = document.getElementById(\"structure-modal-close\");\n\n          if (!vetSettingsForm || !submitBtn || !cancelBtn || !structureButton || !modalClose) {\n            console.log(\"Settings: Certains éléments n'ont pas été trouvés, annulation de l'attachement.\");\n            return;\n          }\n\n          // Remplacer les anciens écouteurs par des clones\n          submitBtn.replaceWith(submitBtn.cloneNode(true));\n          cancelBtn.replaceWith(cancelBtn.cloneNode(true));\n          structureButton.replaceWith(structureButton.cloneNode(true));\n          modalClose.replaceWith(modalClose.cloneNode(true));\n\n          const newSubmitBtn = document.getElementById('submit-btn');\n          const newCancelBtn = document.getElementById('cancel-btn');\n          const newStructureButton = document.getElementById(\"structure-button\");\n          const newModalClose = document.getElementById(\"structure-modal-close\");\n\n          newSubmitBtn.addEventListener('click', (event) => {\n            anvil.call(vetSettingsForm, 'submit_click');\n          });\n\n          newCancelBtn.addEventListener('click', (event) => {\n            anvil.call(vetSettingsForm, 'cancel_click');\n          });\n\n          newStructureButton.addEventListener('click', (event) => {\n            openStructureModal();\n          });\n\n          newModalClose.addEventListener('click', (event) => {\n            closeStructureModal();\n          });\n\n          window.addEventListener('click', function(event) {\n            const modal = document.getElementById(\"structure-modal\");\n            if (event.target == modal) {\n              closeStructureModal();\n            }\n          });\n\n          // Mettre à jour le libellé lors de la sélection d'un fichier\n          const fileInputs = vetSettingsForm.querySelectorAll('input[type=\"file\"]');\n          fileInputs.forEach(input => {\n            input.addEventListener('change', () => {\n              const label = input.nextElementSibling.nextElementSibling;\n              if (label && label.classList.contains('file-name-label')) {\n                label.textContent = input.files[0] ? input.files[0].name : 'Aucun fichier choisi';\n              }\n            });\n          });\n\n          // Attacher les événements pour le bouton de langue préférée\n          const favoriteLanguageButton = document.getElementById(\"favorite-language-button\");\n          const favoriteLanguageModalClose = document.getElementById(\"favorite-language-modal-close\");\n          favoriteLanguageButton.replaceWith(favoriteLanguageButton.cloneNode(true));\n          favoriteLanguageModalClose.replaceWith(favoriteLanguageModalClose.cloneNode(true));\n          const newFavoriteLanguageButton = document.getElementById(\"favorite-language-button\");\n          const newFavoriteLanguageModalClose = document.getElementById(\"favorite-language-modal-close\");\n          newFavoriteLanguageButton.addEventListener('click', (event) => {\n            openFavoriteLanguageModal();\n          });\n          newFavoriteLanguageModalClose.addEventListener('click', (event) => {\n            closeFavoriteLanguageModal();\n          });\n          window.addEventListener('click', function(event) {\n            const modal = document.getElementById(\"favorite-language-modal\");\n            if (event.target == modal) {\n              closeFavoriteLanguageModal();\n            }\n          });\n\n          // Attacher les événements pour le bouton Tester mon micro\n          const microphoneTestButton = document.getElementById(\"microphone-test-button\");\n          if(microphoneTestButton) {\n            microphoneTestButton.replaceWith(microphoneTestButton.cloneNode(true));\n            const newMicrophoneTestButton = document.getElementById(\"microphone-test-button\");\n            newMicrophoneTestButton.addEventListener('click', (event) => {\n              anvil.call(vetSettingsForm, 'openMicrophoneTest');\n            });\n          }\n\n          // Attacher les événements pour le bouton de déconnexion\n          const logoutBtn = document.getElementById(\"logout-btn\");\n          if (logoutBtn) {\n            logoutBtn.replaceWith(logoutBtn.cloneNode(true));\n            const newLogoutBtn = document.getElementById(\"logout-btn\");\n            newLogoutBtn.addEventListener('click', (event) => {\n              anvil.call(vetSettingsForm, 'logout_click');\n            });\n          }\n\n          // Attacher l'événement pour le bouton Admin\n          const adminBtn = document.getElementById(\"admin-btn\");\n          console.log(\"Admin button found:\", adminBtn ? \"Yes\" : \"No\");\n          if (adminBtn) {\n            adminBtn.replaceWith(adminBtn.cloneNode(true));\n            const newAdminBtn = document.getElementById(\"admin-btn\");\n            newAdminBtn.addEventListener('click', (event) => {\n              console.log(\"Admin button clicked\");\n              anvil.call(vetSettingsForm, 'openAdmin');\n            });\n          }\n\n          console.log(\"Settings: Gestionnaires d'événements attachés à la nouvelle instance.\");\n        };\n      }\n\n      // Attacher les écouteurs dès que le DOM est prêt\n      window.__attachVetSettingsEvents();\n\n      // Check if admin button is present in DOM after attachment\n      console.log(\"Admin button present after attachment:\", document.getElementById(\"admin-btn\") ? \"Yes\" : \"No\");\n\n      // Navigation\n      document.querySelectorAll('.nav-tab').forEach(tab => {\n        tab.addEventListener('click', (event) => {\n          const tabText = tab.getAttribute('data-tab');\n          document.querySelector('.nav-tab.active').classList.remove('active');\n          tab.classList.add('active');\n\n          if (tabText === 'Production') {\n            anvil.call(document.getElementById('vet-settings-form'), 'openProduction');\n          } else if (tabText === 'Modèles/IA') {\n            anvil.call(document.getElementById('vet-settings-form'), 'openTemplates');\n          } else if (tabText === 'Archives') {\n            anvil.call(document.getElementById('vet-settings-form'), 'openArchives');\n          } else if (tabText === 'Paramètres') {\n            // Rester sur la page actuelle\n          }\n        });\n      });\n\n      // Affichage de l'heure\n      function updateTime() {\n        const now = new Date();\n        const hrs = now.getHours().toString().padStart(2, '0');\n        const mins = now.getMinutes().toString().padStart(2, '0');\n        document.querySelector('.time').textContent = `${hrs}h${mins}`;\n      }\n      updateTime();\n      setInterval(updateTime, 60000);\n    </script>\n\n    <!-- Session handler: now using a valid DOM element from the form -->\n    <script>\n      if (!window.__session_handlers_initialized) {\n        window.__session_handlers_initialized = true;\n\n        window.setupSessionHandlers = function() {\n          document.addEventListener('visibilitychange', function() {\n            if (document.visibilityState === 'visible') {\n              var formElem = document.getElementById('vet-settings-form');\n              if (formElem) {\n                anvil.call(formElem, 'refresh_session_relay');\n              }\n            }\n          });\n\n          window.addEventListener('online', function() {\n            var formElem = document.getElementById('vet-settings-form');\n            if (formElem) {\n              anvil.call(formElem, 'refresh_session_relay');\n            }\n          });\n        };\n        window.setupSessionHandlers();\n      }\n    </script>\n  </body>\n</html>"
+    html: |-
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            /* --- Existing Global Styles (Slightly adjusted for consistency) --- */
+            * {
+              box-sizing: border-box;
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              background-color: #f5f5f5;
+              height: 100vh;
+              overflow: hidden;
+            }
+            .container {
+              display: flex;
+              flex-direction: column;
+              height: 100vh;
+              max-width: 800px;
+              margin: 0 auto;
+              background-color: white;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .fixed-section {
+              background: white;
+              z-index: 10;
+            }
+            .actions-row {
+              display: flex;
+              justify-content: flex-end;
+              align-items: center;
+              padding: 15px 20px;
+            }
+            .time {
+              color: #666;
+              font-size: 14px;
+            }
+            .scrollable-content {
+              flex: 1;
+              overflow-y: auto;
+              padding: 20px;
+            }
+
+            /* --- NEW: Improved Settings Layout Styles --- */
+            .settings-form {
+              background-color: white;
+              border-radius: 8px;
+            }
+            .settings-section {
+              background-color: #f9f9f9;
+              border: 1px solid #e0e0e0;
+              border-radius: 8px;
+              padding: 20px;
+              margin-bottom: 25px;
+            }
+            .section-title {
+              font-size: 18px;
+              font-weight: 600;
+              color: #333;
+              margin-top: 0;
+              margin-bottom: 20px;
+              border-bottom: 1px solid #e0e0e0;
+              padding-bottom: 10px;
+            }
+            .form-row {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 20px;
+            }
+            .form-group {
+              flex: 1 1 100%; /* Default to full width */
+              margin-bottom: 15px;
+            }
+            .form-group.half-width {
+              flex: 1 1 calc(50% - 10px); /* Two columns on larger screens */
+              min-width: 250px; /* Prevent excessive shrinking */
+            }
+            .form-group label {
+              display: block;
+              margin-bottom: 8px;
+              font-weight: 500;
+              color: #333;
+            }
+            .form-group input[type="text"],
+            .form-group input[type="email"],
+            .form-group input[type="tel"] {
+              width: 100%;
+              padding: 10px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              font-size: 14px;
+            }
+            .form-group input[type="email"][readonly] {
+              background-color: #f0f0f0;
+              cursor: not-allowed;
+            }
+            .file-input-wrapper {
+              display: flex;
+              align-items: center;
+              gap: 10px;
+            }
+            .file-input-wrapper input[type="file"] {
+              display: none;
+            }
+            .file-input-wrapper .file-upload-btn {
+              padding: 8px 16px;
+              background-color: #f0f0f0;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+              white-space: nowrap;
+            }
+            .file-input-wrapper .file-name-label {
+              flex: 1;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              color: #666;
+              font-size: 14px;
+              padding: 8px;
+              border: 1px dashed #ccc;
+              border-radius: 4px;
+              background-color: #fafafa;
+            }
+            .button-group {
+              display: flex;
+              gap: 10px;
+              margin-top: 20px;
+              justify-content: flex-end;
+            }
+            .custom-button {
+              padding: 12px 24px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+              text-align: center;
+              transition: background-color 0.3s;
+            }
+            #submit-btn {
+              background-color: #4CAF50;
+              color: white;
+            }
+            #cancel-btn {
+              background-color: #aaa;
+              color: white;
+            }
+            .custom-structure-button {
+              width: 100%;
+              padding: 10px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              font-size: 14px;
+              background-color: #fff;
+              cursor: pointer;
+              text-align: left;
+            }
+
+            /* --- Modal, Footer, and Other Styles (Unchanged) --- */
+            .modal {
+              display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);
+            }
+            .modal-content {
+              background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; border-radius: 8px;
+            }
+            .modal-close {
+              color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;
+            }
+            .structure-option {
+              padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin: 5px 0; cursor: pointer; background-color: #fff;
+            }
+            .structure-option.selected {
+              background-color: #d0ebff; border-color: #66b0ff;
+            }
+            .logout-footer {
+              padding: 20px; border-top: 1px solid #ddd; background-color: #f8f8f8; text-align: center; margin-top: 20px;
+            }
+            #logout-btn, #admin-btn {
+              background-color: #f44336; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-size: 14px; width: 100%;
+            }
+            #admin-btn {
+              background-color: #007bff; margin-bottom: 10px; display: none; font-weight: bold; border: 2px solid #0056b3;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="fixed-section">
+              <div anvil-slot="default"></div>
+              <div class="actions-row">
+                <div class="time">--:--</div>
+              </div>
+            </div>
+            <div class="scrollable-content">
+              <div class="settings-form">
+                <form id="vet-settings-form" onsubmit="return false;">
+
+                  <!-- Section 1: Vet Information -->
+                  <div class="settings-section">
+                    <h2 class="section-title">Vet Information</h2>
+                    <div class="form-row">
+                      <div class="form-group half-width">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name_input" required>
+                      </div>
+                      <div class="form-group half-width">
+                        <label for="phone">Phone</label>
+                        <input type="tel" id="phone" name="phone_input">
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="email">Email</label>
+                      <input type="email" id="email" name="email_input" readonly>
+                    </div>
+                  </div>
+
+                  <!-- Section 2: Organization & Preferences -->
+                  <div class="settings-section">
+                    <h2 class="section-title">Organization & Preferences</h2>
+                    <div class="form-row">
+                      <div class="form-group half-width">
+                        <label for="structure-button">Structure</label>
+                        <input type="hidden" id="structure" name="structure_input">
+                        <button type="button" id="structure-button" class="custom-structure-button">Indépendant</button>
+                      </div>
+                      <div class="form-group half-width">
+                        <label for="favorite-language-button">Favorite Language</label>
+                        <input type="hidden" id="favorite-language" name="favorite_language_input">
+                        <button type="button" id="favorite-language-button" class="custom-structure-button">English</button>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label style="display: flex; align-items: center; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="supervisor" name="supervisor_checkbox" style="margin-right: 8px;">
+                        <span>Supervisor</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Section 4: Tools -->
+                  <div class="settings-section">
+                    <h2 class="section-title">Tools</h2>
+                    <button type="button" id="microphone-test-button" class="custom-structure-button">Test My Microphone</button>
+                  </div>
+
+
+                  <!-- Main Action Buttons -->
+                  <div class="button-group">
+                    <div id="cancel-btn" class="custom-button">Cancel</div>
+                    <div id="submit-btn" class="custom-button">Update Settings</div>
+                  </div>
+                </form>
+              </div>
+              <div class="logout-footer">
+                <button id="admin-btn" class="custom-button">Administration</button>
+                <button id="logout-btn" class="custom-button">Logout</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modals (Structure and Language) - Unchanged -->
+          <div id="structure-modal" class="modal">
+            <div class="modal-content">
+              <span id="structure-modal-close" class="modal-close">×</span>
+              <h3>Select Structure</h3>
+              <div id="structure-options"></div>
+            </div>
+          </div>
+          <div id="favorite-language-modal" class="modal">
+            <div class="modal-content">
+              <span id="favorite-language-modal-close" class="modal-close">×</span>
+              <h3>Select Favorite Language</h3>
+              <div id="favorite-language-options"></div>
+            </div>
+          </div>
+
+          <script>
+            // Function to show/hide admin button - defined OUTSIDE conditional block
+            window.showAdminButton = function(isAdmin) {
+              const adminBtn = document.getElementById("admin-btn");
+              console.log("showAdminButton called with isAdmin =", isAdmin);
+              if (adminBtn) {
+                adminBtn.style.display = isAdmin ? "block" : "none";
+                console.log("Admin button display set to:", adminBtn.style.display);
+              } else {
+                console.log("Admin button element not found!");
+              }
+            };
+
+            // ---------------------------------------
+            // 1) Exécuter une seule fois par session
+            // ---------------------------------------
+            if (!window.__my_vet_settings_globals) {
+              window.__my_vet_settings_globals = true;
+              console.log("Initializing settings globals");
+
+              // Function to display success/error banners
+              window.displayBanner = function(message, type) {
+                console.log("Display banner:", message, type);
+                const bannerDiv = document.createElement('div');
+                bannerDiv.textContent = message;
+                bannerDiv.style.padding = '10px';
+                bannerDiv.style.margin = '10px 0';
+                bannerDiv.style.borderRadius = '4px';
+                bannerDiv.style.textAlign = 'center';
+                bannerDiv.style.position = 'fixed';
+                bannerDiv.style.top = '20px';
+                bannerDiv.style.left = '50%';
+                bannerDiv.style.transform = 'translateX(-50%)';
+                bannerDiv.style.zIndex = '1000';
+                bannerDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+
+                if (type === 'success') {
+                  bannerDiv.style.backgroundColor = '#4CAF50';
+                  bannerDiv.style.color = 'white';
+                } else {
+                  bannerDiv.style.backgroundColor = '#f44336';
+                  bannerDiv.style.color = 'white';
+                }
+
+                document.body.appendChild(bannerDiv);
+
+                // Remove banner after 3 seconds
+                setTimeout(() => {
+                  if (document.body.contains(bannerDiv)) {
+                    document.body.removeChild(bannerDiv);
+                  }
+                }, 3000);
+              };
+
+              // Fonctions de base pour get/set des champs de texte
+              window.getValueById = function(id) {
+                const element = document.getElementById(id);
+                return element ? element.value : "";
+              };
+              window.setValueById = function(id, value) {
+                const element = document.getElementById(id);
+                if (element) {
+                  element.value = value;
+                }
+              };
+
+              window.setButtonTextById = function(id, text) {
+                const element = document.getElementById(id);
+                if (element) {
+                  element.textContent = text;
+                }
+              };
+
+              // Pour les cases à cocher
+              window.getCheckedById = function(id) {
+                const element = document.getElementById(id);
+                return element ? element.checked : false;
+              };
+              window.setCheckedById = function(id, checked) {
+                const element = document.getElementById(id);
+                if (element) {
+                  element.checked = checked;
+                }
+              };
+
+              // Pour les libellés de noms de fichiers
+              window.setFileNameById = function(id, fileName) {
+                const input = document.getElementById(id);
+                if (input && input.type === 'file') {
+                  const label = input.nextElementSibling.nextElementSibling;
+                  if (label && label.classList.contains('file-name-label')) {
+                    label.textContent = fileName || 'Aucun fichier choisi';
+                  }
+                }
+              };
+
+              // Pour lire les données d'un fichier (renvoie une Promise ou null)
+              window.getFileData = function(inputId) {
+                const input = document.getElementById(inputId);
+                if (input && input.files && input.files.length > 0) {
+                  const file = input.files[0];
+                  return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                      resolve({
+                        name: file.name,
+                        content_type: file.type,
+                        content: new Uint8Array(e.target.result)
+                      });
+                    };
+                    reader.onerror = reject;
+                    reader.readAsArrayBuffer(file);
+                  });
+                }
+                return null;
+              };
+
+              // Remplir le modal de structure avec des options.
+              window.populateStructureModal = function(options, current) {
+                const optionsContainer = document.getElementById("structure-options");
+                optionsContainer.innerHTML = "";
+                options.forEach(opt => {
+                  const optionElem = document.createElement("div");
+                  optionElem.classList.add("structure-option");
+                  optionElem.textContent = opt;
+                  if (current && opt === current) {
+                    optionElem.classList.add("selected");
+                  }
+                  optionElem.addEventListener("click", function(event) {
+                    if (opt !== "Indépendant") {
+                      anvil.call(document.getElementById('vet-settings-form'), 'check_structure_authorization', opt)
+                        .then(function(isAuthorized) {
+                          if (!isAuthorized) {
+                            alert("Vous n'êtes pas autorisé(e) pour cette structure.");
+                            return;
+                          }
+                          let confirmMsg = "Êtes-vous sûr de vouloir changer votre structure pour " + opt + " ?";
+                          if(opt !== current && !confirm(confirmMsg)) {
+                            return;
+                          }
+                          document.getElementById("structure").value = opt;
+                          setButtonTextById("structure-button", opt);
+                          const allOptions = optionsContainer.querySelectorAll(".structure-option");
+                          allOptions.forEach(elem => elem.classList.remove("selected"));
+                          optionElem.classList.add("selected");
+                          current = opt;
+                          window.closeStructureModal();
+                        })
+                        .catch(function(error) {
+                          alert("Erreur lors de la vérification de l'autorisation: " + error);
+                        });
+                    } else {
+                      let confirmMsg = "Voulez-vous vraiment quitter votre structure actuelle ?";
+                      if(opt !== current && !confirm(confirmMsg)) {
+                        return;
+                      }
+                      document.getElementById("structure").value = opt;
+                      setButtonTextById("structure-button", opt);
+                      const allOptions = optionsContainer.querySelectorAll(".structure-option");
+                      allOptions.forEach(elem => elem.classList.remove("selected"));
+                      optionElem.classList.add("selected");
+                      current = opt;
+                      window.closeStructureModal();
+                    }
+                  });
+                  optionsContainer.appendChild(optionElem);
+                });
+              };
+
+              // Remplir le modal de langue préférée avec des options.
+              window.populateFavoriteLanguageModal = function(options, current) {
+                const optionsContainer = document.getElementById("favorite-language-options");
+                optionsContainer.innerHTML = "";
+                options.forEach(opt => {
+                  const optionElem = document.createElement("div");
+                  optionElem.classList.add("structure-option");
+                  optionElem.textContent = opt.display;
+                  if (current && opt.value === current) {
+                    optionElem.classList.add("selected");
+                  }
+                  optionElem.addEventListener("click", function(event) {
+                    document.getElementById("favorite-language").value = opt.value;
+                    setButtonTextById("favorite-language-button", opt.display);
+                    const allOptions = optionsContainer.querySelectorAll(".structure-option");
+                    allOptions.forEach(elem => elem.classList.remove("selected"));
+                    optionElem.classList.add("selected");
+                    current = opt.value;
+                    window.closeFavoriteLanguageModal();
+                  });
+                  optionsContainer.appendChild(optionElem);
+                });
+              };
+
+              // Ouvrir et fermer les modaux
+              window.openStructureModal = function() {
+                const modal = document.getElementById("structure-modal");
+                modal.style.display = "block";
+              };
+              window.closeStructureModal = function() {
+                const modal = document.getElementById("structure-modal");
+                modal.style.display = "none";
+              };
+              window.openFavoriteLanguageModal = function() {
+                const modal = document.getElementById("favorite-language-modal");
+                modal.style.display = "block";
+              };
+              window.closeFavoriteLanguageModal = function() {
+                const modal = document.getElementById("favorite-language-modal");
+                modal.style.display = "none";
+              };
+
+              // Attacher les écouteurs d'événements
+              window.__attachVetSettingsEvents = function() {
+                console.log("Attaching vet settings events");
+                const vetSettingsForm = document.getElementById('vet-settings-form');
+                const submitBtn = document.getElementById('submit-btn');
+                const cancelBtn = document.getElementById('cancel-btn');
+                const structureButton = document.getElementById("structure-button");
+                const modalClose = document.getElementById("structure-modal-close");
+
+                if (!vetSettingsForm || !submitBtn || !cancelBtn || !structureButton || !modalClose) {
+                  console.log("Settings: Certains éléments n'ont pas été trouvés, annulation de l'attachement.");
+                  return;
+                }
+
+                // Remplacer les anciens écouteurs par des clones
+                submitBtn.replaceWith(submitBtn.cloneNode(true));
+                cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+                structureButton.replaceWith(structureButton.cloneNode(true));
+                modalClose.replaceWith(modalClose.cloneNode(true));
+
+                const newSubmitBtn = document.getElementById('submit-btn');
+                const newCancelBtn = document.getElementById('cancel-btn');
+                const newStructureButton = document.getElementById("structure-button");
+                const newModalClose = document.getElementById("structure-modal-close");
+
+                newSubmitBtn.addEventListener('click', (event) => {
+                  anvil.call(vetSettingsForm, 'submit_click');
+                });
+
+                newCancelBtn.addEventListener('click', (event) => {
+                  anvil.call(vetSettingsForm, 'cancel_click');
+                });
+
+                newStructureButton.addEventListener('click', (event) => {
+                  openStructureModal();
+                });
+
+                newModalClose.addEventListener('click', (event) => {
+                  closeStructureModal();
+                });
+
+                window.addEventListener('click', function(event) {
+                  const modal = document.getElementById("structure-modal");
+                  if (event.target == modal) {
+                    closeStructureModal();
+                  }
+                });
+
+                // Mettre à jour le libellé lors de la sélection d'un fichier
+                const fileInputs = vetSettingsForm.querySelectorAll('input[type="file"]');
+                fileInputs.forEach(input => {
+                  input.addEventListener('change', () => {
+                    const label = input.nextElementSibling.nextElementSibling;
+                    if (label && label.classList.contains('file-name-label')) {
+                      label.textContent = input.files[0] ? input.files[0].name : 'Aucun fichier choisi';
+                    }
+                  });
+                });
+
+                // Attacher les événements pour le bouton de langue préférée
+                const favoriteLanguageButton = document.getElementById("favorite-language-button");
+                const favoriteLanguageModalClose = document.getElementById("favorite-language-modal-close");
+                favoriteLanguageButton.replaceWith(favoriteLanguageButton.cloneNode(true));
+                favoriteLanguageModalClose.replaceWith(favoriteLanguageModalClose.cloneNode(true));
+                const newFavoriteLanguageButton = document.getElementById("favorite-language-button");
+                const newFavoriteLanguageModalClose = document.getElementById("favorite-language-modal-close");
+                newFavoriteLanguageButton.addEventListener('click', (event) => {
+                  openFavoriteLanguageModal();
+                });
+                newFavoriteLanguageModalClose.addEventListener('click', (event) => {
+                  closeFavoriteLanguageModal();
+                });
+                window.addEventListener('click', function(event) {
+                  const modal = document.getElementById("favorite-language-modal");
+                  if (event.target == modal) {
+                    closeFavoriteLanguageModal();
+                  }
+                });
+
+                // Attacher les événements pour le bouton Tester mon micro
+                const microphoneTestButton = document.getElementById("microphone-test-button");
+                if(microphoneTestButton) {
+                  microphoneTestButton.replaceWith(microphoneTestButton.cloneNode(true));
+                  const newMicrophoneTestButton = document.getElementById("microphone-test-button");
+                  newMicrophoneTestButton.addEventListener('click', (event) => {
+                    anvil.call(vetSettingsForm, 'openMicrophoneTest');
+                  });
+                }
+
+                // Attacher les événements pour le bouton de déconnexion
+                const logoutBtn = document.getElementById("logout-btn");
+                if (logoutBtn) {
+                  logoutBtn.replaceWith(logoutBtn.cloneNode(true));
+                  const newLogoutBtn = document.getElementById("logout-btn");
+                  newLogoutBtn.addEventListener('click', (event) => {
+                    anvil.call(vetSettingsForm, 'logout_click');
+                  });
+                }
+
+                // Attacher l'événement pour le bouton Admin
+                const adminBtn = document.getElementById("admin-btn");
+                console.log("Admin button found:", adminBtn ? "Yes" : "No");
+                if (adminBtn) {
+                  adminBtn.replaceWith(adminBtn.cloneNode(true));
+                  const newAdminBtn = document.getElementById("admin-btn");
+                  newAdminBtn.addEventListener('click', (event) => {
+                    console.log("Admin button clicked");
+                    anvil.call(vetSettingsForm, 'openAdmin');
+                  });
+                }
+
+                console.log("Settings: Gestionnaires d'événements attachés à la nouvelle instance.");
+              };
+            }
+
+            // Attacher les écouteurs dès que le DOM est prêt
+            window.__attachVetSettingsEvents();
+
+            // Check if admin button is present in DOM after attachment
+            console.log("Admin button present after attachment:", document.getElementById("admin-btn") ? "Yes" : "No");
+
+            // Navigation
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+              tab.addEventListener('click', (event) => {
+                const tabText = tab.getAttribute('data-tab');
+                document.querySelector('.nav-tab.active').classList.remove('active');
+                tab.classList.add('active');
+
+                if (tabText === 'Production') {
+                  anvil.call(document.getElementById('vet-settings-form'), 'openProduction');
+                } else if (tabText === 'Modèles/IA') {
+                  anvil.call(document.getElementById('vet-settings-form'), 'openTemplates');
+                } else if (tabText === 'Archives') {
+                  anvil.call(document.getElementById('vet-settings-form'), 'openArchives');
+                } else if (tabText === 'Paramètres') {
+                  // Rester sur la page actuelle
+                }
+              });
+            });
+
+            // Affichage de l'heure
+            function updateTime() {
+              const now = new Date();
+              const hrs = now.getHours().toString().padStart(2, '0');
+              const mins = now.getMinutes().toString().padStart(2, '0');
+              document.querySelector('.time').textContent = `${hrs}h${mins}`;
+            }
+            updateTime();
+            setInterval(updateTime, 60000);
+          </script>
+
+          <!-- Session handler: now using a valid DOM element from the form -->
+          <script>
+            if (!window.__session_handlers_initialized) {
+              window.__session_handlers_initialized = true;
+
+              window.setupSessionHandlers = function() {
+                document.addEventListener('visibilitychange', function() {
+                  if (document.visibilityState === 'visible') {
+                    var formElem = document.getElementById('vet-settings-form');
+                    if (formElem) {
+                      anvil.call(formElem, 'refresh_session_relay');
+                    }
+                  }
+                });
+
+                window.addEventListener('online', function() {
+                  var formElem = document.getElementById('vet-settings-form');
+                  if (formElem) {
+                    anvil.call(formElem, 'refresh_session_relay');
+                  }
+                });
+              };
+              window.setupSessionHandlers();
+            }
+          </script>
+        </body>
+      </html>
   type: HtmlTemplate
 is_package: true

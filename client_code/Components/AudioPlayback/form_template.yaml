@@ -1,0 +1,111 @@
+components: []
+container:
+  properties:
+    html: |
+      <div id="audioBar" style="display: none; width: 100%; height: 50px; background-color: #f8f8f8; border-radius: 5px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 20px; border: 1px solid #ddd; position: relative;">
+        <button id="audioPlaybackControl" style="width: 30px; height: 30px; background-color: #4CAF50; border: none; border-radius: 50%; color: white; font-size: 16px; cursor: pointer; margin-right: 10px;">▶</button>
+        <div id="audioProgress" style="flex-grow: 1; height: 10px; background-color: #ddd; border-radius: 5px; overflow: hidden; cursor: pointer; margin-right: 10px; touch-action: none;">
+          <div id="audioProgressBar" style="width: 0; height: 100%; background-color: #4CAF50; transition: width 0.1s linear;"></div>
+        </div>
+        <span id="audioDuration" style="font-size: 14px;">0:00 / 0:00</span>
+        <button id="clearRecordingButton" title="Reset recording" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #666; margin-left: 10px;">🗑</button>
+        <audio id="audioPlayback" style="display: none;"></audio>
+      </div>
+
+
+      <script>
+        if (!window.__audio_playback_globals) {
+          window.__audio_playback_globals = true;
+
+          window.formatTime = (seconds) => {
+            if (isNaN(seconds) || !isFinite(seconds)) return "0:00";
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${min}:${sec}`;
+          };
+
+          window.setupAudioPlayback = function(audioBlob) {
+            const audioBar = document.getElementById("audioBar");
+            const audioPlayer = document.getElementById("audioPlayback");
+            if (!audioBar || !audioPlayer || !audioBlob) return;
+
+            const audioURL = URL.createObjectURL(audioBlob);
+            audioPlayer.src = audioURL;
+            audioBar.style.display = 'flex';
+          };
+
+          window.resetAudioPlayback = function() {
+            const audioBar = document.getElementById("audioBar");
+            const audioPlayer = document.getElementById("audioPlayback");
+            const progressBar = document.getElementById("audioProgressBar");
+            const durationSpan = document.getElementById('audioDuration');
+            const playbackBtn = document.getElementById('audioPlaybackControl');
+
+            if(audioBar) audioBar.style.display = 'none';
+            if(audioPlayer) audioPlayer.src = '';
+            if(progressBar) progressBar.style.width = '0%';
+            if(durationSpan) durationSpan.textContent = '0:00 / 0:00';
+            if(playbackBtn) playbackBtn.textContent = '▶';
+          };
+
+          // This function will now be called from Python
+          window.initializeAudioPlayer = function() {
+            const audioEl = document.getElementById('audioPlayback');
+            const playbackBtn = document.getElementById('audioPlaybackControl');
+            const progressDiv = document.getElementById('audioProgress');
+            const progressBar = document.getElementById('audioProgressBar');
+            const durationSpan = document.getElementById('audioDuration');
+            const clearBtn = document.getElementById('clearRecordingButton');
+
+            if (!audioEl || !playbackBtn || !progressDiv || !clearBtn) return;
+
+            // Use cloneNode to avoid duplicate event listeners
+            const newPlaybackBtn = playbackBtn.cloneNode(true);
+            playbackBtn.parentNode.replaceChild(newPlaybackBtn, playbackBtn);
+            newPlaybackBtn.addEventListener('click', () => {
+              if (audioEl.paused) {
+                audioEl.play();
+                newPlaybackBtn.textContent = '❚❚';
+              } else {
+                audioEl.pause();
+                newPlaybackBtn.textContent = '▶';
+              }
+            });
+
+            const newClearBtn = clearBtn.cloneNode(true);
+            clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
+            newClearBtn.addEventListener('click', (e) => {
+              anvil.call(e.target, 'clear_button_clicked');
+            });
+
+            audioEl.addEventListener('timeupdate', () => {
+              const { currentTime, duration } = audioEl;
+              if (!duration || isNaN(duration)) return;
+              progressBar.style.width = `${(currentTime / duration) * 100}%`;
+              durationSpan.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+            });
+
+            audioEl.addEventListener('loadedmetadata', () => {
+              durationSpan.textContent = `0:00 / ${formatTime(audioEl.duration)}`;
+            });
+
+            audioEl.addEventListener('ended', () => {
+              newPlaybackBtn.textContent = '▶';
+            });
+
+            progressDiv.addEventListener('click', (e) => {
+              if(!audioEl.src || isNaN(audioEl.duration)) return;
+              const rect = progressDiv.getBoundingClientRect();
+              const offsetX = e.clientX - rect.left;
+              audioEl.currentTime = (offsetX / rect.width) * audioEl.duration;
+            });
+          }
+        }
+      </script>
+  type: HtmlTemplate
+custom_component: true
+events:
+- {default_event: true, name: x_clear_recording}
+is_package: true
+properties:
+- {default_binding_prop: true, important: true, name: audio_blob, type: object}

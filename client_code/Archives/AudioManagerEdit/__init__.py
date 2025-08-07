@@ -7,12 +7,14 @@ import anvil.server
 import anvil.users
 import json
 
+
 def safe_value(report, key, default_value):
   """Retourne la valeur associée à 'key' dans 'report', ou 'default_value' si elle est manquante ou None."""
   if report is None:
     return default_value
   val = report.get(key)
   return default_value if val is None else val
+
 
 class AudioManagerEdit(AudioManagerEditTemplate):
   def __init__(
@@ -37,7 +39,9 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     anvil.users.login_with_form()
     print("Rapport reçu dans AudioManagerEditSecretariat :", report)
     self.init_components(**properties)
-
+    self.recording_widget_1.set_event_handler(
+      "recording_complete", self.handle_recording
+    )
     # Construire un dictionnaire de rapport s'il n'est pas fourni.
     if report is None:
       if clicked_value is not None or initial_content is not None:
@@ -47,7 +51,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
           "file_name": "Sans nom",
           "statut": "Non spécifié",
           "name": "",
-          "transcript": ""
+          "transcript": "",
         }
       else:
         alert("Aucun rapport fourni. Redirection vers Archives.")
@@ -61,7 +65,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       "report_rich": safe_value(report, "report_rich", ""),
       "statut": safe_value(report, "statut", "Non spécifié"),
       "name": safe_value(report, "name", ""),
-      "transcript": safe_value(report, "transcript", "")
+      "transcript": safe_value(report, "transcript", ""),
     }
     self.report_id = self.report.get("id")
     self.file_name = self.report.get("file_name")
@@ -82,7 +86,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
   def form_show(self, **event_args):
     """Lors de l'affichage du formulaire, s'assurer que l'éditeur affiche le contenu actuel du rapport."""
     if self.initial_content:
-      self.editor_content = self.initial_content
+      self.text_editor_1.html_content = self.initial_content
 
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS"""
@@ -95,17 +99,9 @@ class AudioManagerEdit(AudioManagerEditTemplate):
   # ----------------------------------------------------------
   # Méthodes d'enregistrement audio
   # ----------------------------------------------------------
-  def start_recording(self, **event_args):
-    print("start_recording() appelé (mode édition).")
-    self.recording_state = "recording"
-
-  def pause_recording(self, **event_args):
-    print("pause_recording() appelé (mode édition).")
-    self.recording_state = "paused"
-
-  def stop_recording(self, **event_args):
-    print("stop_recording() appelé (mode édition).")
-    self.recording_state = "stopped"
+  def handle_recording(self, audio_blob, **event_args):
+    """This event handler is called by the RecordingWidget."""
+    self.process_recording(audio_blob)
 
   def process_recording(self, audio_blob, **event_args):
     """
@@ -114,17 +110,12 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     """
     print("process_recording() appelé avec un blob audio en mode édition.")
     try:
-      # 1) Transcrire l'audio
       transcription = anvil.server.call("process_audio_whisper", audio_blob)
-
-      # 2) Appeler la nouvelle fonction serveur 'edit_report'
-      #    en fournissant la transcription et le contenu actuel de l'éditeur
-      edited_report = anvil.server.call("edit_report", transcription, self.editor_content)
-
-      # 3) Mettre à jour l'éditeur avec le rapport édité
-      self.editor_content = edited_report
-
+      current_content = self.text_editor_1.get_content()
+      edited_report = anvil.server.call("edit_report", transcription, current_content)
+      self.text_editor_1.html_content = edited_report
       return "OK"
+
     except Exception as e:
       alert(f"Erreur lors du traitement de l'enregistrement : {str(e)}")
 
@@ -134,73 +125,60 @@ class AudioManagerEdit(AudioManagerEditTemplate):
   def relaunch_ai(self, **event_args):
     print("relaunch_ai() appelé avec transcript:", self.transcript)
     try:
-      # On réutilise la même logique d'édition,
-      # en passant le transcript comme instructions et l'éditeur comme rapport.
-      edited_report = anvil.server.call("edit_report", self.transcript, self.editor_content)
-      self.editor_content = edited_report
+      current_content = self.text_editor_1.get_content()
+      edited_report = anvil.server.call("edit_report", self.transcript, current_content)
+      self.text_editor_1.html_content = edited_report
       self.call_js("displayBanner", "Rapport mis à jour avec succès", "success")
     except Exception as e:
       alert("Erreur lors du relancement de l'IA : " + str(e))
 
   # ----------------------------------------------------------
-  # Propriété de l'éditeur
-  # ----------------------------------------------------------
-  @property
-  def editor_content(self):
-    try:
-      return self.call_js("getEditorContent")
-    except Exception as e:
-      print("ERREUR lors de la récupération du contenu de l'éditeur :", e)
-      return None
-
-  @editor_content.setter
-  def editor_content(self, value):
-    try:
-      self.call_js("setEditorContent", value)
-    except Exception as e:
-      print("ERREUR lors de la définition du contenu de l'éditeur :", e)
-
-  # ----------------------------------------------------------
   # Sélection du Statut
   # ----------------------------------------------------------
-  def on_statut_clicked(self, **event_args):
-    """Invite l'utilisateur à sélectionner un nouveau statut pour le rapport."""
-    choice = alert(
-      "Choisir le statut :",
-      buttons=["à corriger", "validé", "envoyé", "Annuler"]
-    )
-    if choice in ["à corriger", "validé", "envoyé"]:
-      self.statut = choice
-      self.call_js("displayBanner", f"Statut sélectionné : {choice}", "success")
-      return choice
-    else:
-      return None
+
+  def report_footer_1_status_clicked(self, **event_args):
+    print("[DEBUG] report_footer_1_status_clicked called")
+    status_options = anvil.server.call("get_status_options")
+
+    buttons = [(opt.replace("_", " ").title(), opt) for opt in status_options]
+    buttons.append(("Cancel", None))
+
+    choice = alert("Choose status:", buttons=buttons)
+
+    if choice:
+      self.selected_statut = choice
+      self.report_footer_1.update_status_display(choice)
+      self.call_js(
+        "displayBanner", f"Status chosen: {choice.replace('_', ' ').title()}", "success"
+      )
+    return choice
 
   # ----------------------------------------------------------
   # Mise à jour du rapport (Sauvegarder)
   # ----------------------------------------------------------
-  def update_report(self, ignored_file_name, content_json, images, **event_args):
+  def report_footer_1_save_clicked(
+    self, ignored_file_name, content_json, images, **event_args
+  ):
     """
     Appelé lorsque l'utilisateur clique sur "Archiver". Met à jour l'enregistrement
     existant du rapport en appelant la fonction serveur write_report.
     """
     print("update_report() appelé depuis JS en mode édition")
     try:
-      parsed = json.loads(content_json)
-      html_content = parsed.get("content", "")
+      html_content = self.text_editor_1.get_content()
       print(f"Longueur du contenu HTML : {len(html_content)}")
       print(f"Nombre d'images : {len(images)}")
-      statut = self.statut or "Non spécifié"
+      statut = self.statut or "not_specified"
       file_name_to_use = self.file_name
 
       result = anvil.server.call(
         "write_report",
-        file_name_to_use,       # Utiliser toujours le nom de fichier original
-        self.animal_name,       # Nom de l'animal tel qu'originel
-        None,                   # vet : laisser le serveur utiliser l'utilisateur actuel
-        None,                   # last_modified : laissé au serveur
-        html_content,           # report_rich : contenu mis à jour
-        statut                  # statut : mis à jour
+        file_name_to_use,  # Utiliser toujours le nom de fichier original
+        self.animal_name,  # Nom de l'animal tel qu'originel
+        None,  # vet : laisser le serveur utiliser l'utilisateur actuel
+        None,  # last_modified : laissé au serveur
+        html_content,  # report_rich : contenu mis à jour
+        statut,  # statut : mis à jour
       )
 
       if result:
@@ -217,12 +195,18 @@ class AudioManagerEdit(AudioManagerEditTemplate):
   # Partager le rapport (Export PDF)
   # ----------------------------------------------------------
   def build_report_pdf_relay(self, placeholders, images):
-    print("DEBUG: build_report_pdf_relay appelé en mode édition avec placeholders :", placeholders, "et images :", images)
+    print(
+      "DEBUG: build_report_pdf_relay appelé en mode édition avec placeholders :",
+      placeholders,
+      "et images :",
+      images,
+    )
     pdf_base64 = anvil.server.call("build_report_pdf_base64", placeholders, images)
     return pdf_base64
 
   def get_media_url_relay(self, pdf_media):
     import anvil
+
     return anvil.get_url(pdf_media)
 
   # ----------------------------------------------------------

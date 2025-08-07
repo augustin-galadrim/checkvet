@@ -6,6 +6,8 @@ import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.users
 import json
+import uuid
+
 
 def safe_value(template, key, default_value):
   """Returns the value associated with 'key' in 'template', or 'default_value' if missing or None."""
@@ -13,6 +15,7 @@ def safe_value(template, key, default_value):
     return default_value
   val = template.get(key)
   return default_value if val is None else val
+
 
 class TemplateEditor(TemplateEditorTemplate):
   def __init__(self, template=None, **properties):
@@ -22,8 +25,9 @@ class TemplateEditor(TemplateEditorTemplate):
     It accepts a template dictionary via the parameter 'template'.
 
     The template dictionary should contain:
-      - template_name: the name of the template
-      - text_to_display: the content in rich format for display templates
+      - id: the unique identifier of the template
+      - name: the name of the template
+      - html: the content in rich format for display templates
     """
     anvil.users.login_with_form()
     print("Debug: Template received in TemplateEditor:", template)
@@ -32,22 +36,20 @@ class TemplateEditor(TemplateEditorTemplate):
     # Build a template dictionary if none is provided
     if template is None:
       template = {
-        "template_name": "Untitled Template",
-        "text_to_display": "",
-        "prompt": "",
-        "priority": 0
+        "id": None,
+        "name": "Untitled Template",
+        "html": "",
       }
 
     # Use safe_value to ensure each field is defined
     self.template = {
-      "template_name": safe_value(template, "template_name", "Untitled Template"),
-      "text_to_display": safe_value(template, "text_to_display", ""),
-      "prompt": safe_value(template, "prompt", ""),
-      "priority": safe_value(template, "priority", 0)
+      "id": safe_value(template, "id", None),
+      "name": safe_value(template, "name", "Untitled Template"),
+      "html": safe_value(template, "html", ""),
     }
-
-    self.original_template_name = self.template.get("template_name")
-    self.initial_content = self.template.get("text_to_display")  # Use text_to_display instead of human_readable
+    self.initial_content = self.template.get("html")
+    self.original_template_name = self.template.get("name")
+    self.template_id = self.template.get("id")
 
     # Attach the form show event to populate the editor later
     self.add_event_handler("show", self.form_show)
@@ -55,8 +57,8 @@ class TemplateEditor(TemplateEditorTemplate):
   def form_show(self, **event_args):
     """When the form is displayed, ensure the editor shows the current template content."""
     if self.initial_content:
-      self.editor_content = self.initial_content
-    self.call_js("setTemplateNameValue", self.template.get("template_name"))
+      self.text_editor_1.html_content = self.initial_content
+    self.call_js("setTemplateNameValue", self.template.get("name"))
 
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS"""
@@ -65,24 +67,6 @@ class TemplateEditor(TemplateEditorTemplate):
     except Exception as e:
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
-
-  # ----------------------------------------------------------
-  # Editor properties
-  # ----------------------------------------------------------
-  @property
-  def editor_content(self):
-    try:
-      return self.call_js("getEditorContent")
-    except Exception as e:
-      print("ERROR when retrieving editor content:", e)
-      return None
-
-  @editor_content.setter
-  def editor_content(self, value):
-    try:
-      self.call_js("setEditorContent", value)
-    except Exception as e:
-      print("ERROR when setting editor content:", e)
 
   # ----------------------------------------------------------
   # Save template
@@ -94,20 +78,20 @@ class TemplateEditor(TemplateEditorTemplate):
     """
     print("Debug: save_template() called from JS")
     try:
-      parsed = json.loads(content_json)
-      html_content = parsed.get("content", "")
+      html_content = self.text_editor_1.get_content()
       print(f"Debug: HTML content length: {len(html_content)}")
       print(f"Debug: Number of images: {len(images)}")
 
       # Use the existing write_template server function with updated parameters
+      print(
+        f"calling write_template with the following args : name={name}, html={html_content}, id={self.template_id}"
+      )
       result = anvil.server.call(
         "write_template",
-        name,                   # template_name
-        None,                   # prompt (not modified in this editor)
-        None,                   # human_readable (not modified in this editor)
-        None,                   # priority (not modified in this editor)
-        html_content,           # text_to_display
-        True                    # display_template
+        name=name,
+        html=html_content,
+        display=True,
+        template_id=self.template_id,
       )
 
       if result:

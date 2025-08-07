@@ -1,0 +1,392 @@
+components:
+- layout_properties: {slot: default}
+  name: header_nav_1
+  properties: {active_tab: Archives}
+  type: form:Components.HeaderNav
+container:
+  properties:
+    html: |-
+      <!DOCTYPE html>
+      <html lang="fr">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            /* =====================================================
+            Base Styles, Resets, and Container
+            ===================================================== */
+            * { box-sizing: border-box; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+            body { background-color: #f5f5f5; height: 100vh; overflow: hidden; }
+            .container { display: flex; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .fixed-section { background: white; z-index: 10; }
+
+            /* Action Bar and Controls */
+            .actions-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; flex-wrap: wrap; }
+            .left-section { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+            .create-button { padding: 8px 16px; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+            .create-button:hover { background: #f5f5f5; }
+            .time { color: #666; font-size: 14px; }
+            .search-bar { width: calc(100% - 40px); padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin: 0 20px 15px 20px; }
+
+            /* --- Supervisor Tabs --- */
+            .supervisor-tabs { display: none; /* Hidden by default */ border-bottom: 1px solid #ddd; }
+            .sub-tab { flex: 1; text-align: center; padding: 12px; cursor: pointer; background: #f8f8f8; border-right: 1px solid #ddd; }
+            .sub-tab:last-child { border-right: none; }
+            .sub-tab.active { background: #fff; font-weight: bold; border-bottom: 2px solid #1a73e8; color: #1a73e8; }
+
+            /* Report List and Items */
+            .content-area { flex: 1; overflow-y: auto; }
+            .report-panel { display: none; /* Panels are hidden by default */ padding: 20px; }
+            .report-panel.active { display: block; }
+
+            /* --- NEW: Section Titles --- */
+            .section-title {
+              font-size: 20px;
+              color: #333;
+              padding-bottom: 15px;
+              margin-bottom: 20px;
+              border-bottom: 1px solid #eee;
+            }
+
+            .record-entry { display: flex; align-items: center; justify-content: space-between; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px; background: #fff; cursor: pointer; }
+            .record-subcase { flex: 1; padding: 0 10px; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+            .trash-icon { width: auto; display: flex; justify-content: center; align-items: center; padding: 0 4px; cursor: pointer; }
+            .trash-icon svg { width: 18px; height: 18px; fill: #888; transition: fill 0.2s; }
+            .trash-icon:hover svg { fill: #c00; }
+
+            /* Status filter bar styles */
+            .status-nav {
+              display: flex;                 /* Aligne les boutons sur une ligne */
+              border: 1px solid #ddd;        /* Ajoute une bordure unifiée autour du groupe */
+              border-radius: 4px;            /* Arrondi léger, cohérent avec les autres boutons */
+              overflow: hidden;              /* Assure que les styles internes ne dépassent pas les coins arrondis */
+            }
+            .status-option {
+              display: flex;
+              align-items: center;
+              padding: 8px 16px;
+              gap: 8px;
+              color: #333;                   /* Couleur de texte légèrement plus foncée pour la lisibilité */
+              cursor: pointer;
+              text-decoration: none;
+              background-color: #f8f8f8;      /* Fond gris clair pour un aspect de bouton */
+              border-right: 1px solid #ddd;  /* Ligne de séparation entre les boutons */
+              transition: background-color 0.2s; /* Effet de survol fluide */
+            }
+            .status-option:last-child {
+              border-right: none;            /* Supprime la bordure du dernier bouton */
+            }
+            .status-option:hover {
+              background-color: #f0f0f0;      /* Changement de couleur au survol */
+            }
+            .status-option.active {
+              background-color: #fff;        /* Fond blanc pour le bouton actif */
+              color: #1a73e8;                 /* Texte en bleu pour indiquer la sélection */
+              font-weight: bold;               /* Met le texte en gras */
+              box-shadow: inset 0 -2px 0 #1a73e8; /* Ligne bleue en bas pour imiter un onglet actif */
+            }
+            .icon {
+              width: 18px;
+              height: 18px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+            }
+            /* Vet filter modals */
+            .vet-modal, .vet-add-modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+            .modal-content { background-color: #fff; width: 300px; margin: 100px auto; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); position: relative; }
+            .modal-content h3 { margin-bottom: 15px; }
+            .vet-list, .vet-add-results { max-height: 200px; overflow-y: auto; margin-bottom: 15px; }
+            .vet-item { display: flex; align-items: center; margin-bottom: 8px; }
+            .vet-item label { margin-left: 8px; }
+            .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+            .modal-actions button { padding: 6px 12px; border: 1px solid #ccc; background: #f8f8f8; border-radius: 4px; cursor: pointer; }
+            .modal-actions button:hover { background: #f0f0f0; }
+            .vet-add-search { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
+            .structure-controls { padding-bottom: 15px; text-align: right; }
+            .vet-filter-button { padding: 8px 16px; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+            .vet-filter-button:hover { background: #f5f5f5; }
+
+            /* Responsive */
+            @media (max-width: 800px) {
+              .actions-row, .search-bar { padding: 10px; margin-left: 10px; margin-right: 10px; }
+              .report-panel { padding: 10px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="fixed-section">
+              <div anvil-slot="default"></div>
+              <div class="actions-row">
+                <div class="left-section">
+                  <button class="create-button" id="createBtn">+ Créer</button>
+                  <nav class="status-nav">
+                    <a href="#" class="status-option active" data-filter="all"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></span>Afficher tout</a>
+                    <a href="#" class="status-option" data-filter="pending_correction"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>A corriger</a>
+                    <a href="#" class="status-option" data-filter="validated"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>Validé</a>
+                    <a href="#" class="status-option" data-filter="sent"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></span>Envoyé</a>
+                  </nav>
+                </div>
+                <div class="time">--:--</div>
+              </div>
+              <input type="text" class="search-bar" placeholder="Rechercher...">
+            </div>
+
+            <!-- Supervisor Tabs (hidden by default) -->
+            <div class="supervisor-tabs" id="supervisorTabs">
+              <div class="sub-tab active" data-tab="my_reports">Mes Rapports</div>
+              <div class="sub-tab" data-tab="structure_reports">Ma Structure</div>
+            </div>
+
+            <!-- Scrollable area containing report panels -->
+            <div class="content-area">
+              <!-- Panel for "My Reports" -->
+              <div class="report-panel active" id="myReportsPanel">
+                <!-- NEW: Section Title -->
+                <h2 class="section-title">Mes Rapports</h2>
+                <div id="myReportsContainer"></div>
+              </div>
+
+              <!-- Panel for "My Structure" reports -->
+              <div class="report-panel" id="structureReportsPanel">
+                <!-- NEW: Section Title -->
+                <h2 class="section-title">Ma Structure</h2>
+                <div class="structure-controls">
+                  <button class="vet-filter-button" id="vetFilterBtn">Filtrer par Vétérinaire</button>
+                </div>
+                <div id="structureReportsContainer"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Vet Modals -->
+          <div class="vet-modal" id="vetModal">
+            <div class="modal-content">
+              <h3>Trier par vétérinaire</h3>
+              <div class="vet-list" id="vetList"></div>
+              <div class="modal-actions">
+                <button id="vetModalRetourBtn">Retour</button>
+                <button id="vetModalAddBtn">Ajouter des vétérinaires</button>
+                <button id="vetModalApplyBtn">Appliquer</button>
+              </div>
+            </div>
+          </div>
+          <div class="vet-add-modal" id="vetAddModal">
+            <div class="modal-content">
+              <h3>Ajouter un vétérinaire</h3>
+              <input type="text" class="vet-add-search" id="vetAddSearch" placeholder="Rechercher un utilisateur">
+              <div class="vet-add-results" id="vetAddResults"></div>
+              <div class="modal-actions">
+                <button id="vetAddRetourBtn">Retour</button>
+              </div>
+            </div>
+          </div>
+
+          <script>
+            if (!window.__archives_form_globals) {
+              window.__archives_form_globals = true;
+
+              window.isSupervisor = false;
+              window.hasStructure = false;
+              window.activeSubTab = 'my_reports';
+              window.__affiliated_vets = [];
+              window.__structure = null;
+
+              window.setupUI = function(isSupervisor, hasStructure, vetList, structureName) {
+                window.isSupervisor = isSupervisor;
+                window.hasStructure = hasStructure;
+                window.__structure = structureName;
+
+                const supervisorTabs = document.getElementById('supervisorTabs');
+                const myReportsPanel = document.getElementById('myReportsPanel');
+
+                if (isSupervisor && hasStructure) {
+                  supervisorTabs.style.display = 'flex';
+                  window.setAffiliatedVets(vetList || []);
+                } else {
+                  supervisorTabs.style.display = 'none';
+                }
+                myReportsPanel.classList.add('active');
+              };
+
+              window.setAffiliatedVets = function(vetsArray) {
+                window.__affiliated_vets = vetsArray || [];
+                renderVetCheckboxes();
+              };
+
+              const createReportElement = (report) => {
+                const entryDiv = document.createElement("div");
+                entryDiv.className = "record-entry";
+                const patientNameDiv = document.createElement("div");
+                patientNameDiv.className = "record-subcase";
+                patientNameDiv.textContent = report.name || "(Aucun patient)";
+                const vetNameDiv = document.createElement("div");
+                if (window.isSupervisor && window.activeSubTab === 'structure_reports') {
+                  vetNameDiv.className = "record-subcase";
+                  vetNameDiv.textContent = report.vet_name || "(Inconnu)";
+                }
+                const dateDiv = document.createElement("div");
+                dateDiv.className = "record-subcase";
+                dateDiv.textContent = formatLastModified(report.last_modified);
+                const statusDiv = document.createElement("div");
+                statusDiv.className = "record-subcase";
+                statusDiv.textContent = report.statut || "(Non spécifié)";
+                const trashDiv = document.createElement("div");
+                trashDiv.className = "trash-icon";
+                trashDiv.textContent = '🗑️';
+                trashDiv.addEventListener("click", ev => {
+                ev.stopPropagation();
+                anvil.call(ev.currentTarget, "delete_report", report.report_rich, window.activeSubTab);
+              });
+                entryDiv.addEventListener("click", (event) => {
+                anvil.call(event.currentTarget, "open_report_editor", report);
+              });
+                entryDiv.appendChild(patientNameDiv);
+                if (window.isSupervisor && window.activeSubTab === 'structure_reports') entryDiv.appendChild(vetNameDiv);
+                entryDiv.appendChild(dateDiv);
+                entryDiv.appendChild(statusDiv);
+                entryDiv.appendChild(trashDiv);
+                return entryDiv;
+              };
+
+                window.populateMyReports = function(reports) {
+                const container = document.getElementById("myReportsContainer");
+                container.innerHTML = "";
+                if (!reports || reports.length === 0) {
+                container.innerHTML = "<div style='text-align: center; color: #888;'>Aucun rapport personnel à afficher.</div>";
+                return;
+              }
+                reports.sort((a,b) => parseDateTime(b.last_modified) - parseDateTime(a.last_modified));
+                reports.forEach(report => container.appendChild(createReportElement(report)));
+              };
+
+                window.populateStructureReports = function(reports) {
+                const container = document.getElementById("structureReportsContainer");
+                container.innerHTML = "";
+                if (!reports || reports.length === 0) {
+                container.innerHTML = "<div style='text-align: center; color: #888;'>Aucun rapport de structure à afficher.</div>";
+                return;
+              }
+                reports.sort((a,b) => parseDateTime(b.last_modified) - parseDateTime(a.last_modified));
+                reports.forEach(report => container.appendChild(createReportElement(report)));
+              };
+
+                function formatLastModified(dateStr) {
+                if (!dateStr) return "(N/A)";
+                const date = new Date(dateStr.replace(' ', 'T'));
+                if (isNaN(date)) return dateStr;
+                const currentYear = new Date().getFullYear();
+                if (date.getFullYear() !== currentYear) return "l'an dernier";
+                const monthNames = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+                return `${date.getDate()} ${monthNames[date.getMonth()] || ''}`.trim();
+              }
+
+                function parseDateTime(dateStr) {
+                if (!dateStr) return 0;
+                const date = new Date(dateStr.replace(' ', 'T'));
+                return isNaN(date) ? 0 : date.getTime();
+              }
+
+                function renderVetCheckboxes() {
+                const vetList = document.getElementById("vetList");
+                if (!vetList) return;
+                vetList.innerHTML = "";
+                window.__affiliated_vets.forEach(vet => {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "vet-item";
+                itemDiv.innerHTML = `<input type="checkbox" value="${vet.email}" id="vet_${vet.email}"><label for="vet_${vet.email}">${vet.name}</label>`;
+                vetList.appendChild(itemDiv);
+              });
+              }
+
+                function renderVetAddResults(users) {
+                const resultsContainer = document.getElementById("vetAddResults");
+                resultsContainer.innerHTML = !users || users.length === 0 ? "Aucun résultat." : "";
+                if (!users) return;
+                users.forEach(user => {
+                const userDiv = document.createElement("div");
+                userDiv.className = "vet-item";
+                userDiv.style.cursor = "pointer";
+                userDiv.textContent = user.name || user.email;
+                userDiv.addEventListener("click", evt => {
+                if (window.confirm(`Voulez-vous autoriser ${user.name} à rejoindre votre structure ?`)) {
+                anvil.call(evt.currentTarget, "add_vet_to_structure", user.email)
+                .then(() => {
+                alert("Utilisateur ajouté.");
+                document.getElementById("vetAddModal").style.display = "none";
+                document.getElementById("vetModal").style.display = "block";
+              })
+                .catch(err => alert("Erreur: " + err));
+              }
+              });
+                resultsContainer.appendChild(userDiv);
+              });
+              }
+              }
+
+                (function attachArchivesEvents() {
+                const stableAnchor = document.querySelector('.container');
+                document.getElementById('createBtn').addEventListener('click', (event) => anvil.call(event.currentTarget, 'create_new_report'));
+
+                document.querySelectorAll('.sub-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                document.querySelector('.sub-tab.active')?.classList.remove('active');
+                tab.classList.add('active');
+                window.activeSubTab = tab.dataset.tab;
+                document.querySelectorAll('.report-panel').forEach(panel => panel.classList.remove('active'));
+                document.getElementById(window.activeSubTab === 'my_reports' ? 'myReportsPanel' : 'structureReportsPanel').classList.add('active');
+                anvil.call(stableAnchor, 'apply_filters', window.activeSubTab);
+              });
+              });
+
+                document.querySelector('.search-bar').addEventListener('input', (event) => {
+                anvil.call(event.currentTarget, 'search_reports', event.target.value, window.activeSubTab);
+              });
+
+                document.querySelectorAll('.status-option').forEach(option => {
+                option.addEventListener('click', (event) => {
+                event.preventDefault();
+                document.querySelector('.status-option.active')?.classList.remove('active');
+                option.classList.add('active');
+                anvil.call(event.currentTarget, 'filter_reports_by_status', option.dataset.filter, window.activeSubTab);
+              });
+              });
+
+                const vetFilterBtn = document.getElementById('vetFilterBtn');
+                const vetModal = document.getElementById('vetModal');
+                if(vetFilterBtn && vetModal) {
+                vetFilterBtn.addEventListener('click', () => { vetModal.style.display = "block"; });
+                document.getElementById('vetModalRetourBtn').addEventListener('click', () => { vetModal.style.display = "none"; });
+                document.getElementById('vetModalApplyBtn').addEventListener('click', (event) => {
+                const checkedVetEmails = Array.from(document.querySelectorAll('#vetList input:checked')).map(cb => cb.value);
+                anvil.call(event.currentTarget, 'filter_reports_by_vets', checkedVetEmails);
+                vetModal.style.display = "none";
+              });
+
+                const vetAddModal = document.getElementById('vetAddModal');
+                document.getElementById('vetModalAddBtn').addEventListener('click', () => { vetModal.style.display = "none"; vetAddModal.style.display = "block"; });
+                document.getElementById('vetAddRetourBtn').addEventListener('click', () => { vetAddModal.style.display = "none"; vetModal.style.display = "block"; });
+
+                document.getElementById('vetAddSearch').addEventListener('input', (event) => {
+                anvil.call(event.currentTarget, 'search_users_for_modal', event.target.value)
+                .then(users => renderVetAddResults(users))
+                .catch(err => console.error("Search error:", err));
+              });
+              }
+
+                function updateTime() {
+                const timeElem = document.querySelector('.time');
+                if (timeElem) {
+                const now = new Date();
+                timeElem.textContent = `${now.getHours().toString().padStart(2, '0')}h${now.getMinutes().toString().padStart(2, '0')}`;
+              }
+              }
+                updateTime();
+                setInterval(updateTime, 60000);
+              })();
+                </script>
+        </body>
+      </html>
+  type: HtmlTemplate
+is_package: true

@@ -1,0 +1,148 @@
+components: []
+container:
+  properties:
+    html: |-
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            .fixed-section {
+              background: white;
+              z-index: 10;
+              padding: 10px 20px; /* Ajoute un peu d'espace autour de la barre */
+              border-bottom: 1px solid #ddd;
+            }
+            .nav-tabs {
+              display: flex;
+              width: 100%;
+              border: 1px solid #ddd; /* Bordure unifiée autour du groupe */
+              border-radius: 4px;   /* Coins arrondis */
+              overflow: hidden;     /* Pour que les coins arrondis s'appliquent correctement */
+            }
+            .nav-tab {
+              flex: 1;              /* Permet aux boutons de remplir l'espace disponible */
+              padding: 10px 16px;   /* Augmente légèrement le padding vertical pour un meilleur confort visuel */
+              cursor: pointer;
+              background: #f8f8f8;  /* Fond gris clair par défaut */
+              font-size: 14px;
+              text-align: center;
+              border: none;         /* Supprime les bordures individuelles */
+              border-right: 1px solid #ddd; /* Ajoute un séparateur vertical */
+              transition: background-color 0.2s;
+              color: #333;
+            }
+            .nav-tab:last-child {
+              border-right: none;   /* Supprime le dernier séparateur */
+            }
+            .nav-tab:hover {
+              background-color: #f0f0f0;
+            }
+            .nav-tab.active {
+              background: #fff;              /* Fond blanc pour l'onglet actif */
+              color: #1a73e8;                 /* Couleur du texte pour l'onglet actif */
+              font-weight: bold;               /* Texte en gras pour l'onglet actif */
+              box-shadow: inset 0 -2px 0 #1a73e8; /* Ligne de surbrillance en bas */
+            }
+            .actions-row {
+              display: flex;
+              justify-content: flex-end; /* Aligns the time to the right */
+              align-items: center;
+              padding: 15px 20px;
+            }
+            .time {
+              color: #666;
+              font-size: 14px;
+            }
+
+            /* --- AMÉLIORATIONS POUR L'AFFICHAGE SUR MOBILE --- */
+            @media (max-width: 800px) {
+              .fixed-section {
+                padding: 8px; /* Réduit légèrement l'espacement autour de la barre */
+              }
+              .nav-tab {
+                padding: 14px 6px;  /* AUGMENTE LA HAUTEUR des boutons (14px) et ajuste l'horizontal (6px) */
+                font-size: 13px;    /* Taille de police optimisée pour les petits écrans */
+                white-space: nowrap;/* Empêche le texte de passer à la ligne de manière non désirée */
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="fixed-section">
+            <div class="nav-tabs">
+              <button class="nav-tab" data-tab="Production" id="nav_production">Production</button>
+              <button class="nav-tab" data-tab="Templates/AI" id="nav_templates">Templates/AI</button>
+              <button class="nav-tab" data-tab="Archives" id="nav_archives">Archives</button>
+              <button class="nav-tab" data-tab="Settings" id="nav_settings">Settings</button>
+            </div>
+          </div>
+
+          <script>
+            // --- ADDED THIS BLOCK TO MAKE THE COMPONENT SELF-CONTAINED ---
+            if (!window.__header_nav_globals) {
+              window.__header_nav_globals = true;
+
+              // This function is now defined inside the component that uses it.
+              window.setElementText = function(elementId, newText) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                  element.textContent = newText;
+                }
+              };
+
+              // This function was also missing and is now included.
+              window.updateTime = function() {
+                const timeElem = document.querySelector('.time');
+                if (timeElem) {
+                  const now = new Date();
+                  timeElem.textContent = `${now.getHours().toString().padStart(2, '0')}h${now.getMinutes().toString().padStart(2, '0')}`;
+                }
+              };
+            }
+            // --- END OF ADDED BLOCK ---
+
+            // This function attaches event listeners to the navigation buttons.
+            function attachHeaderEvents() {
+              document.querySelectorAll('.nav-tab').forEach(tab => {
+                const newTab = tab.cloneNode(true);
+                tab.parentNode.replaceChild(newTab, tab);
+
+                newTab.addEventListener('click', (event) => {
+                  const tabValue = newTab.getAttribute("data-tab");
+                  if (tabValue === 'Production') {
+                    anvil.call(event.target, 'open_production_form');
+                  } else if (tabValue === 'Templates/AI') {
+                    anvil.call(event.target, 'open_templates_form');
+                  } else if (tabValue === 'Archives') {
+                    anvil.call(event.target, 'open_archives_form');
+                  } else if (tabValue === 'Settings') {
+                    anvil.call(event.target, 'open_settings_form');
+                  }
+                });
+              });
+            }
+
+            // This function is called from Python to set the active tab
+            window.setActiveTab = function(tabName) {
+              document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-tab') === tabName) {
+                  btn.classList.add('active');
+                }
+              });
+            };
+
+            // Run the functions to attach events and set the initial time.
+            attachHeaderEvents();
+            updateTime();
+            setInterval(updateTime, 60000); // Update every minute
+          </script>
+        </body>
+      </html>
+  type: HtmlTemplate
+custom_component: true
+is_package: true
+properties:
+- {default_binding_prop: true, default_value: '', important: true, name: active_tab, type: string}
+toolbox_item: {group: App Header}

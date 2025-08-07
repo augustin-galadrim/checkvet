@@ -56,39 +56,23 @@ db_schema:
     server: full
     title: Base_templates
   custom_templates:
-    client: none
+    client: search
     columns:
     - admin_ui: {order: 0, width: 200}
-      name: template_name
+      name: name
       type: string
     - admin_ui: {order: 1, width: 200}
       name: owner
       target: users
       type: link_single
-    - admin_ui: {order: 2, width: 200}
-      name: prompt
-      type: string
-    - admin_ui: {order: 3, width: 200}
-      name: human_readable
-      type: simpleObject
-    - admin_ui: {order: 4, width: 200}
-      name: priority
-      type: number
-    - admin_ui: {order: 5, width: 200}
-      name: prompt_fr
-      type: string
-    - admin_ui: {order: 6, width: 200}
-      name: prompt_en
-      type: string
-    - admin_ui: {order: 7, width: 200}
-      name: base_template
-      target: base_templates
-      type: link_single
-    - admin_ui: {order: 8, width: 200}
-      name: display_template
+    - admin_ui: {width: 200}
+      name: display
       type: bool
     - admin_ui: {order: 9, width: 200}
-      name: text_to_display
+      name: html
+      type: string
+    - admin_ui: {order: -1, width: 404}
+      name: id
       type: string
     server: full
     title: Custom_templates
@@ -111,27 +95,6 @@ db_schema:
       type: string
     server: full
     title: Embedded_images
-  favorites:
-    client: none
-    columns:
-    - admin_ui: {order: 0, width: 200}
-      name: vet
-      target: users
-      type: link_single
-    - admin_ui: {order: 1, width: 200}
-      name: favorite_1
-      target: custom_templates
-      type: link_single
-    - admin_ui: {order: 2, width: 200}
-      name: favorite_2
-      target: custom_templates
-      type: link_single
-    - admin_ui: {order: 3, width: 200}
-      name: favorite_3
-      target: custom_templates
-      type: link_single
-    server: full
-    title: Favorites
   microphone_tests:
     client: none
     columns:
@@ -147,6 +110,20 @@ db_schema:
       type: datetime
     server: full
     title: microphone_tests
+  prompts:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: task
+      type: string
+    - admin_ui: {order: 1, width: 200}
+      name: language
+      type: string
+    - admin_ui: {order: 2, width: 200}
+      name: text
+      type: string
+    server: full
+    title: Prompts
   reports:
     client: none
     columns:
@@ -664,7 +641,7 @@ secrets:
     value: {JYDDKHKPSWZ5AZHX: KVp41Rl7SjzvCZum/C8cftteLUTI17U18HzNkCFFylPyBxjS8VYGTdeX81iBW3gmUc7xATsQDci49UK0SzH75w4U6gZqho+Y9kz1LvUEvkfcwi6rDDaW8/WyEguSHmyHYWy2H28pajWrcxmjXr3SOxWt3IjsAcQfHL3jxn0MNmoGhQR9bztEZqBl+npk7AniwBtcw9hovFKPQ/mQ/0hRLEtBEWAcWjP3T1A5YI5cSFylj2nB/06uqknZI9Dn/ijuJ4rcSi8cDHovUegqgOCQ0tyr6smQ0JkDQuvqiUWcghShHUxaM/Mtj8zK7KEKyApjcKZzC4UlbmkJxxmQvoWWUc+rgw==}
 services:
 - client_config: {}
-  server_config: {}
+  server_config: {auto_create_missing_columns: false}
   source: /runtime/services/tables.yml
 - client_config: {allow_remember_me: true, allow_signup: true, confirm_email: false, enable_automatically: true, remember_me_days: 30, use_email: true}
   server_config: {user_table: users}

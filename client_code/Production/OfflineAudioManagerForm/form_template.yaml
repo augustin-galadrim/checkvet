@@ -146,6 +146,7 @@ container:
               window.__offline_form_globals = true;
 
               let db;
+
               // --- IndexedDB Functions ---
               function initDB() {
                 return new Promise((resolve, reject) => {
@@ -162,18 +163,23 @@ container:
                 });
               }
 
-              // --- REFACTORED: Save function now pulls blob from Python ---
+              // *** FIX IS HERE: Modified save function ***
               async function saveCurrentRecordingToQueue(title) {
                 if (!db) {
                   return displayBanner("Database not initialized.", "error");
                 }
 
                 const stableAnchor = document.getElementById('offline-form-stable-anchor');
+                // get_current_audio_blob() returns the Anvil Media Object, which wraps the JS Blob
                 const audioBlob = await anvil.call(stableAnchor, 'get_current_audio_blob');
 
                 if (!audioBlob) {
                   return displayBanner("Error: No audio data to save.", "error");
                 }
+
+                // Convert the Blob to an ArrayBuffer for safe storage.
+                const audioData = await audioBlob.arrayBuffer();
+                const mimeType = audioBlob.type; // e.g., 'audio/mp4'
 
                 const metadata = {
                   id: `rec_${Date.now()}`,
@@ -182,12 +188,15 @@ container:
                   title: title || "Untitled Recording",
                 };
 
+                // Store the ArrayBuffer and mimeType, NOT the Blob object itself.
+                const record = { ...metadata, audioData: audioData, mimeType: mimeType };
+
                 const request = db.transaction(['recordings'], 'readwrite')
                   .objectStore('recordings')
-                  .add({ ...metadata, audioBlob: audioBlob });
+                  .add(record);
 
                 request.onsuccess = () => {
-                  console.log("Successfully saved to IndexedDB.");
+                  console.log("Successfully saved raw audio data to IndexedDB.");
                   displayBanner(`'${metadata.title}' saved to offline queue.`, "success");
                   anvil.call(stableAnchor, 'reset_ui_to_recording');
                   updateQueueBadge();
@@ -197,6 +206,7 @@ container:
                   displayBanner("Failed to save recording to queue.", "error");
                 };
               }
+              // *** END OF FIX ***
 
               function getQueuedRecordings() {
                 return new Promise((resolve) => {
@@ -214,7 +224,6 @@ container:
                 renderQueue();
               }
 
-              // --- UI Functions ---
               async function updateQueueBadge() {
                 const queue = await getQueuedRecordings();
                 const badge = document.getElementById('queueBadge');
@@ -229,15 +238,15 @@ container:
                   const div = document.createElement('div');
                   div.className = 'queue-item';
                   div.innerHTML = `
-                                    <div>
-                                      <div class="queue-item-title">${item.title}</div>
-                                      <div class="queue-item-status">Status: <strong>${item.status}</strong></div>
-                                    </div>
-                                    <div class="queue-item-actions">
-                                      <button class="button" disabled title="Import is only available in online mode">Import</button>
-                                      <button class="button delete-btn" data-id="${item.id}">Delete</button>
-                                    </div>
-                                  `;
+                                <div>
+                                  <div class="queue-item-title">${item.title}</div>
+                                  <div class="queue-item-status">Status: <strong>${item.status}</strong></div>
+                                </div>
+                                <div class="queue-item-actions">
+                                  <button class="button" disabled title="Import is only available in online mode">Import</button>
+                                  <button class="button delete-btn" data-id="${item.id}">Delete</button>
+                                </div>
+                              `;
                   container.appendChild(div);
                 });
                 document.getElementById('queueModal').style.display = 'flex';
@@ -252,7 +261,6 @@ container:
                 setTimeout(() => banner.remove(), 3000);
               };
 
-              // NEW: UI State Manager (from AudioManagerForm)
               window.setAudioWorkflowState = (state) => {
                 console.log(`Setting audio workflow state to: ${state}`);
                 const inputContainer = document.getElementById('audioInputContainer');
@@ -277,10 +285,8 @@ container:
                 updateQueueBadge();
               };
 
-              // --- Event Listeners ---
               function attachOfflineEvents() {
                 const stableAnchor = document.getElementById('offline-form-stable-anchor');
-
                 const reattach = (id, event, handler) => {
                   const el = document.getElementById(id);
                   if(el) {
@@ -289,18 +295,14 @@ container:
                     newEl.addEventListener(event, handler);
                   }
                 };
-
                 reattach('viewQueueBtn', 'click', renderQueue);
                 reattach('closeQueueModalBtn', 'click', () => document.getElementById('queueModal').style.display = 'none');
-
                 reattach('discard-audio-btn', 'click', () => anvil.call(stableAnchor, 'reset_ui_to_recording'));
                 reattach('queue-audio-btn', 'click', () => anvil.call(stableAnchor, 'queue_button_click'));
-
-                // REFACTORED: Title modal button now calls the async JS function
                 reattach('cancelTitleBtn', 'click', () => document.getElementById('titleModal').style.display = 'none');
                 reattach('confirmTitleBtn', 'click', () => {
                   const title = document.getElementById('recordingTitle').value;
-                  saveCurrentRecordingToQueue(title);
+                  saveCurrentRecordingToQueue(title); // This now calls our robust save function
                   document.getElementById('titleModal').style.display = 'none';
                 });
 
@@ -321,7 +323,6 @@ container:
                 updateTime();
                 setInterval(updateTime, 60000);
               }
-
               attachOfflineEvents();
             }
           </script>

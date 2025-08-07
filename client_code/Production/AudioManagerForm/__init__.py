@@ -142,6 +142,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
     print("[DEBUG] Rebuilding patient search field.")
     self.call_js("rebuildPatientSearchInput")
 
+    self.queue_manager_1.refresh_badge()
+
     print("[DEBUG] form_show completed.")
 
   def refresh_session_relay(self, **event_args):
@@ -300,7 +302,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     except anvil.server.AppOfflineError:
       print("[DEBUG] AppOfflineError caught. Saving to offline queue.")
       alert("Connection lost. Your recording has been saved to the offline queue.")
-      anvil.js.call_js("handleOfflineSave")
+      self.queue_manager_1.open_title_modal(self.current_audio_blob)
       return "OFFLINE_SAVE"  # Return offline status
 
     except Exception as e:
@@ -308,7 +310,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       self.call_js("displayBanner", f"Error: {e}", "error")
       if confirm("An unexpected error occurred. Save to offline queue?"):
         print("[DEBUG] User confirmed offline save. Calling JS: handleOfflineSave.")
-        anvil.js.call_js("handleOfflineSave")
+        self.queue_manager_1.open_title_modal(self.current_audio_blob)
         return "OFFLINE_SAVE"  # Return offline status
       else:
         return "ERROR"  # Return error status
@@ -673,3 +675,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
     except Exception as e:
       print(f"[ERROR] Error in search_template_relay: {e}")
       return []
+
+  def queue_manager_1_x_import_item(self, item_id, audio_blob, **event_args):
+    """Handles the import event from the QueueManager component."""
+    print(f"AudioManagerForm: Importing item {item_id} from queue.")
+    self.import_audio_from_queue(audio_blob)

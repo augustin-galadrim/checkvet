@@ -148,6 +148,7 @@ container:
               const micIconHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 11.5a2.5 2.5 0 0 0 2.5-2.5V4a2.5 2.5 0 1 0-5 0v5A2.5 2.5 0 0 0 8 11.5z"/><path d="M10 5a.5.5 0 0 1 1 0v4a3 3 0 1 1-6 0V5a.5.5 0 0 1 1 0v4a2 2 0 0 0 4 0V5z"/><path d="M8 13a4.5 4.5 0 0 0 4.5-4.5.5.5 0 0 1 1 0 5.5 5.5 0 0 1-11 0 .5.5 0 0 1 1 0A4.5 4.5 0 0 0 8 13z"/></svg>`;
               const pauseIconHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><rect x="9" y="2" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 12a6 6 0 0 0 12 0M12 18v4M8 22h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 
+              // --- HELPER FUNCTIONS ---
               window.setRingPercentage = function(percentage) {
                 const ring = document.getElementById("progressRing");
                 if (ring) {
@@ -156,7 +157,6 @@ container:
                 }
               };
 
-              // MODIFICATION: Replaced optional chaining with a standard 'if' check
               window.startRecordingFlash = function() {
                 const ring = document.getElementById("progressRing");
                 if (ring) {
@@ -171,6 +171,7 @@ container:
                 }
               };
 
+              // --- MAIN EVENT ATTACHMENT FUNCTION ---
               window.attachRecordingEvents = function() {
                 const playButton = document.getElementById("playButton");
                 const stopButton = document.getElementById("stopButton");
@@ -179,14 +180,30 @@ container:
                   playButton.addEventListener("click", async (evt) => {
                     if (!recordingState.isRecording) {
                       try {
+                        // *** FIX STARTS HERE ***
+                        // 1. Intelligently select the best MIME type. 'audio/mp4' for iOS, otherwise 'audio/webm'.
+                        const supportedMimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
+                        console.log(`Using supported MIME type: ${supportedMimeType}`);
+                        // *** END OF CHANGE 1 ***
+
                         recordingState.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        recordingState.mediaRecorder = new MediaRecorder(recordingState.stream);
+
+                        // *** FIX CONTINUES HERE ***
+                        // 2. Pass the selected MIME type to the MediaRecorder.
+                        recordingState.mediaRecorder = new MediaRecorder(recordingState.stream, { mimeType: supportedMimeType });
+                        // *** END OF CHANGE 2 ***
+
                         recordingState.recordedChunks = [];
                         recordingState.mediaRecorder.ondataavailable = e => recordingState.recordedChunks.push(e.data);
+
                         recordingState.mediaRecorder.onstop = () => {
-                          recordingState.audioBlob = new Blob(recordingState.recordedChunks, { type: 'audio/webm' });
+                          // *** FIX CONTINUES HERE ***
+                          // 3. Create the Blob with the correct, dynamically chosen MIME type.
+                          recordingState.audioBlob = new Blob(recordingState.recordedChunks, { type: supportedMimeType });
+                          // *** END OF CHANGE 3 ***
                           anvil.call(stopButton, "handle_js_recording_complete", recordingState.audioBlob);
                         };
+
                         recordingState.mediaRecorder.start();
                         recordingState.isRecording = true;
                         playButton.innerHTML = pauseIconHTML;

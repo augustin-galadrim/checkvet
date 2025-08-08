@@ -1,7 +1,243 @@
 components: []
 container:
   properties:
-    html: "<!-- Main button to view the queue -->\n<button class=\"queue-button\" id=\"qm-viewQueueBtn\">\n  <span>Queue</span>\n  <span class=\"queue-badge\" id=\"qm-queueBadge\">0</span>\n</button>\n\n<!-- Modal for viewing the queue -->\n<div class=\"modal\" id=\"qm-queueModal\" style=\"display: none;\">\n  <div class=\"modal-content\">\n    <div class=\"modal-header\">Offline Recordings Queue</div>\n    <div class=\"modal-body\">\n      <div class=\"queue-list\" id=\"qm-queueListContainer\">\n        <!-- Queue items will be rendered here by JS -->\n      </div>\n    </div>\n    <div class=\"modal-footer\">\n      <button class=\"button\" id=\"qm-closeQueueModalBtn\">Close</button>\n    </div>\n  </div>\n</div>\n\n<!-- Modal for naming a new recording before queueing -->\n<div class=\"modal\" id=\"qm-titleModal\" style=\"display: none;\">\n  <div class=\"modal-content\">\n    <div class=\"modal-header\">Name Your Recording</div>\n    <div class=\"modal-body\">\n      <p>Provide a title for this recording to identify it in the queue.</p>\n      <label for=\"qm-recordingTitle\">Recording Title:</label>\n      <input type=\"text\" id=\"qm-recordingTitle\" placeholder=\"e.g., Exam of 'Fido'\">\n    </div>\n    <div class=\"modal-footer\">\n      <button class=\"button\" id=\"qm-cancelTitleBtn\">Cancel</button>\n      <button class=\"button button-primary\" id=\"qm-confirmTitleBtn\">Save to Queue</button>\n    </div>\n  </div>\n</div>\n\n<style>\n  /* Basic styles for the button and modal, adapted from your forms */\n  .queue-button { padding: 8px 12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; }\n  .queue-button:hover { background: #e0e0e0; }\n  .queue-badge { background-color: #f44336; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold; min-width: 18px; text-align: center; display: none; }\n  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10010; align-items: center; justify-content: center; }\n  .modal-content { position: relative; background-color: white; padding: 20px; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }\n  .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; }\n  .modal-body p { margin-bottom: 15px; }\n  .modal-body label { font-weight: bold; margin-bottom: 5px; display: block; }\n  .modal-body input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; margin-bottom: 15px; }\n  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }\n  .queue-list { max-height: 300px; overflow-y: auto; }\n  .queue-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }\n  .queue-item:last-child { border-bottom: none; }\n  .queue-item-title { font-weight: bold; }\n  .queue-item-status { font-size: 12px; color: #666; margin-top: 4px; }\n  .queue-item-actions button { margin-left: 10px; }\n  .button { padding: 8px 16px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; cursor: pointer; }\n  .button-primary { background-color: #4CAF50; color: white; border-color: #4CAF50; }\n  .button[disabled] { background-color: #ccc; cursor: not-allowed; }\n</style>\n\n<script>\n  if (!window.__queue_manager_globals) {\n    window.__queue_manager_globals = true;\n\n    let db;\n    let isImportDisabled = false;\n\n    // --- Python Callable JS Functions ---\n    window.qm_initialize = function(disableImport) {\n      isImportDisabled = disableImport;\n      initDB().then(updateQueueBadge);\n    };\n\n    // *** NEW FUNCTION TO FIX THE ERROR ***\n    window.qm_openTitleModal = function() {\n      // Clear any previous input and show the modal\n      const titleInput = document.getElementById('qm-recordingTitle');\n      if (titleInput) titleInput.value = '';\n      const modal = document.getElementById('qm-titleModal');\n      if (modal) modal.style.display = 'flex';\n    };  \n    window.qm_addToQueue = async function(jsBlobProxy, title) {\n      console.log(\"QM JS: addToQueue triggered with JS Blob Proxy.\");\n\n      try {\n        if (!jsBlobProxy || !title) {\n          console.error(\"QM JS: Did not receive a valid item from Python call.\");\n          return;\n        }\n\n        // NO CONVERSION NEEDED. The proxy is a valid Blob for IndexedDB.\n        await saveToQueue(jsBlobProxy, title);\n        await updateQueueBadge();\n\n        anvil.call(document.getElementById('qm-viewQueueBtn'), 'handle_queue_updated');\n\n      } catch (e) {\n        console.error(\"QM JS: CRITICAL ERROR during queueing process:\", e);\n        alert(\"A critical error occurred while queueing the audio.\");\n      }\n    };\n    window.qm_refreshBadge = updateQueueBadge;\n\n    window.qm_deleteItem = async function(itemId) {\n      console.log(`QM JS: Received command to delete item ${itemId}`);\n      try {\n        await deleteFromQueue(itemId); // This helper function already exists\n        await updateQueueBadge(); // Refresh the badge count\n        // We don't need to re-render the modal list here, as it will be closed.\n      } catch (e) {\n        console.error(`QM JS: Failed to delete item ${itemId}`, e);\n      }\n    };\n\n\n    // --- IndexedDB Core Functions ---\n    function initDB() {\n      return new Promise((resolve, reject) => {\n        const request = indexedDB.open('audioQueueDB', 1);\n        request.onerror = event => reject(\"IndexedDB error: \" + event.target.errorCode);\n        request.onsuccess = event => { db = event.target.result; resolve(db); };\n        request.onupgradeneeded = event => {\n          event.target.result.createObjectStore('recordings', { keyPath: 'id' });\n        };\n      });\n    }\n\n    async function saveToQueue(jsBlob, title) {\n      if (!db) throw new Error(\"DB not initialized\");\n      const audioData = await jsBlob.arrayBuffer();\n      const mimeType = jsBlob.type;\n      const recording = {\n        id: 'rec_' + Date.now(), title: title, audioData: audioData,\n        mimeType: mimeType, status: 'queued'\n      };\n      return new Promise((resolve, reject) => {\n        const transaction = db.transaction(['recordings'], 'readwrite');\n        const store = transaction.objectStore('recordings');\n        store.add(recording).onsuccess = () => resolve(recording.id);\n        store.onerror = e => reject(\"Failed to save: \" + e.target.error);\n      });\n    }\n\n    function getQueuedRecordings() {\n      return new Promise((resolve, reject) => {\n        if (!db) return reject(\"DB not initialized\");\n        db.transaction(['recordings'], 'readonly').objectStore('recordings').getAll().onsuccess = e => resolve(e.target.result);\n      });\n    }\n\n    function deleteFromQueue(id) {\n      return new Promise((resolve, reject) => {\n        if (!db) return reject(\"DB not initialized\");\n        db.transaction(['recordings'], 'readwrite').objectStore('recordings').delete(id).onsuccess = resolve;\n      });\n    }\n\n    // --- UI and Event Handling Functions ---\n    async function updateQueueBadge() {\n      const queue = await getQueuedRecordings();\n      const badge = document.getElementById('qm-queueBadge');\n      if (badge) {\n        badge.style.display = queue.length > 0 ? 'inline-block' : 'none';\n        badge.textContent = queue.length;\n      }\n    }\n\n    async function renderQueue() {\n      const queue = await getQueuedRecordings();\n      const container = document.getElementById('qm-queueListContainer');\n      container.innerHTML = queue.length === 0 ? '<p>No recordings in queue.</p>' : '';\n\n      queue.forEach(item => {\n        const div = document.createElement('div');\n        div.className = 'queue-item';\n        const importButtonHTML = isImportDisabled\n          ? `<button class=\"button button-primary\" disabled title=\"Import is not available in this mode\">Import</button>`\n          : `<button class=\"button button-primary import-btn\" data-id=\"${item.id}\">Import</button>`;\n\n        div.innerHTML = `\n          <div>\n            <div class=\"queue-item-title\">${item.title}</div>\n            <div class=\"queue-item-status\">Status: <strong>${item.status}</strong></div>\n          </div>\n          <div class=\"queue-item-actions\">\n            ${importButtonHTML}\n            <button class=\"button delete-btn\" data-id=\"${item.id}\">Delete</button>\n          </div>`;\n        container.appendChild(div);\n      });\n    }\n\n    // --- Attach Event Listeners ---\n    function attachQueueManagerEvents() {\n      const componentRoot = document.getElementById('qm-viewQueueBtn');\n\n      document.getElementById('qm-viewQueueBtn').addEventListener('click', async () => {\n        await renderQueue();\n        document.getElementById('qm-queueModal').style.display = 'flex';\n      });\n\n      document.getElementById('qm-closeQueueModalBtn').addEventListener('click', () => {\n        document.getElementById('qm-queueModal').style.display = 'none';\n      });\n\n      document.getElementById('qm-queueListContainer').addEventListener('click', async (e) => {\n        const target = e.target;\n        const id = target.dataset.id;\n        if (!id) return;\n\n        if (target.classList.contains('import-btn')) {\n          const queue = await getQueuedRecordings();\n          const item = queue.find(i => i.id === id);\n          if (item) {\n            const blob = new Blob([item.audioData], { type: item.mimeType });\n            anvil.call(componentRoot, 'handle_import_click', item.id, blob);\n            document.getElementById('qm-queueModal').style.display = 'none';\n          }\n        } else if (target.classList.contains('delete-btn')) {\n          if (confirm(\"Are you sure you want to delete this recording?\")) {\n            await deleteFromQueue(id);\n            await renderQueue(); // Re-render the list in the modal\n            await updateQueueBadge(); // Update the badge\n            anvil.call(componentRoot, 'handle_queue_updated'); // Notify parent\n          }\n        }\n      });\n\n      document.getElementById('qm-cancelTitleBtn').addEventListener('click', () => {\n        document.getElementById('qm-titleModal').style.display = 'none';\n      });\n\n      document.getElementById('qm-confirmTitleBtn').addEventListener('click', () => {\n        const title = document.getElementById('qm-recordingTitle').value.trim() || `Recording from ${new Date().toLocaleString()}`;\n        anvil.call(componentRoot, 'handle_confirm_save', title);\n        document.getElementById('qm-titleModal').style.display = 'none';\n      });\n    }\n\n    attachQueueManagerEvents();\n  }\n</script>\n</script>"
+    html: |-
+      <!-- Main button to view the queue -->
+      <button class="queue-button" id="qm-viewQueueBtn">
+        <span>Queue</span>
+        <span class="queue-badge" id="qm-queueBadge">0</span>
+      </button>
+
+      <!-- Modal for viewing the queue -->
+      <div class="modal" id="qm-queueModal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">Offline Recordings Queue</div>
+          <div class="modal-body">
+            <div class="queue-list" id="qm-queueListContainer">
+              <!-- Queue items will be rendered here by JS -->
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="button" id="qm-closeQueueModalBtn">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal for naming a new recording before queueing -->
+      <div class="modal" id="qm-titleModal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">Name Your Recording</div>
+          <div class="modal-body">
+            <p>Provide a title for this recording to identify it in the queue.</p>
+            <label for="qm-recordingTitle">Recording Title:</label>
+            <input type="text" id="qm-recordingTitle" placeholder="e.g., Exam of 'Fido'">
+          </div>
+          <div class="modal-footer">
+            <button class="button" id="qm-cancelTitleBtn">Cancel</button>
+            <button class="button button-primary" id="qm-confirmTitleBtn">Save to Queue</button>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        /* Basic styles for the button and modal, adapted from your forms */
+        .queue-button { padding: 8px 12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; }
+        .queue-button:hover { background: #e0e0e0; }
+        .queue-badge { background-color: #f44336; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold; min-width: 18px; text-align: center; display: none; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10010; align-items: center; justify-content: center; }
+        .modal-content { position: relative; background-color: white; padding: 20px; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+        .modal-body p { margin-bottom: 15px; }
+        .modal-body label { font-weight: bold; margin-bottom: 5px; display: block; }
+        .modal-body input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; margin-bottom: 15px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .queue-list { max-height: 300px; overflow-y: auto; }
+        .queue-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .queue-item:last-child { border-bottom: none; }
+        .queue-item-title { font-weight: bold; }
+        .queue-item-status { font-size: 12px; color: #666; margin-top: 4px; }
+        .queue-item-actions button { margin-left: 10px; }
+        .button { padding: 8px 16px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; cursor: pointer; }
+        .button-primary { background-color: #4CAF50; color: white; border-color: #4CAF50; }
+        .button[disabled] { background-color: #ccc; cursor: not-allowed; }
+      </style>
+
+      <script>
+        if (!window.__queue_manager_globals) {
+          window.__queue_manager_globals = true;
+
+          // --- THE FIX: PART 1 ---
+          // This promise will hold the database connection. It starts as null.
+          let dbPromise = null;
+          let isImportDisabled = false;
+
+          // --- Python Callable JS Functions ---
+          window.qm_initialize = function(disableImport) {
+            isImportDisabled = disableImport;
+            // Start the DB initialization, but don't wait for it here.
+            initDB();
+          };
+
+          window.qm_openTitleModal = function() {
+            const titleInput = document.getElementById('qm-recordingTitle');
+            if (titleInput) titleInput.value = '';
+            const modal = document.getElementById('qm-titleModal');
+            if (modal) modal.style.display = 'flex';
+          };
+
+          window.qm_addToQueue = async function(jsBlobProxy, title) {
+            try {
+              if (!jsBlobProxy || !title) {
+                console.error("QM JS: Did not receive a valid item from Python call.");
+                return;
+              }
+              await saveToQueue(jsBlobProxy, title);
+              await updateQueueBadge();
+              anvil.call(document.getElementById('qm-viewQueueBtn'), 'handle_queue_updated');
+            } catch (e) {
+              console.error("QM JS: CRITICAL ERROR during queueing process:", e);
+              alert("A critical error occurred while queueing the audio.");
+            }
+          };
+
+          window.qm_refreshBadge = updateQueueBadge;
+
+          window.qm_deleteItem = async function(itemId) {
+            try {
+              await deleteFromQueue(itemId);
+              await updateQueueBadge();
+            } catch (e) {
+              console.error(`QM JS: Failed to delete item ${itemId}`, e);
+            }
+          };
+
+          // --- IndexedDB Core Functions ---
+          function initDB() {
+            // If the promise already exists, just return it.
+            if (dbPromise) return dbPromise;
+
+            // --- THE FIX: PART 2 ---
+            // Create the promise for the database connection. This code only runs ONCE.
+            dbPromise = new Promise((resolve, reject) => {
+              const request = indexedDB.open('audioQueueDB', 1);
+              request.onerror = event => reject("IndexedDB error: " + event.target.errorCode);
+              request.onsuccess = event => resolve(event.target.result);
+              request.onupgradeneeded = event => {
+                event.target.result.createObjectStore('recordings', { keyPath: 'id' });
+              };
+            });
+            return dbPromise;
+          }
+
+          async function saveToQueue(jsBlob, title) {
+            // --- THE FIX: PART 3 ---
+            // Now, every function that needs the DB will wait for the promise to resolve.
+            const db = await initDB();
+            const audioData = await jsBlob.arrayBuffer();
+            const mimeType = jsBlob.type;
+            const recording = {
+              id: 'rec_' + Date.now(), title: title, audioData: audioData,
+              mimeType: mimeType, status: 'queued'
+            };
+            return new Promise((resolve, reject) => {
+              const transaction = db.transaction(['recordings'], 'readwrite');
+              const store = transaction.objectStore('recordings');
+              store.add(recording).onsuccess = () => resolve(recording.id);
+              store.onerror = e => reject("Failed to save: " + e.target.error);
+            });
+          }
+
+          async function getQueuedRecordings() {
+            const db = await initDB(); // Wait for the DB to be ready.
+            return new Promise((resolve) => {
+              db.transaction(['recordings'], 'readonly').objectStore('recordings').getAll().onsuccess = e => resolve(e.target.result);
+            });
+          }
+
+          async function deleteFromQueue(id) {
+            const db = await initDB(); // Wait for the DB to be ready.
+            return new Promise((resolve) => {
+              db.transaction(['recordings'], 'readwrite').objectStore('recordings').delete(id).onsuccess = resolve;
+            });
+          }
+
+          // --- UI and Event Handling Functions ---
+          async function updateQueueBadge() {
+            const queue = await getQueuedRecordings(); // This will now wait for the DB.
+            const badge = document.getElementById('qm-queueBadge');
+            if (badge) {
+              badge.style.display = queue.length > 0 ? 'inline-block' : 'none';
+              badge.textContent = queue.length;
+            }
+          }
+
+          async function renderQueue() {
+            const queue = await getQueuedRecordings();
+            const container = document.getElementById('qm-queueListContainer');
+            container.innerHTML = queue.length === 0 ? '<p>No recordings in queue.</p>' : '';
+            queue.forEach(item => {
+              const div = document.createElement('div');
+              div.className = 'queue-item';
+              const importButtonHTML = isImportDisabled
+                ? `<button class=\"button button-primary\" disabled title=\"Import is not available in this mode\">Import</button>`
+                : `<button class=\"button button-primary import-btn\" data-id=\"${item.id}\">Import</button>`;
+              div.innerHTML = `
+                <div>
+                  <div class=\"queue-item-title\">${item.title}</div>
+                  <div class=\"queue-item-status\">Status: <strong>${item.status}</strong></div>
+                </div>
+                <div class=\"queue-item-actions\">
+                  ${importButtonHTML}
+                  <button class=\"button delete-btn\" data-id=\"${item.id}\">Delete</button>
+                </div>`;
+              container.appendChild(div);
+            });
+          }
+
+          // --- Attach Event Listeners ---
+          function attachQueueManagerEvents() {
+            const componentRoot = document.getElementById('qm-viewQueueBtn');
+            document.getElementById('qm-viewQueueBtn').addEventListener('click', async () => {
+              await renderQueue();
+              document.getElementById('qm-queueModal').style.display = 'flex';
+            });
+            document.getElementById('qm-closeQueueModalBtn').addEventListener('click', () => {
+              document.getElementById('qm-queueModal').style.display = 'none';
+            });
+            document.getElementById('qm-queueListContainer').addEventListener('click', async (e) => {
+              const target = e.target;
+              const id = target.dataset.id;
+              if (!id) return;
+              if (target.classList.contains('import-btn')) {
+                const queue = await getQueuedRecordings();
+                const item = queue.find(i => i.id === id);
+                if (item) {
+                  const blob = new Blob([item.audioData], { type: item.mimeType });
+                  anvil.call(componentRoot, 'handle_import_click', item.id, blob);
+                  document.getElementById('qm-queueModal').style.display = 'none';
+                }
+              } else if (target.classList.contains('delete-btn')) {
+                if (confirm("Are you sure you want to delete this recording?")) {
+                  await deleteFromQueue(id);
+                  await renderQueue();
+                  await updateQueueBadge();
+                  anvil.call(componentRoot, 'handle_queue_updated');
+                }
+              }
+            });
+            document.getElementById('qm-cancelTitleBtn').addEventListener('click', () => {
+              document.getElementById('qm-titleModal').style.display = 'none';
+            });
+            document.getElementById('qm-confirmTitleBtn').addEventListener('click', () => {
+              const title = document.getElementById('qm-recordingTitle').value.trim() || `Recording from ${new Date().toLocaleString()}`;
+              anvil.call(componentRoot, 'handle_confirm_save', title);
+              document.getElementById('qm-titleModal').style.display = 'none';
+            });
+          }
+
+          attachQueueManagerEvents();
+        }
+      </script>
   type: HtmlTemplate
 custom_component: true
 events:

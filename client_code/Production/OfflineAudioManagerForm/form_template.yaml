@@ -42,6 +42,13 @@ container:
               justify-content: center;
               gap: 15px;
               margin-top: 15px;
+              align-items: center;
+              flex-direction: column;
+            }
+            .decision-buttons {
+              display: flex;
+              gap: 15px;
+              margin-top: 15px;
             }
             .decision-button {
               padding: 10px 20px;
@@ -81,8 +88,10 @@ container:
 
               <div id="audioDecisionContainer">
                 <div anvil-slot="playback_slot"></div>
-                <button id="discard-audio-btn" class="decision-button btn-discard">Discard</button>
-                <button id="queue-audio-btn" class="decision-button btn-queue">Put in Queue</button>
+                <div class="decision-buttons">
+                  <button id="discard-audio-btn" class="decision-button btn-discard">Discard</button>
+                  <button id="queue-audio-btn" class="decision-button btn-queue">Put in Queue</button>
+                </div>
               </div>
 
             </div>
@@ -95,7 +104,6 @@ container:
             if (!window.__offline_form_globals) {
               window.__offline_form_globals = true;
 
-              // These functions control the PARENT form's state and are safe to keep.
               window.displayBanner = function(message, type) {
                 const container = document.getElementById('bannerContainer');
                 if (!container) return;
@@ -130,11 +138,11 @@ container:
                   }
                 };
 
-                // These are the ONLY event handlers this form needs now.
+                // The discard button correctly calls the python method to reset the UI
                 reattach('discard-audio-btn', 'click', () => anvil.call(stableAnchor, 'reset_ui_to_recording'));
+                // The queue button now calls the updated python logic
                 reattach('queue-audio-btn', 'click', () => anvil.call(stableAnchor, 'queue_button_click'));
 
-                // The time display logic is also fine to keep.
                 const timeElem = document.getElementById('timeDisplay');
                 if (timeElem) {
                   const updateTime = () => {

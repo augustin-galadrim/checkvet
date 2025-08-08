@@ -28,6 +28,63 @@ def _generate_unique_join_code(length=6):
       return join_code
 
 
+import anvil.secrets
+import anvil.users
+import anvil.tables as tables
+from anvil.tables import app_tables
+import anvil.server
+import random
+import string
+
+
+def _generate_unique_join_code(length=6):
+  """
+  Generates a unique, random alphanumeric code to join a structure.
+
+  Ensures the generated code is not already in use in the database.
+
+  Args:
+    length (int): The desired length of the code.
+
+  Returns:
+    str: A unique join code.
+  """
+  chars = string.ascii_uppercase + string.digits
+  while True:
+    join_code = "".join(random.choice(chars) for _ in range(length))
+    # Check if this code already exists in the table.
+    if not app_tables.structures.get(join_code=join_code):
+      return join_code
+
+
+@anvil.server.callable(require_user=True)
+def read_structures():
+  """
+  Retrieves a list of all structures available in the application.
+
+  This function is used by the Settings form to populate the structure selection modal.
+  It returns a list of dictionaries, each containing a structure's details.
+  """
+  print("[INFO] Reading all structures from the database.")
+
+  # Fetch all rows from the 'structures' table.
+  all_structures = app_tables.structures.search()
+
+  result = []
+  for structure_row in all_structures:
+    # Use the column name 'name' which is the correct one in your schema.
+    structure_dict = {
+      "structure": structure_row["name"],
+      "phone": structure_row["phone"],
+      "email": structure_row["email"],
+      "address": structure_row["address"],
+    }
+    result.append(structure_dict)
+
+  print(f"[INFO] Returning {len(result)} structures.")
+  return result
+
+
 @anvil.server.callable(require_user=True)
 def create_and_join_new_structure(structure_details):
   """

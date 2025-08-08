@@ -110,8 +110,51 @@ def get_user_info(column_name):
   if column_name == "structure":
     return user_row["structure"]["name"] if user_row["structure"] else INDEPENDENT_KEY
 
-  if column_name in user_row:
+  try:
     return user_row[column_name]
-  else:
+  except KeyError:
+    # This block will now correctly execute if the column is missing from the schema.
     print(f"[WARN] Column '{column_name}' does not exist in the users table.")
     return None
+
+
+@anvil.server.callable(require_user=True)
+def get_vets_in_structure(structure_name):
+  """
+  Retrieves the name and email for all users linked to a specific structure.
+  This replaces the obsolete 'get_affiliated_vets_details' logic.
+
+  Args:
+    structure_name (str): The name of the structure to look up.
+
+  Returns:
+    list of dict: A list of vet details [{'name': str, 'email': str}] or an empty list.
+  """
+  # Do not search if the structure is the independent key
+  if not structure_name or structure_name == "independent":
+    return []
+
+  try:
+    # Find the structure row from the 'structures' table by its name.
+    structure_row = app_tables.structures.get(name=structure_name)
+    if not structure_row:
+      print(
+        f"[WARN] No structure found with name '{structure_name}' in get_vets_in_structure."
+      )
+      return []
+
+    # Query the 'users' table for all users linked to this specific structure row.
+    vets_in_structure = app_tables.users.search(structure=structure_row)
+
+    vet_details_list = [
+      {"name": vet["name"], "email": vet["email"]} for vet in vets_in_structure if vet
+    ]
+
+    print(
+      f"[INFO] Found {len(vet_details_list)} vets for structure '{structure_name}'."
+    )
+    return vet_details_list
+
+  except Exception as e:
+    print(f"[ERROR] in get_vets_in_structure for '{structure_name}': {e}")
+    return []

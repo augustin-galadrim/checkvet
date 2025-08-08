@@ -2,197 +2,132 @@ from ._anvil_designer import SettingsTemplate
 from anvil import *
 import anvil.server
 import anvil.users
-import anvil.tables as tables
-import anvil.tables.query as q
-from anvil.tables import app_tables
+from ... import TranslationService as t
 
 
 class Settings(SettingsTemplate):
   def __init__(self, **properties):
-    print("Debug: Initialisation du formulaire Settings...")
     self.init_components(**properties)
-    print("Debug: Composants du formulaire initialisés.")
     self.add_event_handler("show", self.on_form_show)
 
   def on_form_show(self, **event_args):
     """
-    S'exécute après que le formulaire est visible. Nous allons récupérer les données utilisateur,
-    remplir les champs via self.call_js(...), et charger les modaux.
+    Called when the form is shown. Fetches user data and populates the form fields
+    and modals with up-to-date information.
     """
-    print(
-      "Debug: Le formulaire Settings est maintenant visible. Chargement des données du vétérinaire..."
-    )
+    print("Settings form is visible. Loading user and modal data...")
     self.load_vet_data()
-    print("Debug: Données du vétérinaire chargées dans le formulaire.")
-    print("Debug: Chargement des données du modal de structure...")
     self.load_structure_modal()
-    print("Debug: Données du modal de structure chargées.")
-    print("Debug: Chargement des données du modal de langue préférée...")
     self.load_favorite_language_modal()
-    print("Debug: Données du modal de langue préférée chargées.")
+    print("Data loading complete.")
 
   def refresh_session_relay(self, **event_args):
-    """Relay method for refreshing the session when called from JS"""
+    """Relay method for refreshing the session when called from JS."""
     try:
       return anvil.server.call("check_and_refresh_session")
     except anvil.server.SessionExpiredError:
       anvil.server.reset_session()
       return anvil.server.call("check_and_refresh_session")
     except Exception as e:
-      print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
+      print(f"[ERROR] Session refresh failed: {str(e)}")
       return False
 
   def load_vet_data(self):
     """
-    Récupère les données utilisateur depuis le serveur et remplit les champs
-    dans le formulaire HTML via self.call_js(...).
+    Retrieves the current user's data from the server and updates the UI.
     """
     try:
-      current_user = anvil.users.get_user()
-      if not current_user:
-        print("Debug: Aucun utilisateur connecté.")
-        alert("Aucun utilisateur n'est actuellement connecté.")
+      user_data = anvil.server.call("read_user")
+      if not user_data:
+        alert("Could not retrieve your user data. Please try logging in again.")
         return
 
-      print(f"Debug: Utilisateur courant récupéré : {current_user}")
+      # Populate text fields
+      self.call_js("setValueById", "name", user_data.get("name", ""))
+      self.call_js("setValueById", "email", user_data.get("email", ""))
+      self.call_js("setValueById", "phone", user_data.get("phone", ""))
 
-      try:
-        user_data = anvil.server.call("read_user")
-      except anvil.server.SessionExpiredError:
-        anvil.server.reset_session()
-        user_data = anvil.server.call("read_user")
-
-      print(f"Debug: Données utilisateur depuis le serveur : {user_data}")
-
-      if user_data:
-        # Pour les champs de texte :
-        self.call_js("setValueById", "name", user_data.get("name", ""))
-        self.call_js("setValueById", "email", user_data.get("email", ""))
-        self.call_js("setValueById", "phone", user_data.get("phone", ""))
-        # Définir la structure : mettre à jour l'input caché et le bouton d'affichage
-        structure = user_data.get("structure")
-        if not structure:
-          structure = "Indépendant"
-        self.call_js("setValueById", "structure", structure)
-        self.call_js("setButtonTextById", "structure-button", structure)
-
-        # Définir la langue préférée : mettre à jour l'input caché et le bouton d'affichage.
-        favorite_language = user_data.get("favorite_language")
-        if not favorite_language:
-          favorite_language = "EN"
-        mapping = {"FR": "Français", "EN": "Anglais"}
-        display_text = mapping.get(favorite_language, "Anglais")
-        self.call_js("setValueById", "favorite-language", favorite_language)
-        self.call_js("setButtonTextById", "favorite-language-button", display_text)
-
-        # Pour la case à cocher
-        self.call_js("setCheckedById", "supervisor", user_data.get("supervisor", False))
-
-        # Libellés de fichiers pour les images existantes
-        if user_data.get("signature_image"):
-          self.call_js(
-            "setFileNameById", "signature", user_data["signature_image"].name
-          )
-        if user_data.get("report_header_image"):
-          self.call_js(
-            "setFileNameById", "report-header", user_data["report_header_image"].name
-          )
-        if user_data.get("report_footer_image"):
-          self.call_js(
-            "setFileNameById", "report-footer", user_data["report_footer_image"].name
-          )
-
-        # Check if the user is an admin and show/hide button accordingly
-        is_admin = self.is_admin_user()
-        self.call_js("showAdminButton", is_admin)
+      # Handle the 'structure' field with translation for the 'independent' key
+      structure_value = user_data.get("structure", "independent")
+      if structure_value == "independent":
+        display_text = t.t("independent_structure_label")
       else:
-        alert(
-          "Impossible de récupérer les données utilisateur. Veuillez contacter le support."
+        display_text = structure_value
+
+      self.call_js("setValueById", "structure", structure_value)
+      self.call_js("setButtonTextById", "structure-button", display_text)
+
+      # Handle favorite language
+      favorite_language = user_data.get("favorite_language", "EN")
+      lang_map = {"FR": "Français", "EN": "English"}
+      lang_display_text = lang_map.get(favorite_language, "English")
+      self.call_js("setValueById", "favorite-language", favorite_language)
+      self.call_js("setButtonTextById", "favorite-language-button", lang_display_text)
+
+      # Handle checkbox
+      self.call_js("setCheckedById", "supervisor", user_data.get("supervisor", False))
+
+      # Set file names for existing media
+      if user_data.get("signature_image"):
+        self.call_js("setFileNameById", "signature", user_data["signature_image"].name)
+      if user_data.get("report_header_image"):
+        self.call_js(
+          "setFileNameById", "report-header", user_data["report_header_image"].name
         )
+      if user_data.get("report_footer_image"):
+        self.call_js(
+          "setFileNameById", "report-footer", user_data["report_footer_image"].name
+        )
+
+      # Show/hide admin button
+      self.call_js("showAdminButton", self.is_admin_user())
+
     except Exception as e:
-      print(f"Debug: Erreur dans load_vet_data : {str(e)}")
-      alert(f"Une erreur est survenue lors du chargement des données : {str(e)}")
+      alert(f"An error occurred while loading your data: {str(e)}")
 
   def load_structure_modal(self):
     """
-    Utilise la fonction relais pour récupérer les structures depuis le serveur et
-    remplit le modal avec les noms des structures.
+    Fetches all available structures and populates the selection modal.
     """
     try:
-      try:
-        structures = relay_read_structures()
-      except anvil.server.SessionExpiredError:
-        anvil.server.reset_session()
-        structures = relay_read_structures()
+      # This server call should return a list of all structure names
+      structures = relay_read_structures()
 
-      print(f"Debug: Structures récupérées : {structures}")
-      # Extraire le nom de la structure pour chaque structure
-      options = [s["structure"] for s in structures]
-      # S'assurer que "Indépendant" est toujours disponible
-      if "Indépendant" not in options:
-        options.append("Indépendant")
+      # The server returns dicts, so we extract the names
+      structure_names = [s["structure"] for s in structures]
 
-      # Récupérer la structure actuelle de l'utilisateur, ou utiliser "Indépendant" par défaut
-      try:
-        user_data = anvil.server.call("read_user")
-      except anvil.server.SessionExpiredError:
-        anvil.server.reset_session()
-        user_data = anvil.server.call("read_user")
+      # Add the 'independent' option as a dictionary for the JS
+      options = [
+        {
+          "key": "independent",
+          "display": t.t("independent_structure_label"),
+        }
+      ]
+      options.extend([{"key": name, "display": name} for name in structure_names])
 
-      current_structure = (
-        user_data.get("structure")
-        if user_data and user_data.get("structure")
-        else "Indépendant"
-      )
-      # Mettre à jour l'input caché et le bouton de structure
-      self.call_js("setValueById", "structure", current_structure)
-      self.call_js("setButtonTextById", "structure-button", current_structure)
-      # Remplir le modal avec les options et mettre en évidence la valeur actuelle
-      self.call_js("populateStructureModal", options, current_structure)
+      current_structure_key = anvil.server.call("get_user_info", "structure")
+
+      # Populate the modal with the options and the user's current selection
+      self.call_js("populateStructureModal", options, current_structure_key)
     except Exception as e:
-      print(f"Debug: Erreur lors du chargement du modal de structure : {str(e)}")
-      alert(f"Une erreur est survenue lors du chargement des structures : {str(e)}")
+      alert(f"An error occurred while loading structures: {str(e)}")
 
   def load_favorite_language_modal(self):
     """
-    Remplit le modal de langue préférée avec des options prédéfinies.
+    Populates the favorite language selection modal with predefined options.
     """
-    try:
-      options = [
-        {"display": "Français", "value": "FR"},
-        {"display": "Anglais", "value": "EN"},
-      ]
-
-      try:
-        user_data = anvil.server.call("read_user")
-      except anvil.server.SessionExpiredError:
-        anvil.server.reset_session()
-        user_data = anvil.server.call("read_user")
-
-      current_fav = (
-        user_data.get("favorite_language")
-        if user_data and user_data.get("favorite_language")
-        else "EN"
-      )
-      mapping = {"FR": "Français", "EN": "Anglais"}
-      display_text = mapping.get(current_fav, "Anglais")
-      self.call_js("setValueById", "favorite-language", current_fav)
-      self.call_js("setButtonTextById", "favorite-language-button", display_text)
-      self.call_js("populateFavoriteLanguageModal", options, current_fav)
-    except Exception as e:
-      print(f"Debug: Erreur lors du chargement du modal de langue préférée : {str(e)}")
-      alert(
-        f"Une erreur est survenue lors du chargement des langues préférées : {str(e)}"
-      )
+    options = [
+      {"display": "Français", "value": "FR"},
+      {"display": "English", "value": "EN"},
+    ]
+    current_fav = anvil.server.call("get_user_info", "favorite_language") or "EN"
+    self.call_js("populateFavoriteLanguageModal", options, current_fav)
 
   def submit_click(self, **event_args):
     """
-    Called when the user clicks "Update Settings". It now saves the data,
-    shows a success message, and reloads the form data to reflect changes.
+    Gathers all data from the form and calls the server to update the user's record.
     """
     try:
-      print("Debug: Submit button clicked. Gathering form data...")
-
       form_data = {
         "name": self.call_js("getValueById", "name"),
         "phone": self.call_js("getValueById", "phone"),
@@ -201,138 +136,73 @@ class Settings(SettingsTemplate):
         "favorite_language": self.call_js("getValueById", "favorite-language"),
       }
 
-      # Handle file data for each field if a file was selected
-      signature_file = self.get_file_data("signature")
-      if signature_file:
-        form_data["signature_image"] = signature_file
+      # Handle file uploads if new files were selected
+      for field in ["signature", "report-header", "report-footer"]:
+        file = self.get_file_data(field)
+        if file:
+          form_data[f"{field.replace('-', '_')}_image"] = file
 
-      report_header_file = self.get_file_data("report-header")
-      if report_header_file:
-        form_data["report_header_image"] = report_header_file
-
-      report_footer_file = self.get_file_data("report-footer")
-      if report_footer_file:
-        form_data["report_footer_image"] = report_footer_file
-
-      print(f"Debug: Form data gathered: {form_data}")
-
-      # Call the server to update the user record
-      try:
-        success = anvil.server.call("write_user", **form_data)
-      except anvil.server.SessionExpiredError:
-        anvil.server.reset_session()
-        success = anvil.server.call("write_user", **form_data)
-
-      print(f"Debug: Server response for update: {success}")
+      success = anvil.server.call("write_user", **form_data)
 
       if success:
-        self.call_js(
-          "displayBanner",
-          "Vet settings updated successfully!",
-          "success",
-        )
-        # Reload the form data to show the saved changes
-        self.load_vet_data()
+        self.call_js("displayBanner", "Settings updated successfully!", "success")
+        self.load_vet_data()  # Refresh the form to show the saved changes
       else:
-        alert("Failed to update vet settings. Please try again.")
+        alert("Failed to update settings. Please try again.")
     except Exception as e:
-      print(f"Debug: Error during submission: {str(e)}")
       alert(f"An error occurred during submission: {str(e)}")
 
   def cancel_click(self, **event_args):
-    """
-    Called when the user clicks "Cancel". It now reloads the vet data
-    from the server, effectively discarding any changes.
-    """
-    print("Debug: Cancel button clicked. Reverting changes.")
+    """Discards any changes by reloading the user data from the server."""
     self.load_vet_data()
     self.call_js("displayBanner", "Changes have been discarded.", "info")
 
   def logout_click(self, **event_args):
-    """
-    Appelé lorsque l'utilisateur clique sur "Déconnexion".
-    """
+    """Logs the user out and returns to the startup form."""
     anvil.users.logout()
     open_form("StartupForm")
 
   def get_file_data(self, input_id):
-    """
-    Récupère les données d'un fichier depuis JavaScript et crée un BlobMedia.
-    """
-    file_data_promise = self.call_js("getFileData", input_id)
-    if file_data_promise:
-      try:
-        file_data = file_data_promise
-        return anvil.BlobMedia(
-          content_type=file_data["content_type"],
-          content=file_data["content"],
-          name=file_data["name"],
-        )
-      except Exception as e:
-        print(
-          f"Debug: Erreur lors de la lecture des données du fichier pour {input_id} : {e}"
-        )
+    """Retrieves file data from a file input element via JavaScript."""
+    file_data = self.call_js("getFileData", input_id)
+    if file_data:
+      return anvil.BlobMedia(
+        content_type=file_data["content_type"],
+        content=file_data["content"],
+        name=file_data["name"],
+      )
     return None
 
   def openMicrophoneTest(self, **event_args):
-    """Appelé lorsque l'utilisateur clique sur 'Tester mon micro'."""
+    """Navigates to the microphone test form."""
     open_form("Settings.MicrophoneTest")
 
   def show_install_guide_click(self, **event_args):
-    """Called when the user clicks 'Show App Install Guide'."""
+    """Navigates to the mobile installation guide form."""
     open_form("MobileInstallationFlow")
 
-  def check_structure_authorization(self, structure, **event_args):
-    """
-    Vérifie si l'utilisateur est autorisé pour la structure donnée.
-    """
-    return relay_check_vet_authorization(structure)
-
   def is_admin_user(self):
-    """Check if the current user has admin privileges."""
-    try:
-      current_user = anvil.users.get_user()
-      if not current_user:
-        print("Debug: No current user found")
-        return False
-
-      admin_emails = [
-        "cristobal.navarro@me.com",
-        "biffy071077@gmail.com",
-        "augustincramer.galadrim@gmail.com",
-      ]
-
-      # Use square bracket notation instead of .get() method
-      try:
-        user_email = current_user["email"].lower()
-        print(f"Debug: User email: {user_email}")
-        is_admin = user_email in [email.lower() for email in admin_emails]
-        print(f"Debug: Is admin: {is_admin}")
-        return is_admin
-      except (KeyError, AttributeError):
-        print("Debug: Could not access user email")
-        return False
-    except Exception as e:
-      print(f"Debug: Error checking admin status: {str(e)}")
+    """Checks if the current user is in the hardcoded list of administrators."""
+    user = anvil.users.get_user()
+    if not user:
       return False
 
+    admin_emails = [
+      "cristobal.navarro@me.com",
+      "biffy071077@gmail.com",
+      "augustincramer.galadrim@gmail.com",
+    ]
+    return user["email"].lower() in admin_emails
+
   def openAdmin(self, **event_args):
-    """Opens the Admin form when clicked."""
+    """Navigates to the Administration panel."""
     open_form("Settings.Admin")
 
 
-# Fonctions relais
+# Relay function to ensure server calls can be made after a session refresh.
 def relay_read_structures():
   try:
     return anvil.server.call("read_structures")
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
     return anvil.server.call("read_structures")
-
-
-def relay_check_vet_authorization(structure):
-  try:
-    return anvil.server.call("check_vet_authorization", structure)
-  except anvil.server.SessionExpiredError:
-    anvil.server.reset_session()
-    return anvil.server.call("check_vet_authorization", structure)

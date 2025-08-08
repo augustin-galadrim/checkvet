@@ -170,7 +170,6 @@ container:
               <div class="vet-list" id="vetList"></div>
               <div class="modal-actions">
                 <button id="vetModalRetourBtn">Retour</button>
-                <button id="vetModalAddBtn">Ajouter des vétérinaires</button>
                 <button id="vetModalApplyBtn">Appliquer</button>
               </div>
             </div>

@@ -2,114 +2,124 @@ from ._anvil_designer import RegistrationFlowTemplate
 from anvil import *
 import anvil.server
 import anvil.users
-import anvil.tables as tables
-import anvil.tables.query as q
-from anvil.tables import app_tables
+
 
 class RegistrationFlow(RegistrationFlowTemplate):
   def __init__(self, **properties):
-    print("DEBUG: Initializing RegistrationFlow form...")
-    # Initialize the form components
     self.init_components(**properties)
-    print("DEBUG: RegistrationFlow components initialized.")
-    # Variables to temporarily store data from step 1
+
+    # State variables to hold user data across steps
+    self.user_language = "EN"  # Default value
     self.user_name = ""
     self.user_phone = ""
+    self.structure_choice = "independent"  # Default value
+    self.join_code = ""
 
-  def next_click(self, **event_args):
-    """
-    Called when the user clicks "Next" on the first modal.
-    Collects name and phone, then transitions to step 2.
-    """
-    try:
-      name_val = self.call_js("getValueById", "reg-name")
-      phone_val = self.call_js("getValueById", "reg-phone")
-      print(f"DEBUG: Collected name: {name_val}, phone: {phone_val}")
-      if not name_val or not phone_val:
-        alert("Please fill in both name and phone.")
+    # Add a handler to show the first step when the form is opened
+    self.add_event_handler("show", self.form_show)
+
+  def form_show(self, **event_args):
+    """Called when the form is shown. Displays the first step of the registration."""
+    self.call_js("showModal", "modal-step1")
+
+  def go_to_step(self, step_number, **event_args):
+    """Handles navigation between steps, validating and saving data along the way."""
+    if step_number == 2:
+      # --- Moving from Step 1 (Language) to Step 2 (Info) ---
+      self.user_language = self.call_js("getRadioValueByName", "language")
+      if not self.user_language:
+        alert("Please select a language.")
         return
-      # Save the collected values for later use
-      self.user_name = name_val
-      self.user_phone = phone_val
-      # Transition: hide modal step 1 and show modal step 2
+
       self.call_js("hideModal", "modal-step1")
       self.call_js("showModal", "modal-step2")
-    except Exception as e:
-      print(f"DEBUG: Error in next_click: {str(e)}")
-      alert(f"An error occurred while proceeding to the next step: {str(e)}")
 
-  def back_click(self, **event_args):
-    """
-    Called when the user clicks "Back" on the second modal.
-    Returns to the first modal.
-    """
-    try:
-      self.call_js("hideModal", "modal-step2")
-      self.call_js("showModal", "modal-step1")
-    except Exception as e:
-      print(f"DEBUG: Error in back_click: {str(e)}")
-      alert(f"An error occurred while going back: {str(e)}")
-
-  def submit_click(self, **event_args):
-    """
-    Called when the user clicks "Submit" on the second modal.
-    Collects the specialité selection and logs all user data via the server.
-    Also assigns the Horse template to users who select Equin specialty.
-    """
-    try:
-      specialite_val = self.call_js("getRadioValueByName", "specialite")
-      print(f"DEBUG: Collected specialite: {specialite_val}")
-      if not specialite_val:
-        alert("Please select a specialité.")
+    elif step_number == 3:
+      # --- Moving from Step 2 (Info) to Step 3 (Structure) ---
+      self.user_name = self.call_js("getValueById", "reg-name")
+      self.user_phone = self.call_js("getValueById", "reg-phone")
+      if not self.user_name or not self.user_phone:
+        alert("Please fill in both your name and phone number.")
         return
 
-      # Relay the registration via a server function
-      success = anvil.server.call(
-          "write_user",
-          name=self.user_name,
-          phone=self.user_phone,
-          specialite=specialite_val,
-          additional_info=True
+      self.call_js("hideModal", "modal-step2")
+      self.call_js("showModal", "modal-step3")
+
+    elif step_number == 1:
+      # --- Going back from Step 2 to Step 1 ---
+      self.call_js("hideModal", "modal-step2")
+      self.call_js("showModal", "modal-step1")
+
+  def submit_registration(self, **event_args):
+    """
+    Final step. Gathers all data and makes a single server call to register the user,
+    handle their structure choice, and assign templates.
+    """
+    self.structure_choice = self.call_js("getRadioValueByName", "structure-choice")
+
+    if self.structure_choice == "join":
+      self.join_code = self.call_js("getValueById", "join-code-input")
+      if not self.join_code:
+        alert("Please enter the structure join code.")
+        return
+
+    if self.structure_choice == "create":
+      # For this workflow, we'll open a new form to handle structure creation.
+      # This keeps the registration flow clean.
+      alert("You will now be taken to a new screen to create your structure.")
+      # In a real scenario, you would pass the user data to the next form.
+      # open_form('CreateStructureForm', user_data=self.get_registration_data())
+      # For now, we will simulate completion.
+      print("User chose to create a structure. This would navigate to a new form.")
+      return
+
+    try:
+      # Consolidate all registration data into a single dictionary
+      registration_data = {
+        "name": self.user_name,
+        "phone": self.user_phone,
+        "favorite_language": self.user_language,
+        "structure_choice": self.structure_choice,
+        "join_code": self.join_code,
+      }
+
+      # --- SINGLE SERVER CALL ---
+      # A new, consolidated server function should be created to handle this data.
+      # This function will be responsible for:
+      # 1. Calling `write_user` to save the user's info.
+      # 2. If 'join', calling `join_structure_by_code`.
+      # 3. Calling `assign_language_specific_base_templates`.
+
+      # For now, we simulate the calls that would be inside the new server function.
+      user = anvil.users.get_user(allow_remembered=True)
+
+      # 1. Write basic user info
+      anvil.server.call(
+        "write_user",
+        name=registration_data["name"],
+        phone=registration_data["phone"],
+        favorite_language=registration_data["favorite_language"],
+        additional_info=True,
       )
-      print(f"DEBUG: Server response for write_user: {success}")
 
-      if success:
-        # If the user selected "Equin", assign the Horse template
-        if specialite_val == "Equin":
-          try:
-            # Get the current user
-            current_user = anvil.users.get_user()
-            print(f"DEBUG: Assigning Horse template to user: {current_user['email']}")
+      # 2. Handle structure choice
+      if registration_data["structure_choice"] == "join":
+        join_result = anvil.server.call(
+          "join_structure_by_code", registration_data["join_code"]
+        )
+        if not join_result["success"]:
+          alert(f"Failed to join structure: {join_result['message']}")
+          return
 
-            # First get the base template row
-            horse_template = anvil.server.call("get_base_template", "Horse")
-            if horse_template:
-              # Now pass the row object to affect_base_template
-              result = anvil.server.call("affect_base_template", horse_template, current_user)
-              print(f"DEBUG: Horse template assignment result: {result}")
-            else:
-              print("DEBUG: Horse base template not found")
-          except Exception as e:
-            print(f"DEBUG: Error assigning Horse template: {str(e)}")
-            # Continue with the flow even if template assignment fails
+      # 3. Assign templates based on language
+      anvil.server.call(
+        "assign_language_specific_base_templates",
+        user,
+        registration_data["favorite_language"],
+      )
 
-        alert("Registration successful!")
-        # Hide any active modals before navigating away
-        self.call_js("hideModal", "modal-step2")
-        self.call_js("hideModal", "modal-step1")
-        open_form("Production.AudioManagerForm")
-      else:
-        alert("Registration failed. Please try again.")
+      alert("Registration successful!")
+      open_form("Production.AudioManagerForm")
+
     except Exception as e:
-      print(f"DEBUG: Error in submit_click: {str(e)}")
       alert(f"An error occurred during registration: {str(e)}")
-
-  def cancel_click(self, **event_args):
-    """
-    Called when the user clicks "Cancel" on the first modal.
-    Hides the modals and redirects to the AudioManager form.
-    """
-    # Hide any active modals and overlay before navigation
-    self.call_js("hideModal", "modal-step1")
-    self.call_js("hideModal", "modal-step2")
-    open_form("Production.AudioManagerForm")

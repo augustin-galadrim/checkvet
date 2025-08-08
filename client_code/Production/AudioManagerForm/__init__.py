@@ -109,12 +109,12 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.update_ui_texts()
 
     # Check user info and mobile installation
-    additional_info = anvil.server.call("pick_user_info", "additional_info")
+    additional_info = anvil.server.call("get_user_info", "additional_info")
     if not additional_info:
       open_form("RegistrationFlow")
       return
 
-    mobile_installation = anvil.server.call("pick_user_info2", "mobile_installation")
+    mobile_installation = anvil.server.call("get_user_info", "mobile_installation")
 
     if not mobile_installation:
       is_ios_device = self.call_js("isIOS")
@@ -124,7 +124,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     # Set the default language based on user preference
     try:
-      user_lang = anvil.server.call("pick_user_favorite_language")
+      user_lang = anvil.server.call("get_user_info", "favorite_language")
       print(f"[DEBUG] User's favorite language is: {user_lang}")
       self.call_js("setLanguageDropdown", user_lang)
     except Exception as e:

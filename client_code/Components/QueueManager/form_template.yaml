@@ -66,31 +66,75 @@ container:
         if (!window.__queue_manager_globals) {
           window.__queue_manager_globals = true;
 
-          let db;
-          let isImportDisabled = false; // This will be set by Python
+          // --- THE FIX: PART 1 ---
+          // This promise will hold the database connection. It starts as null.
+          let dbPromise = null;
+          let isImportDisabled = false;
 
-          // Function to be called from Python to set the initial state
+          // --- Python Callable JS Functions ---
           window.qm_initialize = function(disableImport) {
             isImportDisabled = disableImport;
-            initDB().then(updateQueueBadge);
+            // Start the DB initialization, but don't wait for it here.
+            initDB();
+          };
+
+          window.qm_openTitleModal = function() {
+            const titleInput = document.getElementById('qm-recordingTitle');
+            if (titleInput) titleInput.value = '';
+            const modal = document.getElementById('qm-titleModal');
+            if (modal) modal.style.display = 'flex';
+          };
+
+          window.qm_addToQueue = async function(jsBlobProxy, title) {
+            try {
+              if (!jsBlobProxy || !title) {
+                console.error("QM JS: Did not receive a valid item from Python call.");
+                return;
+              }
+              await saveToQueue(jsBlobProxy, title);
+              await updateQueueBadge();
+              anvil.call(document.getElementById('qm-viewQueueBtn'), 'handle_queue_updated');
+            } catch (e) {
+              console.error("QM JS: CRITICAL ERROR during queueing process:", e);
+              alert("A critical error occurred while queueing the audio.");
+            }
+          };
+
+          window.qm_refreshBadge = updateQueueBadge;
+
+          window.qm_deleteItem = async function(itemId) {
+            try {
+              await deleteFromQueue(itemId);
+              await updateQueueBadge();
+            } catch (e) {
+              console.error(`QM JS: Failed to delete item ${itemId}`, e);
+            }
           };
 
           // --- IndexedDB Core Functions ---
           function initDB() {
-            return new Promise((resolve, reject) => {
+            // If the promise already exists, just return it.
+            if (dbPromise) return dbPromise;
+
+            // --- THE FIX: PART 2 ---
+            // Create the promise for the database connection. This code only runs ONCE.
+            dbPromise = new Promise((resolve, reject) => {
               const request = indexedDB.open('audioQueueDB', 1);
               request.onerror = event => reject("IndexedDB error: " + event.target.errorCode);
-              request.onsuccess = event => { db = event.target.result; resolve(db); };
+              request.onsuccess = event => resolve(event.target.result);
               request.onupgradeneeded = event => {
                 event.target.result.createObjectStore('recordings', { keyPath: 'id' });
               };
             });
+            return dbPromise;
           }
 
-          async function saveToQueue(audioBlob, title) {
-            if (!db) throw new Error("DB not initialized");
-            const audioData = await audioBlob.arrayBuffer();
-            const mimeType = audioBlob.type;
+          async function saveToQueue(jsBlob, title) {
+            // --- THE FIX: PART 3 ---
+            // Now, every function that needs the DB will wait for the promise to resolve.
+            const db = await initDB();
+            const audioData = await jsBlob.arrayBuffer();
+            const mimeType = jsBlob.type;
             const recording = {
               id: 'rec_' + Date.now(), title: title, audioData: audioData,
               mimeType: mimeType, status: 'queued'
@@ -103,24 +147,23 @@ container:
             });
           }
 
-          function getQueuedRecordings() {
-            return new Promise((resolve, reject) => {
-              if (!db) return reject("DB not initialized");
-              const store = db.transaction(['recordings'], 'readonly').objectStore('recordings');
-              store.getAll().onsuccess = e => resolve(e.target.result);
+          async function getQueuedRecordings() {
+            const db = await initDB(); // Wait for the DB to be ready.
+            return new Promise((resolve) => {
+              db.transaction(['recordings'], 'readonly').objectStore('recordings').getAll().onsuccess = e => resolve(e.target.result);
             });
           }
 
-          function deleteFromQueue(id) {
-            return new Promise((resolve, reject) => {
-              if (!db) return reject("DB not initialized");
+          async function deleteFromQueue(id) {
+            const db = await initDB(); // Wait for the DB to be ready.
+            return new Promise((resolve) => {
               db.transaction(['recordings'], 'readwrite').objectStore('recordings').delete(id).onsuccess = resolve;
             });
           }
 
           // --- UI and Event Handling Functions ---
           async function updateQueueBadge() {
-            const queue = await getQueuedRecordings();
+            const queue = await getQueuedRecordings(); // This will now wait for the DB.
             const badge = document.getElementById('qm-queueBadge');
             if (badge) {
               badge.style.display = queue.length > 0 ? 'inline-block' : 'none';
@@ -132,79 +175,61 @@ container:
             const queue = await getQueuedRecordings();
             const container = document.getElementById('qm-queueListContainer');
             container.innerHTML = queue.length === 0 ? '<p>No recordings in queue.</p>' : '';
-
             queue.forEach(item => {
               const div = document.createElement('div');
               div.className = 'queue-item';
               const importButtonHTML = isImportDisabled
-                ? `<button class="button button-primary" disabled title="Import is not available in offline mode">Import</button>`
-                : `<button class="button button-primary import-btn" data-id="${item.id}">Import</button>`;
-
+                ? `<button class=\"button button-primary\" disabled title=\"Import is not available in this mode\">Import</button>`
+                : `<button class=\"button button-primary import-btn\" data-id=\"${item.id}\">Import</button>`;
               div.innerHTML = `
-              <div>
-                <div class="queue-item-title">${item.title}</div>
-                <div class="queue-item-status">Status: <strong>${item.status}</strong></div>
-              </div>
-              <div class="queue-item-actions">
-                ${importButtonHTML}
-                <button class="button delete-btn" data-id="${item.id}">Delete</button>
-              </div>`;
+                <div>
+                  <div class=\"queue-item-title\">${item.title}</div>
+                  <div class=\"queue-item-status\">Status: <strong>${item.status}</strong></div>
+                </div>
+                <div class=\"queue-item-actions\">
+                  ${importButtonHTML}
+                  <button class=\"button delete-btn\" data-id=\"${item.id}\">Delete</button>
+                </div>`;
               container.appendChild(div);
             });
           }
 
-          // Public function for parent form to call
-          window.qm_addToQueue = async function(audioBlob, title) {
-            await saveToQueue(audioBlob, title);
-            await updateQueueBadge();
-            anvil.call(document.getElementById('qm-viewQueueBtn'), 'handle_queue_updated');
-          };
-
-          window.qm_refreshBadge = updateQueueBadge;
-
           // --- Attach Event Listeners ---
           function attachQueueManagerEvents() {
             const componentRoot = document.getElementById('qm-viewQueueBtn');
-
-            // Main button to open the modal
             document.getElementById('qm-viewQueueBtn').addEventListener('click', async () => {
               await renderQueue();
               document.getElementById('qm-queueModal').style.display = 'flex';
             });
-
-            // Close modal button
             document.getElementById('qm-closeQueueModalBtn').addEventListener('click', () => {
               document.getElementById('qm-queueModal').style.display = 'none';
             });
-
-            // Event delegation for import/delete buttons inside the modal
             document.getElementById('qm-queueListContainer').addEventListener('click', async (e) => {
               const target = e.target;
               const id = target.dataset.id;
               if (!id) return;
-
               if (target.classList.contains('import-btn')) {
                 const queue = await getQueuedRecordings();
                 const item = queue.find(i => i.id === id);
                 if (item) {
                   const blob = new Blob([item.audioData], { type: item.mimeType });
-                  // Call back to Python to raise the event
                   anvil.call(componentRoot, 'handle_import_click', item.id, blob);
                   document.getElementById('qm-queueModal').style.display = 'none';
                 }
               } else if (target.classList.contains('delete-btn')) {
-                // Call back to Python to handle deletion
-                anvil.call(componentRoot, 'handle_delete_click', id);
+                if (confirm("Are you sure you want to delete this recording?")) {
+                  await deleteFromQueue(id);
+                  await renderQueue();
+                  await updateQueueBadge();
+                  anvil.call(componentRoot, 'handle_queue_updated');
+                }
               }
             });
-
-            // --- Title Modal Logic ---
             document.getElementById('qm-cancelTitleBtn').addEventListener('click', () => {
               document.getElementById('qm-titleModal').style.display = 'none';
             });
-
             document.getElementById('qm-confirmTitleBtn').addEventListener('click', () => {
-              const title = document.getElementById('qm-recordingTitle').value.trim();
+              const title = document.getElementById('qm-recordingTitle').value.trim() || `Recording from ${new Date().toLocaleString()}`;
               anvil.call(componentRoot, 'handle_confirm_save', title);
               document.getElementById('qm-titleModal').style.display = 'none';
             });
@@ -212,7 +237,6 @@ container:
 
           attachQueueManagerEvents();
         }
-      </script>
       </script>
   type: HtmlTemplate
 custom_component: true
@@ -225,4 +249,4 @@ events:
 - {name: x_queue_updated}
 is_package: true
 properties:
-- {default_binding_prop: true, default_value: '', important: true, name: disable_import, type: string}
+- {default_binding_prop: true, default_value: false, important: true, name: disable_import, type: boolean}

@@ -74,7 +74,7 @@ container:
               <div class="actions-row">
                 <!-- The QueueManager component will be placed here by Anvil -->
                 <div anvil-slot="queue_slot"></div>
-                <div class="time" id="timeDisplay">--:--</div>
+                <div anvil-slot="time_display_slot"></div>
               </div>
             </div>
 
@@ -140,18 +140,7 @@ container:
 
                 // The discard button correctly calls the python method to reset the UI
                 reattach('discard-audio-btn', 'click', () => anvil.call(stableAnchor, 'reset_ui_to_recording'));
-                // The queue button now calls the updated python logic
                 reattach('queue-audio-btn', 'click', () => anvil.call(stableAnchor, 'queue_button_click'));
-
-                const timeElem = document.getElementById('timeDisplay');
-                if (timeElem) {
-                  const updateTime = () => {
-                    const now = new Date();
-                    timeElem.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                  };
-                  updateTime();
-                  setInterval(updateTime, 60000);
-                }
               }
               attachOfflineEvents();
             }

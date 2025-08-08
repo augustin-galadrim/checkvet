@@ -80,7 +80,7 @@ class Settings(SettingsTemplate):
         favorite_language = user_data.get("favorite_language")
         if not favorite_language:
           favorite_language = "EN"
-        mapping = {"FR": "Français", "EN": "Anglais", "ES": "Español", "DE": "Deutsch"}
+        mapping = {"FR": "Français", "EN": "Anglais"}
         display_text = mapping.get(favorite_language, "Anglais")
         self.call_js("setValueById", "favorite-language", favorite_language)
         self.call_js("setButtonTextById", "favorite-language-button", display_text)
@@ -161,8 +161,6 @@ class Settings(SettingsTemplate):
       options = [
         {"display": "Français", "value": "FR"},
         {"display": "Anglais", "value": "EN"},
-        {"display": "Español", "value": "ES"},
-        {"display": "Deutsch", "value": "DE"},
       ]
 
       try:
@@ -176,7 +174,7 @@ class Settings(SettingsTemplate):
         if user_data and user_data.get("favorite_language")
         else "EN"
       )
-      mapping = {"FR": "Français", "EN": "Anglais", "ES": "Español", "DE": "Deutsch"}
+      mapping = {"FR": "Français", "EN": "Anglais"}
       display_text = mapping.get(current_fav, "Anglais")
       self.call_js("setValueById", "favorite-language", current_fav)
       self.call_js("setButtonTextById", "favorite-language-button", display_text)
@@ -189,12 +187,12 @@ class Settings(SettingsTemplate):
 
   def submit_click(self, **event_args):
     """
-      Called when the user clicks "Update Settings". It now saves the data,
-      shows a success message, and reloads the form data to reflect changes.
-      """
+    Called when the user clicks "Update Settings". It now saves the data,
+    shows a success message, and reloads the form data to reflect changes.
+    """
     try:
       print("Debug: Submit button clicked. Gathering form data...")
-  
+
       form_data = {
         "name": self.call_js("getValueById", "name"),
         "phone": self.call_js("getValueById", "phone"),
@@ -202,31 +200,31 @@ class Settings(SettingsTemplate):
         "supervisor": self.call_js("getCheckedById", "supervisor"),
         "favorite_language": self.call_js("getValueById", "favorite-language"),
       }
-  
+
       # Handle file data for each field if a file was selected
       signature_file = self.get_file_data("signature")
       if signature_file:
         form_data["signature_image"] = signature_file
-  
+
       report_header_file = self.get_file_data("report-header")
       if report_header_file:
         form_data["report_header_image"] = report_header_file
-  
+
       report_footer_file = self.get_file_data("report-footer")
       if report_footer_file:
         form_data["report_footer_image"] = report_footer_file
-  
+
       print(f"Debug: Form data gathered: {form_data}")
-  
+
       # Call the server to update the user record
       try:
         success = anvil.server.call("write_user", **form_data)
       except anvil.server.SessionExpiredError:
         anvil.server.reset_session()
         success = anvil.server.call("write_user", **form_data)
-  
+
       print(f"Debug: Server response for update: {success}")
-  
+
       if success:
         self.call_js(
           "displayBanner",
@@ -249,7 +247,7 @@ class Settings(SettingsTemplate):
     print("Debug: Cancel button clicked. Reverting changes.")
     self.load_vet_data()
     self.call_js("displayBanner", "Changes have been discarded.", "info")
-    
+
   def logout_click(self, **event_args):
     """
     Appelé lorsque l'utilisateur clique sur "Déconnexion".
@@ -279,6 +277,10 @@ class Settings(SettingsTemplate):
   def openMicrophoneTest(self, **event_args):
     """Appelé lorsque l'utilisateur clique sur 'Tester mon micro'."""
     open_form("Settings.MicrophoneTest")
+
+  def show_install_guide_click(self, **event_args):
+    """Called when the user clicks 'Show App Install Guide'."""
+    open_form("MobileInstallationFlow")
 
   def check_structure_authorization(self, structure, **event_args):
     """

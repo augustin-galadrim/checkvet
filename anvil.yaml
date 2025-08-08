@@ -41,17 +41,14 @@ db_schema:
   base_templates:
     client: none
     columns:
-    - admin_ui: {order: 0, width: 200}
-      name: template_name
-      type: string
-    - admin_ui: {order: 1, width: 200}
-      name: prompt
+    - admin_ui: {order: 2.5, width: 200}
+      name: language
       type: string
     - admin_ui: {order: 2, width: 200}
-      name: prompt_fr
+      name: name
       type: string
     - admin_ui: {order: 3, width: 200}
-      name: prompt_en
+      name: html
       type: string
     server: full
     title: Base_templates
@@ -179,6 +176,9 @@ db_schema:
       name: authorized_vets
       target: users
       type: link_multiple
+    - admin_ui: {order: 7, width: 200}
+      name: structure_code
+      type: string
     server: full
     title: Structures
   translations:
@@ -250,9 +250,6 @@ db_schema:
     - admin_ui: {order: 14, width: 200}
       name: supervisor
       type: bool
-    - admin_ui: {order: 15, width: 200}
-      name: specialite
-      type: string
     - admin_ui: {order: 16, width: 200}
       name: remembered_logins
       type: simpleObject

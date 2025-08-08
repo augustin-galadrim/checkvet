@@ -25,9 +25,10 @@ components:
   properties: {active_tab: Production}
   type: form:Components.HeaderNav
 - data_bindings: []
+  event_bindings: {x_import_item: queue_manager_1_x_import_item}
   layout_properties: {slot: queue}
   name: queue_manager_1
-  properties: {disable_import: 'False'}
+  properties: {disable_import: false}
   type: form:Components.QueueManager
 container:
   properties:

@@ -1,57 +1,64 @@
 from ._anvil_designer import OfflineAudioManagerFormTemplate
 from anvil import *
 import anvil.server
-import anvil.users
-import anvil.tables as tables
-import anvil.tables.query as q
-from anvil.tables import app_tables
-import time
 import anvil.js
 
 
 class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
+    # The event handler is renamed to match the working form for consistency.
     self.recording_widget_1.set_event_handler(
-      "recording_complete", self.handle_recording_complete
+      "recording_complete", self.handle_new_recording
     )
     self.audio_playback_1.set_event_handler(
-      "x_clear_recording", self.reset_ui_to_recording
+      "x-clear_recording", self.reset_ui_to_recording
     )
+    # The queue manager's event is for when the queue count changes.
+    self.queue_manager_1.set_event_handler("x_queue_updated", self.on_queue_updated)
     self.add_event_handler("show", self.form_show)
 
   def form_show(self, **event_args):
-    """Initializes the UI and the offline database."""
+    """Initializes the UI and tells the component to refresh its badge count."""
     self.call_js("setAudioWorkflowState", "input")
-    self.call_js("initializeDBAndQueue")
+    self.queue_manager_1.refresh_badge()
 
-  def handle_recording_complete(self, audio_blob, **event_args):
+  def handle_new_recording(self, audio_blob, **event_args):
     """
+    Called when the RecordingWidget completes a recording.
     Shows the AudioPlayback component and moves the UI to the decision state.
-    The blob is now reliably stored in the component's property.
+    This logic now mirrors the working AudioManagerForm.
     """
-    print("Offline Form: Received audio. Showing decision UI.")
     self.recording_widget_1.visible = False
-    self.audio_playback_1.visible = True
+    # The audio_blob property is set on the playback component.
     self.audio_playback_1.audio_blob = audio_blob
+    self.audio_playback_1.visible = True
     self.call_js("setAudioWorkflowState", "decision")
 
   def reset_ui_to_recording(self, **event_args):
     """Resets the UI to the initial recording state."""
-    print("Offline Form: Resetting UI to recording state.")
     self.recording_widget_1.visible = True
     self.audio_playback_1.visible = False
     self.audio_playback_1.audio_blob = None
     self.call_js("setAudioWorkflowState", "input")
 
   def queue_button_click(self, **event_args):
-    """Opens the modal to get a title for the recording."""
-    self.call_js("openTitleModalForQueueing")
+    """
+    Called from JS when the 'Put in Queue' button is clicked.
+    This exactly mimics the offline path of the AudioManagerForm. It retrieves
+    the raw audio blob proxy and tells the QueueManager to handle the saving process.
+    """
+    audio_proxy = self.audio_playback_1.audio_blob
+    if audio_proxy:
+      # Tell the component to open its naming modal and pass it the raw
+      # JS Blob Proxy to save. This is the correct format for the component.
+      self.queue_manager_1.open_title_modal(audio_proxy)
+    else:
+      self.call_js("displayBanner", "No recording available to save.", "error")
 
-  def get_current_audio_blob(self):
+  def on_queue_updated(self, **event_args):
     """
-    A client-side relay function that returns the current Anvil Media object
-    from the playback component, making it accessible to JavaScript just before saving.
+    Event handler for when the queue is updated by the component.
+    Resets the main UI back to the recording state after an item is successfully queued.
     """
-    print("Python (Offline): get_current_audio_blob called from JavaScript.")
-    return self.audio_playback_1.audio_blob
+    self.reset_ui_to_recording()

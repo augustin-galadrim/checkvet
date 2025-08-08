@@ -115,9 +115,12 @@ class AudioManagerForm(AudioManagerFormTemplate):
       return
 
     mobile_installation = anvil.server.call("pick_user_info2", "mobile_installation")
+
     if not mobile_installation:
-      open_form("MobileInstallationFlow")
-      return
+      is_ios_device = self.call_js("isIOS")
+      if is_ios_device:
+        open_form("MobileInstallationFlow")
+        return
 
     # Set the default language based on user preference
     try:
@@ -669,7 +672,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
           continue
         transformed_result = {
           "id": safe_value(template, "id", ""),
-          "name": safe_value(template, "name", "Untitled template"),
+          "name": safe_value(template, "name", ""),
           "display": safe_value(template, "display", False),
           "html": safe_value(template, "html", ""),
         }

@@ -1,4 +1,8 @@
 components:
+- layout_properties: {slot: time_display_slot}
+  name: time_display_1
+  properties: {}
+  type: form:Components.TimeDisplay
 - layout_properties: {slot: default}
   name: header_nav_1
   properties: {active_tab: Settings}
@@ -200,7 +204,7 @@ container:
             <div class="fixed-section">
               <div anvil-slot="default"></div>
               <div class="actions-row">
-                <div class="time">--:--</div>
+                <div anvil-slot="time_display_slot"></div>
               </div>
             </div>
             <div class="scrollable-content">
@@ -253,6 +257,7 @@ container:
                   <div class="settings-section">
                     <h2 class="section-title">Tools</h2>
                     <button type="button" id="microphone-test-button" class="custom-structure-button">Test My Microphone</button>
+                    <button type="button" id="show-install-guide-button" class="custom-structure-button" style="margin-top: 10px;">Show App Install Guide</button>
                   </div>
 
 
@@ -586,6 +591,15 @@ container:
                   });
                 }
 
+                const installGuideButton = document.getElementById("show-install-guide-button");
+                if (installGuideButton) {
+                  installGuideButton.replaceWith(installGuideButton.cloneNode(true));
+                  const newInstallGuideButton = document.getElementById("show-install-guide-button");
+                  newInstallGuideButton.addEventListener('click', (event) => {
+                    anvil.call(vetSettingsForm, 'show_install_guide_click');
+                  });
+                }
+
                 // Attacher les événements pour le bouton de déconnexion
                 const logoutBtn = document.getElementById("logout-btn");
                 if (logoutBtn) {
@@ -636,16 +650,6 @@ container:
                 }
               });
             });
-
-            // Affichage de l'heure
-            function updateTime() {
-              const now = new Date();
-              const hrs = now.getHours().toString().padStart(2, '0');
-              const mins = now.getMinutes().toString().padStart(2, '0');
-              document.querySelector('.time').textContent = `${hrs}h${mins}`;
-            }
-            updateTime();
-            setInterval(updateTime, 60000);
           </script>
 
           <!-- Session handler: now using a valid DOM element from the form -->

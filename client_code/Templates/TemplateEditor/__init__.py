@@ -37,14 +37,14 @@ class TemplateEditor(TemplateEditorTemplate):
     if template is None:
       template = {
         "id": None,
-        "name": "Untitled Template",
+        "name": "",
         "html": "",
       }
 
     # Use safe_value to ensure each field is defined
     self.template = {
       "id": safe_value(template, "id", None),
-      "name": safe_value(template, "name", "Untitled Template"),
+      "name": safe_value(template, "name", ""),
       "html": safe_value(template, "html", ""),
     }
     self.initial_content = self.template.get("html")

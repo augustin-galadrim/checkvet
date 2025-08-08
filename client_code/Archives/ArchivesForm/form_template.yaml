@@ -1,4 +1,8 @@
 components:
+- layout_properties: {slot: time_display_slot}
+  name: time_display_1
+  properties: {}
+  type: form:Components.TimeDisplay
 - layout_properties: {slot: default}
   name: header_nav_1
   properties: {active_tab: Archives}
@@ -25,7 +29,6 @@ container:
             .left-section { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
             .create-button { padding: 8px 16px; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
             .create-button:hover { background: #f5f5f5; }
-            .time { color: #666; font-size: 14px; }
             .search-bar { width: calc(100% - 40px); padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin: 0 20px 15px 20px; }
 
             /* --- Supervisor Tabs --- */
@@ -128,7 +131,7 @@ container:
                     <a href="#" class="status-option" data-filter="sent"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></span>Envoyé</a>
                   </nav>
                 </div>
-                <div class="time">--:--</div>
+                <div anvil-slot="time_display_slot"></div>
               </div>
               <input type="text" class="search-bar" placeholder="Rechercher...">
             </div>
@@ -374,16 +377,6 @@ container:
                 .catch(err => console.error("Search error:", err));
               });
               }
-
-                function updateTime() {
-                const timeElem = document.querySelector('.time');
-                if (timeElem) {
-                const now = new Date();
-                timeElem.textContent = `${now.getHours().toString().padStart(2, '0')}h${now.getMinutes().toString().padStart(2, '0')}`;
-              }
-              }
-                updateTime();
-                setInterval(updateTime, 60000);
               })();
                 </script>
         </body>

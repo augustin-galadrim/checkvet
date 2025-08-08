@@ -36,11 +36,10 @@ class TextEditor(TextEditorTemplate):
 
     # --- Property setters for toolbar buttons ---
 
-
-def _update_button_visibility(self, button_id, is_visible):
-  # Check if the component has been added to a container
-  if getattr(self, "parent", None):
-    self.call_js("setElementVisibility", button_id, is_visible)
+  def _update_button_visibility(self, button_id, is_visible):
+    # Check if the component has been added to a container
+    if getattr(self, "parent", None):
+      self.call_js("setElementVisibility", button_id, is_visible)
 
   @property
   def show_toolbar(self):

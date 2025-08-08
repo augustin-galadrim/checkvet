@@ -180,8 +180,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
     """
     print("[DEBUG] process_uploaded_audio() called with an audio blob.")
     # This function should NOT process the audio, only prepare it for the user.
-    anvil_media_blob = anvil.js.to_media(audio_blob)
-    self.current_audio_blob = anvil_media_blob
     self.audio_playback_1.audio_blob = audio_blob
     self.recording_widget.visible = False
     self.audio_playback_1.visible = True
@@ -194,8 +192,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
     This is the new relay function.
     """
     print("AudioManagerForm: Importing audio from offline queue.")
-    anvil_media_blob = anvil.js.to_media(audio_blob)
-    self.current_audio_blob = anvil_media_blob
     self.audio_playback_1.audio_blob = audio_blob
     self.audio_playback_1.visible = True
     self.recording_widget.visible = False
@@ -239,19 +235,20 @@ class AudioManagerForm(AudioManagerFormTemplate):
     Called when the RecordingWidget completes a recording.
     This now shows the AudioPlayback component and moves UI to decision state.
     """
-    print("AudioManagerForm: Received audio from widget.")
-    anvil_media_blob = anvil.js.to_media(audio_blob)
-    self.current_audio_blob = anvil_media_blob  # Store blob
+    # LOG 1: See what we receive from the RecordingWidget
+    print(
+      f"AMF PY [LOG 1]: handle_new_recording received object. Type: {type(audio_blob)}, Object: {audio_blob}"
+    )
+
     self.recording_widget.visible = False
+    # Pass the raw JS blob proxy to the playback component for now
     self.audio_playback_1.audio_blob = audio_blob
     self.audio_playback_1.visible = True
-    # Explicitly call the JS function to switch the UI state
     anvil.js.call_js("setAudioWorkflowState", "decision")
 
   def clear_recording_handler(self, **event_args):
     """Handles the x-clear-recording event from the AudioPlayback component."""
     print("AudioManagerForm: Clearing recording.")
-    self.current_audio_blob = None
     self.audio_playback_1.visible = False
     self.audio_playback_1.audio_blob = None
     self.recording_widget.visible = True
@@ -271,20 +268,36 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def process_recording(self, **event_args):
     """
     Orchestrates the online processing of the audio blob.
-    This function no longer handles the initial UI update.
+    This function now retrieves and converts the blob directly.
     """
-    print("[DEBUG] AudioManagerForm: process_recording initiated.")
+    print("AMF PY: process_recording initiated.")
 
-    anvil_media_blob = self.current_audio_blob
+    # LOG 2: See what we retrieve from the playback component
+    js_blob_proxy = self.audio_playback_1.audio_blob
+    print(
+      f"AMF PY [LOG 2]: Retrieved object from playback component. Type: {type(js_blob_proxy)}, Object: {js_blob_proxy}"
+    )
 
-    if not anvil_media_blob:
+    if not js_blob_proxy:
       print("[ERROR] No audio blob found in the playback component.")
       self.call_js("displayBanner", "No audio available to process.", "error")
-      # REVERT UI if there's an immediate error
       self.recording_widget.visible = False
       self.audio_playback_1.visible = True
       anvil.js.call_js("setAudioWorkflowState", "decision")
       return "ERROR"
+
+      # LOG 3: Confirm we are about to convert the object
+    print(
+      f"AMF PY [LOG 3]: --- PRE-CONVERSION --- About to call anvil.js.to_media() on the object."
+    )
+
+    # The crucial conversion step
+    anvil_media_blob = anvil.js.to_media(js_blob_proxy)
+
+    # LOG 4: Check the result of the conversion
+    print(
+      f"AMF PY [LOG 4]: --- POST-CONVERSION --- Resulting Anvil Media Object. Type: {type(anvil_media_blob)}, Object: {anvil_media_blob}"
+    )
 
     try:
       # Step 1: Transcribe the audio
@@ -297,23 +310,31 @@ class AudioManagerForm(AudioManagerFormTemplate):
       self._format_and_display_report(report_content)
 
       print("[DEBUG] process_recording completed successfully (ONLINE).")
-      return "OK"  # Return success status
+      return "OK"
 
     except anvil.server.AppOfflineError:
       print("[DEBUG] AppOfflineError caught. Saving to offline queue.")
       alert("Connection lost. Your recording has been saved to the offline queue.")
-      self.queue_manager_1.open_title_modal(self.current_audio_blob)
-      return "OFFLINE_SAVE"  # Return offline status
+
+      # LOG 5 (OFFLINE): Confirm what we are sending to the QueueManager
+      print(
+        f"AMF PY [LOG 5 - OFFLINE]: Passing object to QueueManager. Type: {type(anvil_media_blob)}, Object: {anvil_media_blob}"
+      )
+      self.queue_manager_1.open_title_modal(anvil_media_blob)
+      return "OFFLINE_SAVE"
 
     except Exception as e:
       print(f"[ERROR] An exception occurred in process_recording: {e}")
       self.call_js("displayBanner", f"Error: {e}", "error")
       if confirm("An unexpected error occurred. Save to offline queue?"):
-        print("[DEBUG] User confirmed offline save. Calling JS: handleOfflineSave.")
-        self.queue_manager_1.open_title_modal(self.current_audio_blob)
-        return "OFFLINE_SAVE"  # Return offline status
+        # LOG 5 (ERROR): Confirm what we are sending to the QueueManager
+        print(
+          f"AMF PY [LOG 5 - ERROR]: Passing object to QueueManager. Type: {type(anvil_media_blob)}, Object: {anvil_media_blob}"
+        )
+        self.queue_manager_1.open_title_modal(anvil_media_blob)
+        return "OFFLINE_SAVE"
       else:
-        return "ERROR"  # Return error status
+        return "ERROR"
 
   def _transcribe_audio(self, audio_blob):
     """Helper to handle the transcription step."""
@@ -347,7 +368,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
     formatter_fn = "EN_format_report" if lang == "EN" else "format_report"
     final_html = anvil.server.call_s(formatter_fn, report_content)
     self.text_editor_1.html_content = final_html
-
 
   # 1) called for each chunk
   def receive_audio_chunk(self, b64_chunk, index, total, **event_args):

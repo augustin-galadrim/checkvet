@@ -84,13 +84,42 @@ container:
             if (modal) modal.style.display = 'flex';
           };
 
-          window.qm_addToQueue = async function(anvilMediaObject, title) {
-            const jsBlob = await anvil.js.toBlob(anvilMediaObject);
-            await saveToQueue(jsBlob, title);
-            await updateQueueBadge();
-            anvil.call(document.getElementById('qm-viewQueueBtn'), 'handle_queue_updated');
-          };
+          window.qm_addToQueue = async function() {
+            console.log("QM JS: addToQueue triggered. Calling back to Python to get the item...");
 
+            try {
+              // Call back to the new Python method to get the item data
+              const item = await anvil.call(
+                document.getElementById('qm-viewQueueBtn'), // Stable element for the call
+                'get_item_to_queue'
+              );
+
+              if (!item || !item.blob || !item.title) {
+                console.error("QM JS: Did not receive a valid item from Python.");
+                alert("Could not retrieve the recording to be queued.");
+                return;
+              }
+
+              const anvilMediaObject = item.blob;
+              const title = item.title;
+
+              console.log("QM JS: Received item from Python. Anvil Media Object:", anvilMediaObject);
+
+              // Now, this conversion will work because anvilMediaObject was the
+              // direct return value of an anvil.call.
+              const jsBlob = await anvil.js.toBlob(anvilMediaObject);
+
+              console.log("QM JS: anvil.js.toBlob successful. Resulting JS Blob:", jsBlob);
+
+              await saveToQueue(jsBlob, title);
+              await updateQueueBadge();
+              anvil.call(document.getElementById('qm-viewQueueBtn'), 'handle_queue_updated');
+
+            } catch (e) {
+              console.error("QM JS: CRITICAL ERROR during queueing process:", e);
+              alert("A critical error occurred while queueing the audio. Please check the browser console for details.");
+            }
+          };
           window.qm_refreshBadge = updateQueueBadge;
 
 

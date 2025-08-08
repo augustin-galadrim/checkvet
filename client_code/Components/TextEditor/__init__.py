@@ -7,21 +7,11 @@ class TextEditor(TextEditorTemplate):
   def __init__(self, **properties):
     # Private attributes to hold the state of properties
     self._html_content = ""
-    self._show_toolbar = True
-    self._show_style_buttons = True
-    self._show_align_buttons = True
-    self._show_image_button = True
-    self._show_copy_button = True
-
     self.init_components(**properties)
-
-    # --- Public Method ---
 
   def get_content(self):
     """Returns the current HTML content from the editor."""
     return self.call_js("getEditorContent")
-
-    # --- html_content property ---
 
   @property
   def html_content(self):
@@ -91,9 +81,12 @@ class TextEditor(TextEditorTemplate):
   def form_show(self, **event_args):
     """This method is called when the component is shown on the screen"""
     # Set initial content and visibility when the component is added to the page
+    print("ok")
     self.call_js("setEditorContent", self._html_content or "")
-    self.call_js("setElementVisibility", "toolbar", self._show_toolbar)
+    print("ok")
     self.call_js("setElementVisibility", "styleButtons", self._show_style_buttons)
     self.call_js("setElementVisibility", "alignButtons", self._show_align_buttons)
+    print("ok")
     self.call_js("setElementVisibility", "insertImageBtn", self._show_image_button)
     self.call_js("setElementVisibility", "copyBtn", self._show_copy_button)
+    print("ok")

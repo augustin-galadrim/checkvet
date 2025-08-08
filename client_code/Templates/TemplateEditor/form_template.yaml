@@ -5,7 +5,7 @@ components:
   type: form:Components.HeaderReturn
 - layout_properties: {slot: editor_slot}
   name: text_editor_1
-  properties: {show_image_button: false}
+  properties: {show_align_buttons: true, show_image_button: false}
   type: form:Components.TextEditor
 container:
   properties:

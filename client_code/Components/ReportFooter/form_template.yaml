@@ -47,11 +47,23 @@ container:
         .primary-button:hover {
           background-color: #45a049;
         }
+        #footer-share-btn.disabled {
+          background-color: #cccccc;
+          color: #666666;
+          cursor: not-allowed;
+          pointer-events: none;
+          border-color: #bbbbbb;
+        }
+
+        #footer-share-btn.disabled:hover {
+          background-color: #cccccc;
+          border-color: #bbbbbb;
+        }
       </style>
       <div class="bottom-buttons">
         <button class="bottom-button" id="footer-status-btn">Status</button>
         <button class="bottom-button" id="footer-archive-btn">Archive</button>
-        <button class="bottom-button" id="footer-share-btn">Share</button>
+        <button class="bottom-button disabled" id="footer-share-btn">Share</button>
       </div>
 
       <script>

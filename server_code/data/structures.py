@@ -1,151 +1,183 @@
 import anvil.secrets
 import anvil.users
 import anvil.tables as tables
-import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
-from datetime import datetime
+import random
+import string
 
 
-@anvil.server.callable
+def _generate_unique_join_code(length=6):
+  """
+  Generates a unique, random alphanumeric code to join a structure.
+
+  Ensures the generated code is not already in use in the database.
+
+  Args:
+    length (int): The desired length of the code.
+
+  Returns:
+    str: A unique join code.
+  """
+  chars = string.ascii_uppercase + string.digits
+  while True:
+    join_code = "".join(random.choice(chars) for _ in range(length))
+    # Check if this code already exists in the table.
+    if not app_tables.structures.get(join_code=join_code):
+      return join_code
+
+
+@anvil.server.callable(require_user=True)
 def read_structures():
-  current_user = anvil.users.get_user()
-  print(f"Reading cliniques for user: {current_user}")
+  """
+  Retrieves a list of all structures available in the application.
 
-  structures = app_tables.structures.search(owner=current_user)
-  print(f"Found {len(structures)} structure")
+  This function is used by the Settings form to populate the structure selection modal.
+  It returns a list of dictionaries, each containing a structure's details.
+  """
+  print("[INFO] Reading all structures from the database.")
+
+  # Fetch all rows from the 'structures' table.
+  all_structures = app_tables.structures.search()
 
   result = []
-  for structure in structures:
-    print(f"Processing structure: {structure['name']}")
+  for structure_row in all_structures:
+    # Use the column name 'name' which is the correct one in your schema.
     structure_dict = {
-      "structure": structure["name"],
-      "phone": structure["phone"],  # This will return a list of user rows
-      "email": structure["email"],
-      "affiliated_vets": structure["affiliated_vets"],
-      "authorized_vets": structure["authorized_vets"],
-      "owner": structure["owner"],
+      "structure": structure_row["name"],
+      "phone": structure_row["phone"],
+      "email": structure_row["email"],
+      "address": structure_row["address"],
     }
-    print(
-      f"Number of vets in clinique: {len(structure['affiliated_vets']) if structure['affiliated_vets'] else 0}"
-    )
     result.append(structure_dict)
 
-  print(f"Returning {len(result)} structures")
+  print(f"[INFO] Returning {len(result)} structures.")
   return result
 
 
-@anvil.server.callable
-def write_structure(
-  name=None, phone=None, email=None, address=None, affiliated_vets=None
-):
-  current_user = anvil.users.get_user()
-  print(f"Writing structure '{name}' for user: {current_user}")
-
-  # Search for clinique rows where the current user is the owner
-  structure_row = app_tables.structures.get(name=name, owner=current_user)
-  print(f"Existing structure found: {structure_row is not None}")
-
-  if structure_row is None:
-    print("Creating new clinique record")
-    structure_row = app_tables.structures.add_row(name=name, owner=current_user)
-
-  # Update only the fields that were provided
-  updates = []
-  if phone is not None:
-    structure_row["phone"] = phone
-    updates.append("phone")
-  if email is not None:
-    structure_row["email"] = email
-    updates.append("email")
-  if address is not None:
-    structure_row["address"] = address
-    updates.append("address")
-  if affiliated_vets is not None:
-    structure_row["affiliated_vets"] = affiliated_vets
-    updates.append("affiliated_vets")
-
-  print(f"Updated fields: {', '.join(updates)}")
-  return True
-
-
-@anvil.server.callable
-def pick_structure(structure_name, header):
-  current_user = anvil.users.get_user()
-  print(f"Picking '{header}' from structure '{structure_name}' (user: {current_user})")
-
-  # Fetch row from the 'structures' table
-  structure = app_tables.structures.get(name=structure_name)
-  print(f"Structure found: {structure is not None}")
-  print("test")
-  print(structure["affiliated_vets"])
-  # Assuming structure['affiliated_vets'] contains a list of Anvil Row objects
-  list_of_dicts = [dict(row) for row in structure["affiliated_vets"]]
-  # Assuming `list_of_dicts` is already defined and contains the list of dictionaries
-  names_list = [d["name"] for d in list_of_dicts if "name" in d]
-  # print(names_list)
-  # Output the result
-  return names_list
-
-
-@anvil.server.callable
-def get_affiliated_vets_details(structure_name):
+@anvil.server.callable(require_user=True)
+def create_and_join_new_structure(structure_details):
   """
-  Retrieves the name and email for all veterinarians affiliated with a given structure.
-
-  This function is called by the unified ArchivesForm when a supervisor logs in,
-  in order to populate the veterinarian filter modal.
+  Creates a new structure, sets the current user as its owner,
+  and automatically links the user to this new structure.
 
   Args:
-    structure_name (str): The name of the structure to look up.
+    structure_details (dict): A dictionary containing the new structure's information,
+                              e.g., {'name': 'My Vet Clinic', 'phone': '12345', 'email': 'contact@vet.com'}.
 
   Returns:
-    list of dict: A list of dictionaries, where each dictionary represents a vet
-                  and contains 'name' and 'email' keys. Returns an empty list
-                  if the structure is not found or has no affiliated vets.
+    dict: A dictionary indicating success and containing the new structure's details.
   """
-  print(f"Server: get_affiliated_vets_details called for structure: '{structure_name}'")
+  user = anvil.users.get_user(allow_remembered=True)
+
+  # Validate input
+  if not isinstance(structure_details, dict) or not structure_details.get("name"):
+    raise anvil.server.NoServerFunctionError(
+      "Valid structure details, including a name, must be provided."
+    )
+
+  structure_name = structure_details["name"]
+
+  # Prevent duplicate structure names
+  if app_tables.structures.get(name=structure_name):
+    return {
+      "success": False,
+      "message": f"A structure with the name '{structure_name}' already exists.",
+    }
+
+  print(
+    f"[INFO] User '{user['email']}' is creating a new structure: '{structure_name}'."
+  )
 
   try:
-    # 1. Find the structure row in the 'structures' table by its name.
-    structure_row = app_tables.structures.get(name=structure_name)
+    # Generate a unique code for this new structure
+    new_join_code = _generate_unique_join_code()
 
-    if not structure_row:
-      print(f"Server: No structure found with name '{structure_name}'.")
-      return []
+    # Create the new row in the 'structures' table
+    new_structure = app_tables.structures.add_row(
+      name=structure_name,
+      phone=structure_details.get("phone"),
+      email=structure_details.get("email"),
+      address=structure_details.get("address"),
+      owner=user,
+      join_code=new_join_code,
+    )
 
-    # 2. Access the 'affiliated_vets' column. This is a list of links to user rows.
-    affiliated_vets_rows = structure_row["affiliated_vets"]
+    # Automatically link the creator's user record to this new structure
+    user["structure"] = new_structure
 
-    if not affiliated_vets_rows:
-      print(f"Server: The structure '{structure_name}' has no affiliated vets listed.")
-      return []
+    print(
+      f"[SUCCESS] Structure '{structure_name}' created with join code '{new_join_code}'."
+    )
 
-    # 3. Create a list of dictionaries containing the required details for each vet.
-    vet_details_list = []
-    for vet_row in affiliated_vets_rows:
-      # It's good practice to check if the linked row still exists
-      if vet_row:
-        vet_details_list.append({"name": vet_row["name"], "email": vet_row["email"]})
-
-    print(f"Server: Returning details for {len(vet_details_list)} affiliated vets.")
-    return vet_details_list
+    return {
+      "success": True,
+      "message": "Structure created and joined successfully.",
+      "structure_name": new_structure["name"],
+      "join_code": new_structure["join_code"],
+    }
 
   except Exception as e:
-    # Log any unexpected errors and return an empty list to prevent crashes.
     print(
-      f"Server ERROR in get_affiliated_vets_details for structure '{structure_name}': {e}"
+      f"[ERROR] Failed to create new structure for user '{user['email']}': {str(e)}"
     )
-    return []
+    return {
+      "success": False,
+      "message": "An unexpected error occurred while creating the structure.",
+    }
 
 
-"""
-# To read all cliniques for the current user (as owner)
-cliniques = anvil.server.call('read_structures')
+@anvil.server.callable(require_user=True)
+def join_structure_by_code(join_code):
+  """
+  Links a user to an existing structure using a unique join code.
 
-# To write or update a clinique's information
-anvil.server.call('write_structure', 'VetCare Clinic', phone='123456789', email='contact@vetcare.com')
+  Args:
+    join_code (str): The unique code for the structure the user wants to join.
 
-# To pick a specific value from a clinique's information
-email = anvil.server.call('pick_structure', 'VetCare Clinic', 'email')
-"""
+  Returns:
+    dict: A dictionary indicating success or failure and providing a user-friendly message.
+  """
+  user = anvil.users.get_user(allow_remembered=True)
+
+  # Validate input
+  if not join_code or not isinstance(join_code, str):
+    return {"success": False, "message": "A valid join code must be provided."}
+
+  print(
+    f"[INFO] User '{user['email']}' is attempting to join a structure with code: '{join_code}'."
+  )
+
+  try:
+    # Find the structure that corresponds to the provided join code.
+    structure_to_join = app_tables.structures.get(join_code=join_code.upper())
+
+    if not structure_to_join:
+      print(f"[FAIL] No structure found with join code '{join_code}'.")
+      return {
+        "success": False,
+        "message": "Invalid join code. Please check the code and try again.",
+      }
+
+    # If a structure is found, update the user's 'structure' column to link them to it.
+    user["structure"] = structure_to_join
+
+    structure_name = structure_to_join["name"]
+    print(
+      f"[SUCCESS] User '{user['email']}' has successfully joined structure '{structure_name}'."
+    )
+
+    return {
+      "success": True,
+      "message": f"You have successfully joined the structure: {structure_name}.",
+      "structure_name": structure_name,
+    }
+
+  except Exception as e:
+    print(
+      f"[ERROR] An error occurred while user '{user['email']}' attempted to join with code '{join_code}': {str(e)}"
+    )
+    return {
+      "success": False,
+      "message": "An unexpected error occurred. Please try again later.",
+    }

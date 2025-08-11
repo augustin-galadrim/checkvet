@@ -1,0 +1,46 @@
+components: []
+container:
+  properties:
+    html: |-
+      <div class="time-display-container">
+        <style>
+          .time-display-container .time {
+            color: #666;
+            font-size: 14px;
+          }
+        </style>
+        <div class="time" id="time-component-display">--:--</div>
+        <script>
+          // Use a guard to prevent re-defining the function if the component is reloaded
+          if (!window.__time_display_init) {
+            window.__time_display_init = true;
+
+            // This function will be called from the component's Python code
+            window.initTimeDisplay = function() {
+              // Use a specific ID to avoid conflicts with other elements
+              const timeElem = document.getElementById('time-component-display');
+
+              function updateTime() {
+                if (timeElem) {
+                  const now = new Date();
+                  const hours = now.getHours().toString().padStart(2, '0');
+                  const minutes = now.getMinutes().toString().padStart(2, '0');
+                  timeElem.textContent = `${hours}h${minutes}`;
+                }
+              }
+
+              // Prevent multiple intervals if the component is re-initialized
+              if (window.timeDisplayInterval) {
+                clearInterval(window.timeDisplayInterval);
+              }
+
+              // Update immediately and then every minute
+              updateTime();
+              window.timeDisplayInterval = setInterval(updateTime, 60000);
+            }
+          }
+        </script>
+      </div>
+  type: HtmlTemplate
+custom_component: true
+is_package: true

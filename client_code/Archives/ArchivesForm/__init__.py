@@ -47,17 +47,21 @@ class ArchivesForm(ArchivesFormTemplate):
       self.call_js("populateMyReports", self.my_reports)
 
       if self.is_supervisor:
-        self.structure_name = anvil.server.call("pick_user_structure")
+        # REFACTORED: Use the new, correct server function to get user info.
+        self.structure_name = anvil.server.call("get_user_info", "structure")
+
+        # REFACTORED: Check against the 'independent' key, not the translated string.
         self.has_structure = bool(
-          self.structure_name and self.structure_name != "Indépendant"
+          self.structure_name and self.structure_name != "independent"
         )
 
         if self.has_structure:
           print(
             f"User is a supervisor for structure: '{self.structure_name}'. Loading structure data."
           )
+          # REFACTORED: Call the new server function to get vets in the structure.
           self.affiliated_vets = (
-            anvil.server.call("get_affiliated_vets_details", self.structure_name) or []
+            anvil.server.call("get_vets_in_structure", self.structure_name) or []
           )
           self.structure_reports = (
             anvil.server.call("get_reports_by_structure", self.structure_name) or []
@@ -67,7 +71,7 @@ class ArchivesForm(ArchivesFormTemplate):
           self.call_js("setupUI", True, True, self.affiliated_vets, self.structure_name)
           self.call_js("populateStructureReports", self.structure_reports)
         else:
-          print("User is a supervisor but has no structure assigned.")
+          print("User is a supervisor but is independent or has no structure assigned.")
           # Tell JS to set up the supervisor UI but hide the structure tab/features
           self.call_js("setupUI", True, False, [], None)
       else:
@@ -126,7 +130,7 @@ class ArchivesForm(ArchivesFormTemplate):
   def filter_reports_by_vets(self, vets_emails_list, **event_args):
     if self.is_supervisor:
       self.selected_vets_emails = vets_emails_list
-      self.apply_filters("structure_reports")  # This only applies to the structure tab
+      self.apply_filters("structure_reports")
 
   def search_reports(self, query, active_tab, **event_args):
     target_populate_func = "populateMyReports"
@@ -136,7 +140,6 @@ class ArchivesForm(ArchivesFormTemplate):
       return
 
     try:
-      # Call the appropriate server function based on which tab is active
       if self.is_supervisor and active_tab == "structure_reports":
         results = anvil.server.call("search_reports_for_all_vets_in_structure", query)
         target_populate_func = "populateStructureReports"
@@ -151,7 +154,6 @@ class ArchivesForm(ArchivesFormTemplate):
     if confirm("Are you sure you want to delete this report?"):
       try:
         if anvil.server.call("delete_report", report_rich):
-          # Remove from the correct local list and refresh
           if active_tab == "my_reports":
             self.my_reports = [
               r
@@ -179,36 +181,10 @@ class ArchivesForm(ArchivesFormTemplate):
         "statut": report.get("statut"),
         "name": report.get("name"),
       }
-
       open_form("Archives.AudioManagerEdit", report=safe_report)
-
     except Exception as e:
       alert(f"Error opening report editor: {e}")
       open_form("ArchivesForm")
 
   def create_new_report(self, **event_args):
     open_form("Production.AudioManagerForm")
-
-  # --- Supervisor-only Functions ---
-
-  def search_users_for_modal(self, search_input, **event_args):
-    if self.is_supervisor:
-      try:
-        return anvil.server.call("search_users", search_input)
-      except Exception as e:
-        return []
-    return []
-
-  def add_vet_to_structure(self, user_email, **event_args):
-    if self.is_supervisor:
-      try:
-        result = anvil.server.call("add_authorized_vet", None, user_email)
-        # Refresh vet list in the modal
-        self.affiliated_vets = (
-          anvil.server.call("get_affiliated_vets_details", self.structure_name) or []
-        )
-        self.call_js("setAffiliatedVets", self.affiliated_vets)
-        return result
-      except Exception as e:
-        alert(f"Error adding vet: {e}")
-    return None

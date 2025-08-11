@@ -1,4 +1,8 @@
 components:
+- layout_properties: {slot: time_display_slot}
+  name: time_display_1
+  properties: {}
+  type: form:Components.TimeDisplay
 - layout_properties: {slot: default}
   name: header_nav_1
   properties: {active_tab: Templates/AI}
@@ -154,9 +158,8 @@ container:
                 <div class="left-section">
                   <div class="buttons-container">
                     <button class="create-button" id="createBtn">+ Créer</button>
-                    <button class="personalize-button" id="personalizeBtn">Personaliser votre IA</button>
                   </div>
-                  <div class="time">--:--</div>
+                  <div anvil-slot="time_display_slot"></div>
                 </div>
               </div>
               <input type="text" class="search-bar" placeholder="Rechercher">
@@ -263,15 +266,6 @@ container:
                 });
               }
             })();
-
-            function updateTime() {
-              const now = new Date();
-              const hrs = now.getHours().toString().padStart(2, '0');
-              const mins = now.getMinutes().toString().padStart(2, '0');
-              document.querySelector('.time').textContent = `${hrs}h${mins}`;
-            }
-            updateTime();
-            setInterval(updateTime, 60000);
 
             if (!window.__session_handlers_initialized) {
               window.__session_handlers_initialized = true;

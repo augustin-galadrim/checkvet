@@ -16,7 +16,7 @@ def assign_language_specific_base_templates(user, language_code):
 
   Args:
     user (Row): The user row from the 'users' table.
-    language_code (str): The two-letter language code (e.g., "FR", "EN") chosen by the user.
+    language_code (str): The two-letter language code (e.g., "fr", "en") chosen by the user.
 
   Returns:
     int: The number of templates that were successfully assigned to the user.

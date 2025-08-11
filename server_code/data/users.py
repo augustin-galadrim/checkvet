@@ -20,6 +20,7 @@ def read_user():
   """
   Retrieves a dictionary of all relevant data for the currently logged-in user.
   Returns the key 'independent' for users without a structure.
+  Includes the structure's join_code if the user is a supervisor.
   """
   current_user = anvil.users.get_user(allow_remembered=True)
 
@@ -29,10 +30,16 @@ def read_user():
       print(f"[ERROR] No user row found for email: {current_user['email']}")
       return None
 
-    # If the user has a linked structure, return its name. Otherwise, return the standard key.
-    structure_value = (
-      user_row["structure"]["name"] if user_row["structure"] else INDEPENDENT_KEY
-    )
+    # Default structure value
+    structure_value = INDEPENDENT_KEY
+    join_code = None
+
+    # If the user is linked to a structure, get its details
+    if user_row["structure"]:
+      structure_value = user_row["structure"]["name"]
+      # If the user is also a supervisor, fetch the join code
+      if user_row["supervisor"]:
+        join_code = user_row["structure"]["join_code"]
 
     user_data = {
       "email": user_row["email"],
@@ -44,6 +51,7 @@ def read_user():
       "additional_info": user_row["additional_info"],
       "favorite_language": user_row["favorite_language"] or "EN",
       "mobile_installation": user_row["mobile_installation"],
+      "join_code": join_code,  # Add the join_code to the returned data
     }
     return user_data
 

@@ -105,7 +105,7 @@ container:
               border-radius: 4px;
               font-size: 14px;
             }
-            .form-group input[type="email"][readonly] {
+            .form-group input[readonly] {
               background-color: #f0f0f0;
               cursor: not-allowed;
             }
@@ -230,26 +230,31 @@ container:
                     </div>
                   </div>
 
-                  <!-- Section 2: Organization & Preferences -->
+                  <!-- Section 2: Organization -->
                   <div class="settings-section">
-                    <h2 class="section-title">Organization & Preferences</h2>
-                    <div class="form-row">
-                      <div class="form-group half-width">
-                        <label for="structure-button">Structure</label>
-                        <input type="hidden" id="structure" name="structure_input">
-                        <button type="button" id="structure-button" class="custom-structure-button">Indépendant</button>
-                      </div>
-                      <div class="form-group half-width">
-                        <label for="favorite-language-button">Favorite Language</label>
-                        <input type="hidden" id="favorite-language" name="favorite_language_input">
-                        <button type="button" id="favorite-language-button" class="custom-structure-button">English</button>
-                      </div>
-                    </div>
+                    <h2 class="section-title">Organization</h2>
                     <div class="form-group">
-                      <label style="display: flex; align-items: center; cursor: pointer; user-select: none;">
-                        <input type="checkbox" id="supervisor" name="supervisor_checkbox" style="margin-right: 8px;">
-                        <span>Supervisor</span>
-                      </label>
+                      <label for="structure-display">Structure</label>
+                      <input type="text" id="structure-display" readonly>
+                    </div>
+                    <!-- Supervisor Message - Initially hidden -->
+                    <div id="supervisor-message" style="display: none; font-style: italic; color: #333; margin-top: 10px; padding: 10px; background-color: #e9f5ff; border-left: 4px solid #007bff; border-radius: 4px;">
+                      You have the <strong>Supervisor</strong> role in your structure.
+                    </div>
+                    <!-- Join Code Field - Initially hidden -->
+                    <div class="form-group" id="join-code-container" style="display: none; margin-top: 15px;">
+                      <label for="join-code">Structure Join Code</label>
+                      <input type="text" id="join-code" readonly>
+                    </div>
+                  </div>
+
+                  <!-- Section 3: Preferences -->
+                  <div class="settings-section">
+                    <h2 class="section-title">Preferences</h2>
+                    <div class="form-group">
+                      <label for="favorite-language-button">Favorite Language</label>
+                      <input type="hidden" id="favorite-language" name="favorite_language_input">
+                      <button type="button" id="favorite-language-button" class="custom-structure-button">English</button>
                     </div>
                   </div>
 
@@ -275,14 +280,7 @@ container:
             </div>
           </div>
 
-          <!-- Modals (Structure and Language) - Unchanged -->
-          <div id="structure-modal" class="modal">
-            <div class="modal-content">
-              <span id="structure-modal-close" class="modal-close">×</span>
-              <h3>Select Structure</h3>
-              <div id="structure-options"></div>
-            </div>
-          </div>
+          <!-- Modals (Language Only) -->
           <div id="favorite-language-modal" class="modal">
             <div class="modal-content">
               <span id="favorite-language-modal-close" class="modal-close">×</span>
@@ -295,12 +293,29 @@ container:
             // Function to show/hide admin button - defined OUTSIDE conditional block
             window.showAdminButton = function(isAdmin) {
               const adminBtn = document.getElementById("admin-btn");
-              console.log("showAdminButton called with isAdmin =", isAdmin);
               if (adminBtn) {
                 adminBtn.style.display = isAdmin ? "block" : "none";
-                console.log("Admin button display set to:", adminBtn.style.display);
-              } else {
-                console.log("Admin button element not found!");
+              }
+            };
+
+            // NEW JS Function to handle supervisor view
+            window.updateSupervisorView = function(isSupervisor, joinCode) {
+              const supervisorMessage = document.getElementById("supervisor-message");
+              const joinCodeContainer = document.getElementById("join-code-container");
+              const joinCodeInput = document.getElementById("join-code");
+
+              if (supervisorMessage) {
+                supervisorMessage.style.display = isSupervisor ? 'block' : 'none';
+              }
+
+              if (joinCodeContainer && joinCodeInput) {
+                if (isSupervisor && joinCode) {
+                  joinCodeContainer.style.display = 'block';
+                  joinCodeInput.value = joinCode;
+                } else {
+                  joinCodeContainer.style.display = 'none';
+                  joinCodeInput.value = '';
+                }
               }
             };
 
@@ -309,11 +324,9 @@ container:
             // ---------------------------------------
             if (!window.__my_vet_settings_globals) {
               window.__my_vet_settings_globals = true;
-              console.log("Initializing settings globals");
 
               // Function to display success/error banners
               window.displayBanner = function(message, type) {
-                console.log("Display banner:", message, type);
                 const bannerDiv = document.createElement('div');
                 bannerDiv.textContent = message;
                 bannerDiv.style.padding = '10px';
@@ -364,18 +377,6 @@ container:
                 }
               };
 
-              // Pour les cases à cocher
-              window.getCheckedById = function(id) {
-                const element = document.getElementById(id);
-                return element ? element.checked : false;
-              };
-              window.setCheckedById = function(id, checked) {
-                const element = document.getElementById(id);
-                if (element) {
-                  element.checked = checked;
-                }
-              };
-
               // Pour les libellés de noms de fichiers
               window.setFileNameById = function(id, fileName) {
                 const input = document.getElementById(id);
@@ -408,58 +409,6 @@ container:
                 return null;
               };
 
-              // Remplir le modal de structure avec des options.
-              window.populateStructureModal = function(options, current) {
-                const optionsContainer = document.getElementById("structure-options");
-                optionsContainer.innerHTML = "";
-                options.forEach(opt => {
-                  const optionElem = document.createElement("div");
-                  optionElem.classList.add("structure-option");
-                  optionElem.textContent = opt;
-                  if (current && opt === current) {
-                    optionElem.classList.add("selected");
-                  }
-                  optionElem.addEventListener("click", function(event) {
-                    if (opt !== "Indépendant") {
-                      anvil.call(document.getElementById('vet-settings-form'), 'check_structure_authorization', opt)
-                        .then(function(isAuthorized) {
-                          if (!isAuthorized) {
-                            alert("Vous n'êtes pas autorisé(e) pour cette structure.");
-                            return;
-                          }
-                          let confirmMsg = "Êtes-vous sûr de vouloir changer votre structure pour " + opt + " ?";
-                          if(opt !== current && !confirm(confirmMsg)) {
-                            return;
-                          }
-                          document.getElementById("structure").value = opt;
-                          setButtonTextById("structure-button", opt);
-                          const allOptions = optionsContainer.querySelectorAll(".structure-option");
-                          allOptions.forEach(elem => elem.classList.remove("selected"));
-                          optionElem.classList.add("selected");
-                          current = opt;
-                          window.closeStructureModal();
-                        })
-                        .catch(function(error) {
-                          alert("Erreur lors de la vérification de l'autorisation: " + error);
-                        });
-                    } else {
-                      let confirmMsg = "Voulez-vous vraiment quitter votre structure actuelle ?";
-                      if(opt !== current && !confirm(confirmMsg)) {
-                        return;
-                      }
-                      document.getElementById("structure").value = opt;
-                      setButtonTextById("structure-button", opt);
-                      const allOptions = optionsContainer.querySelectorAll(".structure-option");
-                      allOptions.forEach(elem => elem.classList.remove("selected"));
-                      optionElem.classList.add("selected");
-                      current = opt;
-                      window.closeStructureModal();
-                    }
-                  });
-                  optionsContainer.appendChild(optionElem);
-                });
-              };
-
               // Remplir le modal de langue préférée avec des options.
               window.populateFavoriteLanguageModal = function(options, current) {
                 const optionsContainer = document.getElementById("favorite-language-options");
@@ -485,14 +434,6 @@ container:
               };
 
               // Ouvrir et fermer les modaux
-              window.openStructureModal = function() {
-                const modal = document.getElementById("structure-modal");
-                modal.style.display = "block";
-              };
-              window.closeStructureModal = function() {
-                const modal = document.getElementById("structure-modal");
-                modal.style.display = "none";
-              };
               window.openFavoriteLanguageModal = function() {
                 const modal = document.getElementById("favorite-language-modal");
                 modal.style.display = "block";
@@ -504,28 +445,20 @@ container:
 
               // Attacher les écouteurs d'événements
               window.__attachVetSettingsEvents = function() {
-                console.log("Attaching vet settings events");
                 const vetSettingsForm = document.getElementById('vet-settings-form');
                 const submitBtn = document.getElementById('submit-btn');
                 const cancelBtn = document.getElementById('cancel-btn');
-                const structureButton = document.getElementById("structure-button");
-                const modalClose = document.getElementById("structure-modal-close");
 
-                if (!vetSettingsForm || !submitBtn || !cancelBtn || !structureButton || !modalClose) {
-                  console.log("Settings: Certains éléments n'ont pas été trouvés, annulation de l'attachement.");
+                if (!vetSettingsForm || !submitBtn || !cancelBtn) {
                   return;
                 }
 
                 // Remplacer les anciens écouteurs par des clones
                 submitBtn.replaceWith(submitBtn.cloneNode(true));
                 cancelBtn.replaceWith(cancelBtn.cloneNode(true));
-                structureButton.replaceWith(structureButton.cloneNode(true));
-                modalClose.replaceWith(modalClose.cloneNode(true));
 
                 const newSubmitBtn = document.getElementById('submit-btn');
                 const newCancelBtn = document.getElementById('cancel-btn');
-                const newStructureButton = document.getElementById("structure-button");
-                const newModalClose = document.getElementById("structure-modal-close");
 
                 newSubmitBtn.addEventListener('click', (event) => {
                   anvil.call(vetSettingsForm, 'submit_click');
@@ -533,32 +466,6 @@ container:
 
                 newCancelBtn.addEventListener('click', (event) => {
                   anvil.call(vetSettingsForm, 'cancel_click');
-                });
-
-                newStructureButton.addEventListener('click', (event) => {
-                  openStructureModal();
-                });
-
-                newModalClose.addEventListener('click', (event) => {
-                  closeStructureModal();
-                });
-
-                window.addEventListener('click', function(event) {
-                  const modal = document.getElementById("structure-modal");
-                  if (event.target == modal) {
-                    closeStructureModal();
-                  }
-                });
-
-                // Mettre à jour le libellé lors de la sélection d'un fichier
-                const fileInputs = vetSettingsForm.querySelectorAll('input[type="file"]');
-                fileInputs.forEach(input => {
-                  input.addEventListener('change', () => {
-                    const label = input.nextElementSibling.nextElementSibling;
-                    if (label && label.classList.contains('file-name-label')) {
-                      label.textContent = input.files[0] ? input.files[0].name : 'Aucun fichier choisi';
-                    }
-                  });
                 });
 
                 // Attacher les événements pour le bouton de langue préférée
@@ -612,51 +519,22 @@ container:
 
                 // Attacher l'événement pour le bouton Admin
                 const adminBtn = document.getElementById("admin-btn");
-                console.log("Admin button found:", adminBtn ? "Yes" : "No");
                 if (adminBtn) {
                   adminBtn.replaceWith(adminBtn.cloneNode(true));
                   const newAdminBtn = document.getElementById("admin-btn");
                   newAdminBtn.addEventListener('click', (event) => {
-                    console.log("Admin button clicked");
                     anvil.call(vetSettingsForm, 'openAdmin');
                   });
                 }
-
-                console.log("Settings: Gestionnaires d'événements attachés à la nouvelle instance.");
               };
             }
 
             // Attacher les écouteurs dès que le DOM est prêt
             window.__attachVetSettingsEvents();
 
-            // Check if admin button is present in DOM after attachment
-            console.log("Admin button present after attachment:", document.getElementById("admin-btn") ? "Yes" : "No");
-
-            // Navigation
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-              tab.addEventListener('click', (event) => {
-                const tabText = tab.getAttribute('data-tab');
-                document.querySelector('.nav-tab.active').classList.remove('active');
-                tab.classList.add('active');
-
-                if (tabText === 'Production') {
-                  anvil.call(document.getElementById('vet-settings-form'), 'openProduction');
-                } else if (tabText === 'Modèles/IA') {
-                  anvil.call(document.getElementById('vet-settings-form'), 'openTemplates');
-                } else if (tabText === 'Archives') {
-                  anvil.call(document.getElementById('vet-settings-form'), 'openArchives');
-                } else if (tabText === 'Paramètres') {
-                  // Rester sur la page actuelle
-                }
-              });
-            });
-          </script>
-
-          <!-- Session handler: now using a valid DOM element from the form -->
-          <script>
+            // Session handler: now using a valid DOM element from the form
             if (!window.__session_handlers_initialized) {
               window.__session_handlers_initialized = true;
-
               window.setupSessionHandlers = function() {
                 document.addEventListener('visibilitychange', function() {
                   if (document.visibilityState === 'visible') {
@@ -666,7 +544,6 @@ container:
                     }
                   }
                 });
-
                 window.addEventListener('online', function() {
                   var formElem = document.getElementById('vet-settings-form');
                   if (formElem) {

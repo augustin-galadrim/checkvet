@@ -12,12 +12,10 @@ class Settings(SettingsTemplate):
 
   def on_form_show(self, **event_args):
     """
-    Called when the form is shown. Fetches user data and populates the form fields
-    and modals with up-to-date information.
+    Called when the form is shown. Fetches user data and populates the form fields.
     """
     print("Settings form is visible. Loading user and modal data...")
     self.load_vet_data()
-    self.load_structure_modal()
     self.load_favorite_language_modal()
     print("Data loading complete.")
 
@@ -53,9 +51,7 @@ class Settings(SettingsTemplate):
         display_text = t.t("independent_structure_label")
       else:
         display_text = structure_value
-
-      self.call_js("setValueById", "structure", structure_value)
-      self.call_js("setButtonTextById", "structure-button", display_text)
+      self.call_js("setValueById", "structure-display", display_text)
 
       # Handle favorite language
       favorite_language = user_data.get("favorite_language", "en")
@@ -64,41 +60,16 @@ class Settings(SettingsTemplate):
       self.call_js("setValueById", "favorite-language", favorite_language)
       self.call_js("setButtonTextById", "favorite-language-button", lang_display_text)
 
-      # Handle checkbox
-      self.call_js("setCheckedById", "supervisor", user_data.get("supervisor", False))
+      # NEW: Handle supervisor view
+      is_supervisor = user_data.get("supervisor", False)
+      join_code = user_data.get("join_code")  # Will be None if not applicable
+      self.call_js("updateSupervisorView", is_supervisor, join_code)
 
       # Show/hide admin button
       self.call_js("showAdminButton", self.is_admin_user())
 
     except Exception as e:
       alert(f"An error occurred while loading your data: {str(e)}")
-
-  def load_structure_modal(self):
-    """
-    Fetches all available structures and populates the selection modal.
-    """
-    try:
-      # This server call should return a list of all structure names
-      structures = relay_read_structures()
-
-      # The server returns dicts, so we extract the names
-      structure_names = [s["structure"] for s in structures]
-
-      # Add the 'independent' option as a dictionary for the JS
-      options = [
-        {
-          "key": "independent",
-          "display": t.t("independent_structure_label"),
-        }
-      ]
-      options.extend([{"key": name, "display": name} for name in structure_names])
-
-      current_structure_key = anvil.server.call("get_user_info", "structure")
-
-      # Populate the modal with the options and the user's current selection
-      self.call_js("populateStructureModal", options, current_structure_key)
-    except Exception as e:
-      alert(f"An error occurred while loading structures: {str(e)}")
 
   def load_favorite_language_modal(self):
     """
@@ -114,13 +85,12 @@ class Settings(SettingsTemplate):
   def submit_click(self, **event_args):
     """
     Gathers all data from the form and calls the server to update the user's record.
+    Structure and Supervisor status are no longer editable here.
     """
     try:
       form_data = {
         "name": self.call_js("getValueById", "name"),
         "phone": self.call_js("getValueById", "phone"),
-        "structure": self.call_js("getValueById", "structure"),
-        "supervisor": self.call_js("getCheckedById", "supervisor"),
         "favorite_language": self.call_js("getValueById", "favorite-language"),
       }
 
@@ -185,12 +155,3 @@ class Settings(SettingsTemplate):
   def openAdmin(self, **event_args):
     """Navigates to the Administration panel."""
     open_form("Settings.Admin")
-
-
-# Relay function to ensure server calls can be made after a session refresh.
-def relay_read_structures():
-  try:
-    return anvil.server.call("read_structures")
-  except anvil.server.SessionExpiredError:
-    anvil.server.reset_session()
-    return anvil.server.call("read_structures")

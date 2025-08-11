@@ -275,7 +275,7 @@ class Admin(AdminTemplate):
         alert("Aucune structure sélectionnée.")
         return False
 
-      success = relay_add_authorized_vet(user_email)
+      success = ...
       if success:
         alert(f"Utilisateur {user_email} ajouté avec succès à la structure.")
         return True
@@ -458,16 +458,6 @@ def relay_write_user(**kwargs):
   except Exception as e:
     print(f"DEBUG: Error in relay_write_user: {str(e)}")
     return False
-
-
-def relay_add_authorized_vet(user_email):
-  """Relay method for add_authorized_vet server function"""
-  try:
-    # Note: The API takes structure_id_unused as first parameter but ignores it
-    return anvil.server.call("add_authorized_vet", None, user_email)
-  except anvil.server.SessionExpiredError:
-    anvil.server.reset_session()
-    return anvil.server.call("add_authorized_vet", None, user_email)
 
 
 def relay_create_user(**kwargs):

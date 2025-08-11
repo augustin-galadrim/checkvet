@@ -129,7 +129,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       self.call_js("setLanguageDropdown", user_lang)
     except Exception as e:
       print(f"[ERROR] Could not set user's language: {e}")
-      self.call_js("setLanguageDropdown", "EN")  # Default to EN on error
+      self.call_js("setLanguageDropdown", "en")  # Default to EN on error
 
     templates = anvil.server.call("read_templates")
     print(f"Found {len(templates)} templates")
@@ -213,16 +213,16 @@ class AudioManagerForm(AudioManagerFormTemplate):
       language_emoji = self.call_js("getDropdownSelectedValue", "langueDropdown")
       print(f"[DEBUG] Selected language emoji: {language_emoji}")
       if language_emoji == "🇫🇷":
-        return "FR"
+        return "fr"
       elif language_emoji == "🇬🇧":
-        return "EN"
+        return "en"
       else:
         # Default to EN if unknown
         print(f"[DEBUG] Unknown language emoji: {language_emoji}, defaulting to EN")
-        return "EN"
+        return "en"
     except Exception as e:
       print(f"[ERROR] Error getting selected language: {e}")
-      return "EN"
+      return "en"
 
   def get_current_audio_blob(self, **event_args):
     """
@@ -367,7 +367,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def _format_and_display_report(self, report_content):
     """Helper to format and display the final report."""
     lang = self.get_selected_language()
-    formatter_fn = "EN_format_report" if lang == "EN" else "format_report"
+    formatter_fn = "EN_format_report" if lang == "en" else "format_report"
     final_html = anvil.server.call_s(formatter_fn, report_content)
     self.text_editor_1.html_content = final_html
 
@@ -452,7 +452,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       selected_language = self.get_selected_language()
       print(f"[DEBUG] (toolbar) Selected language: {selected_language}")
 
-      if selected_language == "EN":
+      if selected_language == "en":
         transcription = anvil.server.call("EN_process_audio_whisper", audio_blob)
       else:
         transcription = anvil.server.call("process_audio_whisper", audio_blob)
@@ -467,7 +467,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[DEBUG] (toolbar) GPT result length: {len(report_content or '')}")
 
       # 5) Formatting according to language
-      if selected_language == "FR":
+      if selected_language == "en":
         report_final = anvil.server.call("format_report", report_content)
       else:
         report_final = anvil.server.call("EN_format_report", report_content)

@@ -188,10 +188,3 @@ class ArchivesForm(ArchivesFormTemplate):
 
   def create_new_report(self, **event_args):
     open_form("Production.AudioManagerForm")
-
-  # --- REMOVED OBSOLETE SUPERVISOR-ONLY FUNCTIONS ---
-  # The following functions are no longer needed as vet management
-  # is now handled by an administrator in the Settings panel.
-  #
-  # def search_users_for_modal(self, search_input, **event_args):
-  # def add_vet_to_structure(self, user_email, **event_args):

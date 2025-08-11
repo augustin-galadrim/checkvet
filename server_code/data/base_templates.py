@@ -77,7 +77,7 @@ def _create_custom_template_from_base(base_template, user):
     bool: True if the template was created, False if it already existed.
   """
   try:
-    template_name = base_template["template_name"]
+    template_name = base_template["name"]
     template_html = base_template["html"]
 
     # Check if a custom template with the same name already exists for this user to avoid duplicates.
@@ -104,7 +104,7 @@ def _create_custom_template_from_base(base_template, user):
     return True
 
   except Exception as e:
-    template_name_for_error = base_template["template_name"] if base_template else "N/A"
+    template_name_for_error = base_template["name"] if base_template else "N/A"
     print(
       f"[ERROR] Failed to create custom template '{template_name_for_error}' for user '{user['email']}': {str(e)}"
     )

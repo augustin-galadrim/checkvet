@@ -10,31 +10,42 @@ class StartupForm(StartupFormTemplate):
     self.init_components(**properties)
 
     try:
+      # 1. AUTHENTICATION: Attempt to get a logged-in user or show the login form.
       user = anvil.users.get_user(allow_remembered=True)
       if not user:
         user = anvil.users.login_with_form()
 
       if user:
-        # If online and logged in, proceed with the normal flow.
+        # --- User is now logged in ---
         anvil.server.call("ensure_persistent_session")
-        lang_code = anvil.server.call("pick_user_favorite_language") or "en"
-        t.load_language(lang_code)
 
-        # Open the main production form for online users
-        open_form("Production.AudioManagerForm")
+        # 2. REGISTRATION CHECK: Verify if the user has completed the initial setup.
+        additional_info_complete = anvil.server.call("get_user_info", "additional_info")
+
+        if not additional_info_complete:
+          # If registration is not complete, redirect to the registration flow first.
+          print("User has not completed registration. Redirecting to RegistrationFlow.")
+          open_form("RegistrationFlow")
+        else:
+          # 3. LOAD MAIN APP: If registration is complete, proceed to the main application.
+          # Use the new, correct server function to get the user's language.
+          lang_code = anvil.server.call("get_user_info", "favorite_language") or "en"
+          t.load_language(lang_code)
+
+          # Open the main production form for online users.
+          open_form("Production.AudioManagerForm")
       else:
-        # If online but the user cancelled the login, they can still proceed to the offline form.
+        # User cancelled the login prompt. They can still use the app offline.
         alert("Login cancelled. Proceeding with offline capabilities.")
         open_form("Production.OfflineAudioManagerForm")
 
     except anvil.server.AppOfflineError:
+      # Handle the case where the app starts in offline mode.
       print("App is offline. Loading offline-first audio manager.")
-      # Open the form specifically designed for offline use. No login is required.
       open_form("Production.OfflineAudioManagerForm")
 
     except Exception as e:
-      # Catch any other unexpected errors during startup
+      # Catch any other unexpected errors during the startup process.
       print(f"An unexpected error occurred during startup: {e}")
       alert("An error occurred while starting the app. You can try the offline mode.")
-      # As a fallback, still try to open the offline form.
       open_form("Production.OfflineAudioManagerForm")

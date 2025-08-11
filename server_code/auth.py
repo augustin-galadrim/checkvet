@@ -69,28 +69,6 @@ def logout_user():
 
 
 @anvil.server.callable
-def pick_user_favorite_language():
-  """Get user's preferred language"""
-  user = anvil.users.get_user()
-  if not user:
-    return "EN"  # Default
-  return user.get("favorite_language", "EN")
-
-
-@anvil.server.callable
-def pick_user_structure():
-  """Get user's structure"""
-  user = anvil.users.get_user()
-  if not user:
-    return None
-
-  structure = user.get("structure")
-  if isinstance(structure, tables.Row):
-    return structure["name"]
-  return structure
-
-
-@anvil.server.callable
 def ensure_persistent_session():
   """
   Ensures the current user's session is set to be remembered.

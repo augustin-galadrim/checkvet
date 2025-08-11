@@ -1,278 +1,212 @@
 components: []
 container:
   properties:
-    html: |
+    html: |-
       <!DOCTYPE html>
       <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Registration</title>
-        <style>
-          /* Global styling */
-          body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-          }
-          .container {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          /* Modal overlay updated to not block pointer events */
-          .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            display: none;
-            z-index: 100;  /* lower than modals */
-            pointer-events: none; /* allow interactions to pass through */
-          }
-          .modal-overlay.active {
-            display: block;
-          }
-          /* Modal styling */
-          .modal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 400px;
-            z-index: 1000; /* make sure modals are above the overlay */
-            display: none;
-            pointer-events: auto; /* ensure the modal receives pointer events */
-          }
-          .modal.active {
-            display: block;
-          }
-          .modal h2 {
-            margin-bottom: 15px;
-          }
-          .modal p {
-            margin-bottom: 15px;
-          }
-          .form-group {
-            margin-bottom: 15px;
-          }
-          .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-          }
-          .form-group input[type="text"],
-          .form-group input[type="tel"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-          }
-          .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            justify-content: flex-end;
-          }
-          /* Force buttons to appear on top */
-          .custom-button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-            position: relative;
-            z-index: 1001;
-          }
-          .btn-primary {
-            background-color: #4CAF50;
-            color: white;
-          }
-          .btn-primary:hover {
-            background-color: #45a049;
-          }
-          .btn-secondary {
-            background-color: #f44336;
-            color: white;
-          }
-          .btn-secondary:hover {
-            background-color: #d32f2f;
-          }
-          .btn-default {
-            background-color: #ccc;
-            color: #333;
-          }
-          /* Radio button group styling for step 2 */
-          .radio-group {
-            margin-bottom: 15px;
-          }
-          .radio-group label {
-            display: block;
-            margin-bottom: 8px;
-            cursor: pointer;
-          }
-          .radio-group input[type="radio"] {
-            margin-right: 8px;
-          }
-        </style>
-      </head>
-      <body>
-        <!-- The modal overlay (transparent and non‑blocking) -->
-        <div class="modal-overlay" id="modal-overlay"></div>
-        <div class="container">
-          <!-- Modal Step 1: Greeting, Name and Phone -->
-          <div class="modal" id="modal-step1">
-            <h2>Welcome!</h2>
-            <p>Please enter your details to register:</p>
-            <div class="form-group">
-              <label for="reg-name">Name</label>
-              <input type="text" id="reg-name" required>
+        <head>
+          <meta charset="utf-t">
+          <title>Registration</title>
+          <style>
+            /* Global & Modal Styles */
+            body { font-family: Arial, sans-serif; margin: 0; background-color: #f5f5f5; }
+            .container { position: relative; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; }
+            .modal {
+              display: none;
+              position: fixed;
+              z-index: 1000;
+              left: 0;
+              top: 0;
+              width: 100%;
+              height: 100%;
+              overflow: auto;
+              background-color: rgba(0,0,0,0.4);
+              align-items: center;
+              justify-content: center;
+            }
+            .modal.active {
+              display: flex;
+            }
+            .modal-content {
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+              width: 90%;
+              max-width: 400px;
+            }
+            .modal h2 { margin-top: 0; margin-bottom: 10px; font-size: 22px; color: #333; }
+            .modal p { margin-bottom: 20px; color: #666; font-size: 15px; }
+
+            /* Form Element Styles */
+            .form-group { margin-bottom: 15px; }
+            .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+            .form-group input[type="text"],
+            .form-group input[type="tel"],
+            .form-group input[type="email"] {
+              width: 100%;
+              padding: 10px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              font-size: 14px;
+            }
+
+            /* Radio Button & Structure Choice Styles */
+            .radio-group label { display: block; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s ease; }
+            .radio-group label:hover { border-color: #4CAF50; }
+            .radio-group input[type="radio"] { margin-right: 10px; }
+            .radio-group input[type="radio"]:checked + span { font-weight: bold; }
+
+            #join-code-group { display: none; margin-top: 15px; }
+            #join-code-group label { font-size: 14px; color: #333; }
+            #join-code-input { margin-top: 5px; }
+
+            /* Button Styles */
+            .button-group { display: flex; gap: 10px; margin-top: 25px; justify-content: flex-end; }
+            .custom-button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.3s; }
+            .btn-primary { background-color: #4CAF50; color: white; }
+            .btn-primary:hover { background-color: #45a049; }
+            .btn-default { background-color: #f0f0f0; color: #333; border: 1px solid #ddd; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+
+            <!-- Step 1: Language Selection -->
+            <div class="modal" id="modal-step1">
+              <div class="modal-content">
+                <h2>Choose Your Language</h2>
+                <p>Please select your preferred language for the application.</p>
+                <div class="radio-group" id="language-group">
+                  <label><input type="radio" name="language" value="fr" required> <span>Français</span></label>
+                  <label><input type="radio" name="language" value="en" checked> <span>English</span></label>
+                </div>
+                <div class="button-group">
+                  <div id="next-btn-1" class="custom-button btn-primary">Next</div>
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="reg-phone">Phone</label>
-              <input type="tel" id="reg-phone" required>
+
+            <!-- Step 2: User Information -->
+            <div class="modal" id="modal-step2">
+              <div class="modal-content">
+                <h2>Your Information</h2>
+                <p>Please enter your name and phone number to continue.</p>
+                <div class="form-group">
+                  <label for="reg-name">Name</label>
+                  <input type="text" id="reg-name" required>
+                </div>
+                <div class="form-group">
+                  <label for="reg-phone">Phone</label>
+                  <input type="tel" id="reg-phone" required>
+                </div>
+                <div class="button-group">
+                  <div id="back-btn-2" class="custom-button btn-default">Back</div>
+                  <div id="next-btn-2" class="custom-button btn-primary">Next</div>
+                </div>
+              </div>
             </div>
-            <div class="button-group">
-              <div id="cancel-btn" class="custom-button btn-secondary">Cancel</div>
-              <div id="next-btn" class="custom-button btn-primary">Next</div>
+
+            <!-- Step 3: Structure Selection -->
+            <div class="modal" id="modal-step3">
+              <div class="modal-content">
+                <h2>Set Up Your Practice</h2>
+                <p>How would you like to configure your account?</p>
+                <div class="radio-group" id="structure-choice-group">
+                  <label><input type="radio" name="structure-choice" value="independent" checked> <span>Register as Independent</span></label>
+                  <label><input type="radio" name="structure-choice" value="join"> <span>Join an Existing Structure</span></label>
+                  <label><input type="radio" name="structure-choice" value="create"> <span>Create a New Structure</span></label>
+                </div>
+                <div class="form-group" id="join-code-group">
+                  <label for="join-code-input">Structure Join Code</label>
+                  <input type="text" id="join-code-input" placeholder="Enter the 6-digit code">
+                </div>
+                <div class="button-group">
+                  <div id="back-btn-3" class="custom-button btn-default">Back</div>
+                  <div id="submit-btn" class="custom-button btn-primary">Finish Registration</div>
+                </div>
+              </div>
             </div>
+
+            <!-- Step 4: Create New Structure -->
+            <div class="modal" id="modal-step4">
+              <div class="modal-content">
+                <h2>Create Your New Structure</h2>
+                <p>Please enter the details for your new practice.</p>
+                <div class="form-group">
+                  <label for="reg-structure-name">Structure Name</label>
+                  <input type="text" id="reg-structure-name" required>
+                </div>
+                <div class="form-group">
+                  <label for="reg-structure-phone">Structure Phone</label>
+                  <input type="tel" id="reg-structure-phone">
+                </div>
+                <div class="form-group">
+                  <label for="reg-structure-email">Structure Email</label>
+                  <input type="email" id="reg-structure-email">
+                </div>
+                <div class="button-group">
+                  <div id="back-btn-4" class="custom-button btn-default">Back</div>
+                  <div id="submit-btn-final" class="custom-button btn-primary">Finish Registration</div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Modal Step 2: Specialité Selection -->
-          <div class="modal" id="modal-step2">
-            <h2>Select Your Specialité</h2>
-            <p>Please select one of the following options:</p>
-            <div class="radio-group">
-              <label>
-                <input type="radio" name="specialite" value="Equin" required> Equin
-              </label>
-              <label>
-                <input type="radio" name="specialite" value="Chiens et Chats"> Chiens et Chats
-              </label>
-              <label>
-                <input type="radio" name="specialite" value="Patients divers"> Patients divers
-              </label>
-            </div>
-            <div class="button-group">
-              <div id="back-btn" class="custom-button btn-default">Back</div>
-              <div id="submit-btn" class="custom-button btn-primary">Submit</div>
-            </div>
-          </div>
-        </div>
+          <script>
+            // Utility functions
+            window.getValueById = (id) => document.getElementById(id)?.value || "";
+            window.getRadioValueByName = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value || "";
+            window.showModal = (modalId) => document.getElementById(modalId)?.classList.add("active");
+            window.hideModal = (modalId) => document.getElementById(modalId)?.classList.remove("active");
 
-        <script>
-          // Utility functions for retrieving and setting input values
-          window.getValueById = function(id) {
-            const element = document.getElementById(id);
-            return element ? element.value : "";
-          };
+            // Event attachment function
+            function attachRegistrationEvents() {
+              const form = document.querySelector('.container');
 
-          window.setValueById = function(id, value) {
-            const element = document.getElementById(id);
-            if (element) {
-              element.value = value;
+              // Step 1 -> 2 (Forward)
+              document.getElementById('next-btn-1').addEventListener('click', (e) => anvil.call(form, 'go_to_step', 1, 2));
+
+              // Step 2 -> 1 (Back)
+              document.getElementById('back-btn-2').addEventListener('click', (e) => anvil.call(form, 'go_to_step', 2, 1));
+              // Step 2 -> 3 (Forward)
+              document.getElementById('next-btn-2').addEventListener('click', (e) => anvil.call(form, 'go_to_step', 2, 3));
+
+              // Step 3 -> 2 (Back)
+              document.getElementById('back-btn-3').addEventListener('click', (e) => anvil.call(form, 'go_to_step', 3, 2));
+              // Step 3 -> Submit or Next (Forward)
+              document.getElementById('submit-btn').addEventListener('click', (e) => anvil.call(form, 'submit_registration'));
+
+              // Step 4 -> 3 (Back)
+              document.getElementById('back-btn-4').addEventListener('click', (e) => anvil.call(form, 'go_to_step', 4, 3));
+              // Step 4 -> Final Submit
+              document.getElementById('submit-btn-final').addEventListener('click', (e) => anvil.call(form, 'finish_registration_with_structure'));
+
+              // Logic to show/hide join code input AND update button text
+              const structureChoiceRadios = document.querySelectorAll('input[name="structure-choice"]');
+              const submitBtnStep3 = document.getElementById('submit-btn');
+              structureChoiceRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                  const joinGroup = document.getElementById('join-code-group');
+                  joinGroup.style.display = (e.target.value === 'join') ? 'block' : 'none';
+                  if (e.target.value === 'create') {
+                    submitBtnStep3.textContent = 'Next';
+                  } else {
+                    submitBtnStep3.textContent = 'Finish Registration';
+                  }
+                });
+              });
             }
-          };
 
-          window.getRadioValueByName = function(name) {
-            const radios = document.getElementsByName(name);
-            for (let radio of radios) {
-              if (radio.checked) {
-                return radio.value;
-              }
+            // Initializer
+            function initRegistration() {
+              attachRegistrationEvents();
+              showModal("modal-step1");
             }
-            return "";
-          };
-
-          // Functions to show/hide modals
-          window.showModal = function(modalId) {
-            console.log("Showing modal:", modalId);
-            // Activate the overlay and the requested modal
-            document.getElementById("modal-overlay").classList.add("active");
-            document.getElementById(modalId).classList.add("active");
-          };
-
-          window.hideModal = function(modalId) {
-            console.log("Hiding modal:", modalId);
-            document.getElementById(modalId).classList.remove("active");
-            // Remove overlay if no modal is active
-            if (!document.querySelector(".modal.active")) {
-              document.getElementById("modal-overlay").classList.remove("active");
-            }
-          };
-
-          // Attach event listeners to buttons
-          function attachRegistrationEvents() {
-            const nextBtn = document.getElementById("next-btn");
-            const cancelBtn = document.getElementById("cancel-btn");
-            const backBtn = document.getElementById("back-btn");
-            const submitBtn = document.getElementById("submit-btn");
-
-            console.log("nextBtn found:", nextBtn);
-            console.log("cancelBtn found:", cancelBtn);
-            console.log("backBtn found:", backBtn);
-            console.log("submitBtn found:", submitBtn);
-
-            nextBtn.addEventListener("click", (event) => {
-              console.log("Next button clicked");
-              // Validate fields locally before relaying the click
-              const nameVal = getValueById("reg-name");
-              const phoneVal = getValueById("reg-phone");
-              if (!nameVal || !phoneVal) {
-                alert("Please fill in both name and phone.");
-                return;
-              }
-              anvil.call(event.target, "next_click");
-            });
-
-            cancelBtn.addEventListener("click", (event) => {
-              console.log("Cancel button clicked");
-              anvil.call(event.target, "cancel_click");
-            });
-
-            backBtn.addEventListener("click", (event) => {
-              console.log("Back button clicked");
-              anvil.call(event.target, "back_click");
-            });
-
-            submitBtn.addEventListener("click", (event) => {
-              console.log("Submit button clicked");
-              // Validate that a specialité is selected before relaying the click
-              const specialiteVal = getRadioValueByName("specialite");
-              if (!specialiteVal) {
-                alert("Please select a specialité.");
-                return;
-              }
-              anvil.call(event.target, "submit_click");
-            });
-            console.log("Registration events attached.");
-          }
-
-          // Initialize the registration flow once the DOM is ready
-          function initRegistration() {
-            attachRegistrationEvents();
-            showModal("modal-step1");
-          }
-
-          if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", initRegistration);
-          } else {
-            initRegistration();
-          }
-        </script>
-      </body>
+            document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", initRegistration) : initRegistration();
+          </script>
+        </body>
       </html>
   type: HtmlTemplate
 is_package: true

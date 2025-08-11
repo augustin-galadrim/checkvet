@@ -61,6 +61,29 @@ def read_user():
 
 
 @anvil.server.callable(require_user=True)
+def join_structure_as_vet(join_code):
+  """
+  Allows the current user to join a structure using a join code.
+  Sets supervisor status to False upon joining.
+  """
+  user = anvil.users.get_user(allow_remembered=True)
+
+  # Use the existing join function from the structures service
+  result = structures.join_structure_by_code(join_code)
+
+  if result.get("success"):
+    # If the join was successful, explicitly set supervisor to False
+    user["supervisor"] = False
+    return {"success": True}
+  else:
+    # Pass the error message from the join function back to the client
+    return {
+      "success": False,
+      "message": result.get("message", "An unknown error occurred."),
+    }
+
+
+@anvil.server.callable(require_user=True)
 def write_user(**kwargs):
   """
   Updates the record of the currently logged-in user.

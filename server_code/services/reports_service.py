@@ -317,15 +317,20 @@ def get_reports_by_structure(structure_name):
       if report_row["last_modified"]:
         dt_str = report_row["last_modified"].strftime("%Y-%m-%d %H:%M:%S")
 
+      # NEW: Get the vet's display name (name or email)
+      vet_display_name = "Unknown Vet"
+      vet_row = report_row["vet"]
+      if vet_row:
+        vet_display_name = vet_row["name"] or vet_row["email"]
+
       results.append({
         "file_name": report_row["file_name"],
-        # Add the animal name
         "name": animal_name,
-        # Use formatted last_modified
         "last_modified": dt_str,
         "owner_email": report_row["vet"]["email"] if report_row["vet"] else None,
         "report_rich": report_row["report_rich"],
         "statut": report_row["statut"],
+        "vet_display_name": vet_display_name,  # Add the new field
       })
 
     print(f"DEBUG: Returning {len(results)} report(s) for structure '{structure_name}'")

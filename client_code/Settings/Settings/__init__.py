@@ -45,13 +45,16 @@ class Settings(SettingsTemplate):
       self.call_js("setValueById", "email", user_data.get("email", ""))
       self.call_js("setValueById", "phone", user_data.get("phone", ""))
 
-      # Handle the 'structure' field with translation for the 'independent' key
+      # Handle the 'structure' field
       structure_value = user_data.get("structure", "independent")
-      if structure_value == "independent":
-        display_text = t.t("independent_structure_label")
-      else:
-        display_text = structure_value
+      is_independent = structure_value == "independent"
+      display_text = (
+        t.t("independent_structure_label") if is_independent else structure_value
+      )
       self.call_js("setValueById", "structure-display", display_text)
+
+      # NEW: Control visibility of the "Join" button
+      self.call_js("toggleJoinButton", is_independent)
 
       # Handle favorite language
       favorite_language = user_data.get("favorite_language", "en")
@@ -60,9 +63,9 @@ class Settings(SettingsTemplate):
       self.call_js("setValueById", "favorite-language", favorite_language)
       self.call_js("setButtonTextById", "favorite-language-button", lang_display_text)
 
-      # NEW: Handle supervisor view
+      # Handle supervisor view
       is_supervisor = user_data.get("supervisor", False)
-      join_code = user_data.get("join_code")  # Will be None if not applicable
+      join_code = user_data.get("join_code")
       self.call_js("updateSupervisorView", is_supervisor, join_code)
 
       # Show/hide admin button
@@ -70,6 +73,20 @@ class Settings(SettingsTemplate):
 
     except Exception as e:
       alert(f"An error occurred while loading your data: {str(e)}")
+
+  def attempt_to_join_structure(self, join_code, **event_args):
+    """
+    Called from JS to attempt joining a structure.
+    Returns a dictionary indicating success or failure.
+    """
+    try:
+      result = anvil.server.call("join_structure_as_vet", join_code)
+      if result.get("success"):
+        # On success, reload all data to refresh the entire form
+        self.load_vet_data()
+      return result
+    except Exception as e:
+      return {"success": False, "message": str(e)}
 
   def load_favorite_language_modal(self):
     """
@@ -85,7 +102,6 @@ class Settings(SettingsTemplate):
   def submit_click(self, **event_args):
     """
     Gathers all data from the form and calls the server to update the user's record.
-    Structure and Supervisor status are no longer editable here.
     """
     try:
       form_data = {
@@ -94,17 +110,11 @@ class Settings(SettingsTemplate):
         "favorite_language": self.call_js("getValueById", "favorite-language"),
       }
 
-      # Handle file uploads if new files were selected
-      for field in ["signature", "report-header", "report-footer"]:
-        file = self.get_file_data(field)
-        if file:
-          form_data[f"{field.replace('-', '_')}_image"] = file
-
       success = anvil.server.call("write_user", **form_data)
 
       if success:
         self.call_js("displayBanner", "Settings updated successfully!", "success")
-        self.load_vet_data()  # Refresh the form to show the saved changes
+        self.load_vet_data()
       else:
         alert("Failed to update settings. Please try again.")
     except Exception as e:

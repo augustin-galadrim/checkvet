@@ -9,7 +9,7 @@ class RegistrationFlow(RegistrationFlowTemplate):
     self.init_components(**properties)
 
     # State variables to hold user data across steps
-    self.user_language = "EN"  # Default value
+    self.user_language = "en"  # Default value
     self.user_name = ""
     self.user_phone = ""
     self.structure_choice = "independent"  # Default value

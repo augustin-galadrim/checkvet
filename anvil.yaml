@@ -169,7 +169,7 @@ db_schema:
       target: users
       type: link_single
     - admin_ui: {order: 7, width: 200}
-      name: structure_code
+      name: join_code
       type: string
     server: full
     title: Structures

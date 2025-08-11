@@ -4,6 +4,11 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
+from ..data import (
+  structures,
+  base_templates,
+)
+
 
 # Define a constant for the non-display key for an independent user.
 # This avoids "magic strings" and ensures consistency across the application.
@@ -154,3 +159,47 @@ def get_vets_in_structure(structure_name):
   except Exception as e:
     print(f"[ERROR] in get_vets_in_structure for '{structure_name}': {e}")
     return []
+
+
+@anvil.server.callable(require_user=True)
+def register_user_and_setup(reg_data):
+  """
+  Handles the entire user registration and structure setup process in a single, atomic transaction.
+  """
+  user = anvil.users.get_user(allow_remembered=True)
+  if not user:
+    return {"success": False, "message": "User not logged in."}
+
+  try:
+    # 1. Update the user's personal information
+    write_user(
+      name=reg_data.get("name"),
+      phone=reg_data.get("phone"),
+      favorite_language=reg_data.get("favorite_language"),
+      additional_info=True,  # Mark registration as complete
+    )
+
+    # 2. Handle the structure choice
+    choice = reg_data.get("structure_choice")
+    if choice == "join":
+      join_code = reg_data.get("join_code")
+      result = structures.join_structure_by_code(join_code)
+      if not result.get("success"):
+        return result  # Return the error message from the join function
+
+    elif choice == "create":
+      structure_details = reg_data.get("structure_details")
+      result = structures.create_and_join_new_structure(structure_details)
+      if not result.get("success"):
+        return result  # Return the error message from the create function
+
+        # 3. Assign language-specific templates
+    base_templates.assign_language_specific_base_templates(
+      user, reg_data.get("favorite_language")
+    )
+
+    return {"success": True, "message": "Registration complete!"}
+
+  except Exception as e:
+    print(f"[FATAL REGISTRATION ERROR] User: {user['email']}, Error: {str(e)}")
+    return {"success": False, "message": f"A fatal error occurred: {str(e)}"}

@@ -72,8 +72,8 @@ container:
                 <h2>Choose Your Language</h2>
                 <p>Please select your preferred language for the application.</p>
                 <div class="radio-group" id="language-group">
-                  <label><input type="radio" name="language" value="FR" required> <span>Français</span></label>
-                  <label><input type="radio" name="language" value="EN" checked> <span>English</span></label>
+                  <label><input type="radio" name="language" value="fr" required> <span>Français</span></label>
+                  <label><input type="radio" name="language" value="en" checked> <span>English</span></label>
                 </div>
                 <div class="button-group">
                   <div id="next-btn-1" class="custom-button btn-primary">Next</div>

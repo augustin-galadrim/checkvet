@@ -251,7 +251,7 @@ class Admin(AdminTemplate):
         phone=user_data.get("phone"),
         structure=user_data.get("structure"),
         supervisor=user_data.get("supervisor", False),
-        favorite_language=user_data.get("favorite_language", "EN"),
+        favorite_language=user_data.get("favorite_language", "en"),
       )
 
       if success:

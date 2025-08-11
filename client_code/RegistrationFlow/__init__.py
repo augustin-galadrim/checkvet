@@ -64,12 +64,7 @@ class RegistrationFlow(RegistrationFlowTemplate):
         return
 
     if self.structure_choice == "create":
-      # For this workflow, we'll open a new form to handle structure creation.
-      # This keeps the registration flow clean.
       alert("You will now be taken to a new screen to create your structure.")
-      # In a real scenario, you would pass the user data to the next form.
-      # open_form('CreateStructureForm', user_data=self.get_registration_data())
-      # For now, we will simulate completion.
       print("User chose to create a structure. This would navigate to a new form.")
       return
 

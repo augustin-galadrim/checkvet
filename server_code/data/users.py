@@ -39,9 +39,6 @@ def read_user():
       "additional_info": user_row["additional_info"],
       "favorite_language": user_row["favorite_language"] or "EN",
       "mobile_installation": user_row["mobile_installation"],
-      "signature_image": user_row["signature_image"],
-      "report_header_image": user_row["report_header_image"],
-      "report_footer_image": user_row["report_footer_image"],
     }
     return user_data
 
@@ -82,9 +79,8 @@ def write_user(**kwargs):
 
     # Update all other provided fields dynamically.
     for key, value in kwargs.items():
-      if key in user_row:
-        user_row[key] = value
-        print(f"[INFO] Updated user '{user_row['email']}' field '{key}'.")
+      user_row[key] = value
+      print(f"[INFO] Updated user '{user_row['email']}' field '{key}'.")
 
     return True
 

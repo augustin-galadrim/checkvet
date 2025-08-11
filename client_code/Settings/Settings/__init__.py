@@ -58,26 +58,14 @@ class Settings(SettingsTemplate):
       self.call_js("setButtonTextById", "structure-button", display_text)
 
       # Handle favorite language
-      favorite_language = user_data.get("favorite_language", "EN")
-      lang_map = {"FR": "Français", "EN": "English"}
+      favorite_language = user_data.get("favorite_language", "en")
+      lang_map = {"fr": "Français", "en": "English"}
       lang_display_text = lang_map.get(favorite_language, "English")
       self.call_js("setValueById", "favorite-language", favorite_language)
       self.call_js("setButtonTextById", "favorite-language-button", lang_display_text)
 
       # Handle checkbox
       self.call_js("setCheckedById", "supervisor", user_data.get("supervisor", False))
-
-      # Set file names for existing media
-      if user_data.get("signature_image"):
-        self.call_js("setFileNameById", "signature", user_data["signature_image"].name)
-      if user_data.get("report_header_image"):
-        self.call_js(
-          "setFileNameById", "report-header", user_data["report_header_image"].name
-        )
-      if user_data.get("report_footer_image"):
-        self.call_js(
-          "setFileNameById", "report-footer", user_data["report_footer_image"].name
-        )
 
       # Show/hide admin button
       self.call_js("showAdminButton", self.is_admin_user())

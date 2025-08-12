@@ -39,7 +39,7 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
     """Resets the UI to the initial recording state."""
     self.recording_widget_1.visible = True
     self.audio_playback_1.visible = False
-    self.audio_playback_1.audio_blob = None
+    self.audio_playback_1.call_js("resetAudioPlayback")
     self.call_js("setAudioWorkflowState", "input")
 
   def queue_button_click(self, **event_args):

@@ -49,9 +49,11 @@ class MicrophoneTest(MicrophoneTestTemplate):
     """
     print("Resetting to record mode.")
 
-    # 1. Make the playback component invisible and clear its audio
+    # 1. Make the playback component invisible, clear its audio, and reset its UI
     self.audio_playback_1.visible = False
-    self.audio_playback_1.audio_blob = None
+    self.audio_playback_1.call_js(
+      "resetAudioPlayback"
+    )  # Explicitly reset the component's UI
 
     # 2. Make the recording widget visible again
     self.recording_widget_1.visible = True

@@ -212,32 +212,34 @@ def search_patients(search_input):
 
 @anvil.server.callable
 def search_templates(search_input):
+  """
+  Searches for custom templates owned by the currently logged-in user,
+  filtered by the search term.
+  """
   try:
     if not isinstance(search_input, str):
       raise ValueError("Search input must be a string")
 
-    # Get the current user.
     current_user = anvil.users.get_user()
     if not current_user:
       raise Exception("No current user is logged in.")
 
-    search_term = search_input.strip()
+    search_term = search_input.strip().lower()
 
-    # If nothing was typed, return all records for the current user.
-    if not search_term:
-      rows = app_tables.custom_templates.search(owner=current_user)
+    # Fetch all templates owned by the current user.
+    all_user_templates = app_tables.custom_templates.search(owner=current_user)
+
+    # If a search term is provided, filter the results in Python.
+    if search_term:
+      rows = [r for r in all_user_templates if search_term in (r["name"] or "").lower()]
     else:
-      # Search for the term within name, limited to records owned by the current user.
-      rows = [
-        r
-        for r in app_tables.custom_templates.search(owner=current_user)
-        if search_term.lower() in r["name"].lower()
-      ]
+      # Otherwise, return all of the user's templates.
+      rows = all_user_templates
 
-    # Build the return structure.
+    # Build and return the result list.
     return [
       {
-        "id": r.get_id(),
+        "id": r["id"],
         "name": r["name"],
         "owner": r["owner"],
         "html": r["html"],
@@ -247,7 +249,7 @@ def search_templates(search_input):
     ]
 
   except Exception as e:
-    print(f"Search error: {str(e)}")
+    print(f"Search templates error: {str(e)}")
     return []
 
 

@@ -366,9 +366,12 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def _format_and_display_report(self, report_content):
     """Helper to format and display the final report."""
+    # Get the selected language from the UI.
     lang = self.get_selected_language()
-    formatter_fn = "EN_format_report" if lang == "en" else "format_report"
-    final_html = anvil.server.call_s(formatter_fn, report_content)
+
+    # Always call the single, unified 'format_report' function with the language.
+    final_html = anvil.server.call_s("format_report", report_content, lang)
+
     self.text_editor_1.html_content = final_html
 
   # 1) called for each chunk
@@ -426,86 +429,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
     except Exception as e:
       print(f"[ERROR] Error checking audio format: {e}")
       return audio_blob  # Return original blob on error
-
-  # -------------------------
-  # Audio processing (TOOLBAR recorder)
-  # -------------------------
-  def process_toolbar_recording(self, audio_blob, **event_args):
-    """
-    Recording via toolbar (completely separate from main).
-    1. Get existing editor content.
-    2. Transcribe voice.
-    3. Combine existing + new transcription
-    4. Generate GPT report
-    5. Update editor with final content
-    """
-    print("[DEBUG] process_toolbar_recording() - toolbar flow.")
-    try:
-      # Hard-coded prompt (or any other prompt you want)
-      self.prompt = "you are a helpful AI assistant"
-
-      # 1) Get current editor content
-      existing_content = self.text_editor_1.get_content() or ""
-      print(f"[DEBUG] existing_content length: {len(existing_content)}")
-
-      # 2) Transcribe newly recorded audio
-      selected_language = self.get_selected_language()
-      print(f"[DEBUG] (toolbar) Selected language: {selected_language}")
-
-      if selected_language == "en":
-        transcription = anvil.server.call("EN_process_audio_whisper", audio_blob)
-      else:
-        transcription = anvil.server.call("process_audio_whisper", audio_blob)
-
-      print(f"[DEBUG] (toolbar) Transcription received: {transcription}")
-
-      # 3) Combine transcription with editor content
-      combined_text = existing_content + "\n" + transcription
-
-      # 4) Generate result via GPT
-      report_content = anvil.server.call("generate_report", self.prompt, combined_text)
-      print(f"[DEBUG] (toolbar) GPT result length: {len(report_content or '')}")
-
-      # 5) Formatting according to language
-      if selected_language == "en":
-        report_final = anvil.server.call("format_report", report_content)
-      else:
-        report_final = anvil.server.call("EN_format_report", report_content)
-
-      # Update editor
-      self.text_editor_1.html_content = report_final
-
-      print(
-        "[DEBUG] process_toolbar_recording() completed successfully (toolbar flow)."
-      )
-      return "OK"
-
-    except Exception as e:
-      print(f"[ERROR] Exception in process_toolbar_recording (toolbar flow): {e}")
-      alert(f"Error processing toolbar recording: {str(e)}")
-      return None
-
-  # -------------------------
-  # Support for validate/send button
-  # -------------------------
-  def validate_and_send(self, **event_args):
-    """Handles validation and sending of editor content"""
-    print("[DEBUG] validate_and_send() called")
-    try:
-      content = self.text_editor_1.get_content()
-      if not content or not content.strip():
-        self.call_js("displayBanner", "No content to send", "error")
-        return False
-      # HERE: sending logic (email, etc.)
-      self.call_js(
-        "displayBanner", "Content validated and sent successfully!", "success"
-      )
-      return True
-
-    except Exception as e:
-      print(f"[ERROR] Exception in validate_and_send: {e}")
-      alert(f"Error validating and sending: {str(e)}")
-      return False
 
   # -------------------------
   # Method for "Status" button
@@ -632,21 +555,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print("[DEBUG] get_new_patient_details canceled by user.")
       return None
 
-  def build_report_pdf_relay(self, placeholders, images):
-    print("[DEBUG] build_report_pdf_relay called")
-    print(f"[DEBUG] Placeholders: {placeholders}, Number of images: {len(images)}")
-    pdf_base64 = anvil.server.call("build_report_pdf_base64", placeholders, images)
-    print(f"[DEBUG] pdf_base64 received from server. Length: {len(pdf_base64)}")
-    return pdf_base64
-
-  def get_media_url_relay(self, pdf_media):
-    print("[DEBUG] get_media_url_relay called")
-    import anvil
-
-    url = anvil.get_url(pdf_media)
-    print(f"[DEBUG] URL generated: {url}")
-    return url
-
   # -------------------------
   # Front-end relay for patient search
   # -------------------------
@@ -663,9 +571,13 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def search_template_relay(self, search_term, **event_args):
     print(f"[DEBUG] search_template_relay called with search_term: {search_term}")
     try:
-      results = anvil.server.call("EN_search_templates", search_term)
+      # Call the simplified 'search_templates' function without the language parameter.
+      results = anvil.server.call("search_templates", search_term)
+
       if results is None:
         results = []
+
+        # The transformation logic remains the same.
       transformed_results = []
       for template in results:
         if template is None:
@@ -677,6 +589,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
           "html": safe_value(template, "html", ""),
         }
         transformed_results.append(transformed_result)
+
       print(f"[DEBUG] Transformed template results: {transformed_results}")
       return transformed_results
     except Exception as e:

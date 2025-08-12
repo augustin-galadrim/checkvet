@@ -5,6 +5,8 @@ import anvil.users
 import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
+from ..Cache import user_settings_cache
+
 
 class MobileInstallationFlow(MobileInstallationFlowTemplate):
   def __init__(self, **properties):
@@ -39,13 +41,16 @@ class MobileInstallationFlow(MobileInstallationFlowTemplate):
 
   def install_click(self, **event_args):
     """
-    Called when the user clicks "I installed the app on my phone" on the third modal.
-    Logs the installation via the server.
+    Called when the user clicks "I installed the app on my phone".
+    Logs the installation and invalidates the cache on success.
     """
     try:
       success = anvil.server.call("write_user", mobile_installation=True)
       print(f"DEBUG: Server response for write_user: {success}")
       if success:
+        # *** FIX: Invalidate the cache so the next form load gets the new value ***
+        user_settings_cache["mobile_installation"] = None
+
         alert("Installation recorded successfully!")
         self.call_js("hideModal", "modal-step3")
         open_form("Production.AudioManagerForm")

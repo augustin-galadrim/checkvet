@@ -2,7 +2,8 @@ from ._anvil_designer import ArchivesFormTemplate
 from anvil import *
 import anvil.server
 import anvil.users
-
+from ...Cache import reports_cache_manager  # Import the cache manager object
+import time
 
 def safe_value(data_dict, key, default_value):
   """A helper function to safely get a value from a dictionary."""
@@ -11,117 +12,129 @@ def safe_value(data_dict, key, default_value):
   val = data_dict.get(key)
   return default_value if val is None else val
 
-
 class ArchivesForm(ArchivesFormTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
     self.add_event_handler("show", self.form_show)
 
-    # --- State variables ---
+    # State variables
     self.is_supervisor = False
     self.has_structure = False
-
     self.my_reports = []
     self.structure_reports = []
-
     self.structure_name = None
     self.affiliated_vets = []
-
-    # --- Filter states ---
     self.current_status_filter = "all"
     self.selected_vets_emails = []
+    self.current_search_query = ""
 
   def form_show(self, **event_args):
     """
-    Called when the form is shown. It determines the user's role and structure affiliation,
-    then loads the appropriate data and configures the UI.
+    Called when the form is shown. It now uses the cache manager object.
     """
+    self.call_js("resetActiveTabState")
     user = anvil.users.get_user()
     self.is_supervisor = user and user["supervisor"]
     self.header_nav_1.active_tab = "Archives"
 
+    my_reports, structure_reports = reports_cache_manager.get()
+
+    if my_reports is not None:
+      self.my_reports = my_reports
+      self.structure_reports = structure_reports or []
+    else:
+      print("Cache is invalid or expired. Fetching fresh reports from server.")
+      try:
+        # *** FIX: Replaced the 'with' block with silent server calls (call_s) ***
+        fresh_my_reports = anvil.server.call_s("read_reports") or []
+        fresh_structure_reports = []
+
+        if self.is_supervisor:
+          self.structure_name = anvil.server.call_s("get_user_info", "structure")
+          self.has_structure = bool(self.structure_name and self.structure_name != "independent")
+          if self.has_structure:
+            fresh_structure_reports = anvil.server.call_s("get_reports_by_structure", self.structure_name) or []
+            self.affiliated_vets = anvil.server.call_s("get_vets_in_structure", self.structure_name) or []
+          else:
+            self.affiliated_vets = []
+
+        self.my_reports = fresh_my_reports
+        self.structure_reports = fresh_structure_reports
+        reports_cache_manager.set(my_reports=self.my_reports, structure_reports=self.structure_reports)
+
+      except Exception as e:
+        alert(f"An error occurred while loading reports: {e}")
+        self.my_reports = []
+        self.structure_reports = []
+
+    self.call_js("setupUI", self.is_supervisor, self.has_structure, self.affiliated_vets, self.structure_name)
+    self.apply_filters("my_reports")
+    self.call_js("reAttachArchivesEvents")
+
+  def refresh_data_click(self, active_tab, **event_args):
+    """
+    Invalidates the cache and re-fetches data, then reapplies all filters
+    for the currently active tab.
+    """
+    print(f"Refresh button clicked on tab: {active_tab}. Invalidating cache.")
+    reports_cache_manager.invalidate()
+
+    # Re-fetch the data silently without a full form_show reset
     try:
-      # ALL users (including supervisors) need to load their own reports.
-      print("Loading personal reports for the current user.")
-      self.my_reports = anvil.server.call("read_reports") or []
-      self.call_js("populateMyReports", self.my_reports)
+      # We always need to refresh both lists, as the cache is now empty
+      self.my_reports = anvil.server.call_s("read_reports") or []
 
-      if self.is_supervisor:
-        # REFACTORED: Use the new, correct server function to get user info.
-        self.structure_name = anvil.server.call("get_user_info", "structure")
+      if self.is_supervisor and self.has_structure:
+        self.structure_reports = anvil.server.call_s("get_reports_by_structure", self.structure_name) or []
 
-        # REFACTORED: Check against the 'independent' key, not the translated string.
-        self.has_structure = bool(
-          self.structure_name and self.structure_name != "independent"
-        )
-
-        if self.has_structure:
-          print(
-            f"User is a supervisor for structure: '{self.structure_name}'. Loading structure data."
-          )
-          # REFACTORED: Call the new server function to get vets in the structure.
-          self.affiliated_vets = (
-            anvil.server.call("get_vets_in_structure", self.structure_name) or []
-          )
-          self.structure_reports = (
-            anvil.server.call("get_reports_by_structure", self.structure_name) or []
-          )
-
-          # Tell JS to set up the full supervisor UI with two tabs
-          self.call_js("setupUI", True, True, self.affiliated_vets, self.structure_name)
-          self.call_js("populateStructureReports", self.structure_reports)
-        else:
-          print("User is a supervisor but is independent or has no structure assigned.")
-          # Tell JS to set up the supervisor UI but hide the structure tab/features
-          self.call_js("setupUI", True, False, [], None)
-      else:
-        print("User is a regular vet.")
-        # Tell JS to set up the standard vet UI
-        self.call_js("setupUI", False, False, [], None)
-
-      # Initially, apply filters to the default view (My Reports)
-      self.apply_filters("my_reports")
+        # Update the cache with the new data
+      reports_cache_manager.set(my_reports=self.my_reports, structure_reports=self.structure_reports)
 
     except Exception as e:
-      print(f"Error during form show: {e}")
-      alert("An error occurred while loading reports.")
+      alert(f"An error occurred while refreshing reports: {e}")
+      # Clear local data on failure to avoid showing stale data
       self.my_reports = []
       self.structure_reports = []
-      self.call_js("populateMyReports", [])
-      self.call_js("populateStructureReports", [])
+
+    # Re-apply all current filters for the tab the user was on
+    self.apply_filters(active_tab)
+    alert("Reports have been refreshed.")
 
   def apply_filters(self, report_type="my_reports"):
-    """
-    Applies current filters to the specified list of reports (either personal or structure).
-    """
-    source_reports = (
-      self.my_reports if report_type == "my_reports" else self.structure_reports
-    )
+    source_reports = self.my_reports if report_type == "my_reports" else self.structure_reports
+    filtered_list = source_reports
 
-    # 1. Filter by status
-    if self.current_status_filter == "all":
-      status_filtered = source_reports
-    else:
-      status_filtered = [
-        r
-        for r in source_reports
+    if self.current_search_query:
+      search_term = self.current_search_query.lower()
+      if report_type == "structure_reports":
+        filtered_list = [
+          r for r in filtered_list
+          if (search_term in (r.get('name') or '').lower()) or \
+          (search_term in (r.get('file_name') or '').lower()) or \
+          (search_term in (r.get('vet_display_name') or '').lower())
+        ]
+      else:
+        filtered_list = [
+          r for r in filtered_list
+          if (search_term in (r.get('name') or '').lower()) or \
+          (search_term in (r.get('file_name') or '').lower())
+        ]
+
+    if self.current_status_filter != "all":
+      filtered_list = [
+        r for r in filtered_list
         if safe_value(r, "statut", "Non spécifié") == self.current_status_filter
       ]
 
-    # 2. For structure reports, apply vet filter if active
-    final_filtered = status_filtered
     if report_type == "structure_reports" and self.selected_vets_emails:
-      final_filtered = [
-        r for r in status_filtered if r.get("owner_email") in self.selected_vets_emails
+      filtered_list = [
+        r for r in filtered_list if r.get("owner_email") in self.selected_vets_emails
       ]
 
-    # Update the correct UI section
     if report_type == "my_reports":
-      self.call_js("populateMyReports", final_filtered)
+      self.call_js("populateMyReports", filtered_list)
     else:
-      self.call_js("populateStructureReports", final_filtered)
-
-  # --- Event Handlers Called from JavaScript ---
+      self.call_js("populateStructureReports", filtered_list)
 
   def filter_reports_by_status(self, filter_val, active_tab, **event_args):
     self.current_status_filter = filter_val
@@ -133,40 +146,15 @@ class ArchivesForm(ArchivesFormTemplate):
       self.apply_filters("structure_reports")
 
   def search_reports(self, query, active_tab, **event_args):
-    target_populate_func = "populateMyReports"
-
-    if not query:
-      self.apply_filters(active_tab)
-      return
-
-    try:
-      if self.is_supervisor and active_tab == "structure_reports":
-        results = anvil.server.call("search_reports_for_all_vets_in_structure", query)
-        target_populate_func = "populateStructureReports"
-      else:
-        results = anvil.server.call("search_reports", query)
-
-      self.call_js(target_populate_func, [r for r in results if r is not None])
-    except Exception as e:
-      alert(f"Search failed: {e}")
+    self.current_search_query = query
+    self.apply_filters(active_tab)
 
   def delete_report(self, report_rich, active_tab, **event_args):
     if confirm("Are you sure you want to delete this report?"):
       try:
         if anvil.server.call("delete_report", report_rich):
-          if active_tab == "my_reports":
-            self.my_reports = [
-              r
-              for r in self.my_reports
-              if safe_value(r, "report_rich", "") != report_rich
-            ]
-          else:
-            self.structure_reports = [
-              r
-              for r in self.structure_reports
-              if safe_value(r, "report_rich", "") != report_rich
-            ]
-          self.apply_filters(active_tab)
+          reports_cache_manager.invalidate()
+          self.form_show() 
         else:
           alert("Failed to delete the report on the server.")
       except Exception as e:
@@ -175,10 +163,8 @@ class ArchivesForm(ArchivesFormTemplate):
   def open_report_editor(self, report, **event_args):
     try:
       safe_report = {
-        "id": report.get("id"),
-        "file_name": report.get("file_name"),
-        "report_rich": report.get("report_rich"),
-        "statut": report.get("statut"),
+        "id": report.get("id"), "file_name": report.get("file_name"),
+        "report_rich": report.get("report_rich"), "statut": report.get("statut"),
         "name": report.get("name"),
       }
       open_form("Archives.AudioManagerEdit", report=safe_report)
@@ -187,4 +173,5 @@ class ArchivesForm(ArchivesFormTemplate):
       open_form("ArchivesForm")
 
   def create_new_report(self, **event_args):
+    reports_cache_manager.invalidate()
     open_form("Production.AudioManagerForm")

@@ -6,25 +6,33 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 import base64
+from ...Cache import template_cache_manager
 
 
 class Templates(TemplatesTemplate):
   def __init__(self, **properties):
     print("Initialisation du formulaire Templates...")
-    # Initialiser les composants du formulaire
     self.init_components(**properties)
     print("Composants du formulaire initialisés.")
 
-    # Attacher le gestionnaire d'événement "show"
+    self.all_templates = []
+
     self.add_event_handler("show", self.form_show)
 
   def form_show(self, **event_args):
-    """Une fois le formulaire affiché, lire les modèles depuis le serveur et remplir la liste HTML."""
-    print("Déclenchement de form_show du formulaire Templates.")
-    templates = anvil.server.call("read_templates")
-    print(f"Le serveur a renvoyé {len(templates)} modèles.")
-    # Pousser la liste des modèles dans le code JavaScript
-    self.call_js("populateTemplates", templates)
+    """Now uses the cache to load templates."""
+    print("Templates form showing. Checking cache.")
+
+    cached_templates = template_cache_manager.get()
+    if cached_templates is not None:
+      print(f"Loading {len(cached_templates)} templates from cache.")
+      self.all_templates = cached_templates
+    else:
+      print("Fetching fresh templates from server.")
+      self.all_templates = anvil.server.call_s("read_templates")
+      template_cache_manager.set(self.all_templates)  # Store in cache
+
+    self.call_js("populateTemplates", self.all_templates)
 
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS"""
@@ -34,58 +42,47 @@ class Templates(TemplatesTemplate):
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
 
-  # --------------------
-  # Ouverture de l'éditeur de template
-  # --------------------
   def open_template_editor(self, template_id=None, **event_args):
     """
-    Ouvre le formulaire TemplateEditor avec les paramètres appropriés.
-    Si template_id est fourni, cherche le template correspondant par son id.
-    Sinon, crée un nouveau template.
+    *** FIX: Invalidates the cache before navigating to the editor. ***
+    This ensures that if a change is made, the cache will be refreshed on return.
     """
-    print(f"open_template_editor appelé avec template_id={template_id}")
+
+    print(f"Opening template editor. Invalidating cache as a precaution.")
+    template_cache_manager.invalidate()
 
     if template_id:
-      # Mode édition - Rechercher le template par id
-      templates = anvil.server.call("read_templates")
-      found_template = next((t for t in templates if t.get("id") == template_id), None)
-
+      found_template = next(
+        (t for t in self.all_templates if t.get("id") == template_id), None
+      )
       if not found_template:
-        alert(f"Template avec ID {template_id} introuvable.")
+        alert(f"Template with ID {template_id} not found.")
         return
-
-      print(f"Ouverture de l'éditeur de template pour éditer: {found_template['name']}")
       open_form("Templates.TemplateEditor", template=found_template)
     else:
-      # Mode création
-      print("Ouverture de l'éditeur de template pour créer un nouveau template")
       open_form("Templates.TemplateEditor")
 
   def search_templates_client(self, query, **event_args):
-    print(f"search_templates_client() appelé avec la requête : {query}")
+    """MODIFIED to use the local self.all_templates list."""
+    print(f"Client-side template search with query: {query}")
     if not query:
-      print("Requête vide ; renvoi des modèles initiaux.")
-      templates = anvil.server.call("read_templates")
-      self.call_js("populateTemplates", templates)
+      self.call_js("populateTemplates", self.all_templates)
       return
-    try:
-      results = anvil.server.call("search_templates", query)
-      print(f"La recherche a renvoyé {len(results)} résultats.")
-      self.call_js("populateTemplates", results)
-    except Exception as e:
-      print("Échec de la recherche :", e)
+    search_term = query.lower()
+    results = [
+      t for t in self.all_templates if search_term in t.get("name", "").lower()
+    ]
+    self.call_js("populateTemplates", results)
 
   def delete_template(self, template_id, **event_args):
-    """Called from JavaScript when a user clicks the delete icon."""
-    # Show a confirmation dialog to the user.
-    if confirm(f"Are you sure you want to delete this template?"):
+    if confirm("Are you sure you want to delete this template?"):
       try:
-        # Call the server function to delete the template.
         success = anvil.server.call("delete_template", template_id)
         if success:
-          # If deletion was successful, refresh the template list.
-          self.form_show()
+          # *** FIX: Invalidate the cache after a successful deletion ***
+          template_cache_manager.invalidate()
+          self.form_show()  # Refresh the view
         else:
-          alert("Could not delete the template. It may have already been removed.")
+          alert("Could not delete the template.")
       except Exception as e:
-        alert(f"An error occurred while deleting the template: {e}")
+        alert(f"An error occurred: {e}")

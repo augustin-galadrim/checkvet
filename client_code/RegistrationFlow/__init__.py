@@ -2,6 +2,7 @@ from ._anvil_designer import RegistrationFlowTemplate
 from anvil import *
 import anvil.server
 import anvil.users
+from ..Cache import user_settings_cache
 
 
 class RegistrationFlow(RegistrationFlowTemplate):
@@ -78,10 +79,12 @@ class RegistrationFlow(RegistrationFlowTemplate):
     self.finalize_registration()
 
   def finalize_registration(self):
-    """Makes the single, consolidated server call."""
+    """Makes the single, consolidated server call and invalidates the cache on success."""
     try:
       result = anvil.server.call("register_user_and_setup", self.registration_data)
       if result.get("success"):
+        user_settings_cache["additional_info"] = None
+
         alert("Registration successful!")
         open_form("Production.AudioManagerForm")
       else:

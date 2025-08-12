@@ -3,6 +3,7 @@ from anvil import *
 import anvil.server
 import anvil.users
 from ... import TranslationService as t
+from ...Cache import user_settings_cache
 
 
 class Settings(SettingsTemplate):
@@ -35,7 +36,7 @@ class Settings(SettingsTemplate):
     Retrieves the current user's data from the server and updates the UI.
     """
     try:
-      user_data = anvil.server.call("read_user")
+      user_data = anvil.server.call_s("read_user")
       if not user_data:
         alert("Could not retrieve your user data. Please try logging in again.")
         return
@@ -80,7 +81,7 @@ class Settings(SettingsTemplate):
     Returns a dictionary indicating success or failure.
     """
     try:
-      result = anvil.server.call("join_structure_as_vet", join_code)
+      result = anvil.server.call_s("join_structure_as_vet", join_code)
       if result.get("success"):
         # On success, reload all data to refresh the entire form
         self.load_vet_data()
@@ -93,10 +94,10 @@ class Settings(SettingsTemplate):
     Populates the favorite language selection modal with predefined options.
     """
     options = [
-      {"display": "Français", "value": "FR"},
-      {"display": "English", "value": "EN"},
+      {"display": "Français", "value": "fr"},
+      {"display": "English", "value": "en"},
     ]
-    current_fav = anvil.server.call("get_user_info", "favorite_language") or "EN"
+    current_fav = anvil.server.call_s("get_user_info", "favorite_language") or "en"
     self.call_js("populateFavoriteLanguageModal", options, current_fav)
 
   def submit_click(self, **event_args):
@@ -113,6 +114,9 @@ class Settings(SettingsTemplate):
       success = anvil.server.call("write_user", **form_data)
 
       if success:
+        # *** FIX: Invalidate the language cache after a successful update ***
+        user_settings_cache["language"] = None
+
         self.call_js("displayBanner", "Settings updated successfully!", "success")
         self.load_vet_data()
       else:

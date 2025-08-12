@@ -190,6 +190,12 @@ container:
 
                 if (list) {
                   list.innerHTML = "";
+                  // Check if the templates list is empty or null
+                  if (!templates || templates.length === 0) {
+                    // If it's empty, display the helpful message
+                    list.innerHTML = "<div style='text-align: center; color: #888;'>Aucun template à afficher</div>";
+                    return; // Stop the function here
+                  }
                   templates.forEach(tpl => {
                     const li = document.createElement("li");
                     li.className = "template-item";

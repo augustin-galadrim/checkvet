@@ -7,7 +7,7 @@ class AudioPlayback(AudioPlaybackTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
     self._audio_blob = None
-    self.add_event_handler("x-clear-recording", self.on_clear_recording)
+    self.add_event_handler("x-clear_recording", self.on_clear_recording)
 
     # Add the 'show' event handler
     self.add_event_handler("show", self.form_show)
@@ -29,12 +29,10 @@ class AudioPlayback(AudioPlaybackTemplate):
       anvil.js.call_js("setupAudioPlayback", value)
 
   def on_clear_recording(self, **event_args):
-    """This is a custom event handler for the 'x-clear-recording' event."""
+    """This is a custom event handler for the 'x-clear_recording' event."""
     pass
 
   def clear_button_clicked(self, **event_args):
     """Called from JS when the clear button is clicked."""
-    self.raise_event("x-clear-recording")
-    # Also reset the component's internal state
+    self.raise_event("x-clear_recording")
     self._audio_blob = None
-    anvil.js.call_js("resetAudioPlayback")

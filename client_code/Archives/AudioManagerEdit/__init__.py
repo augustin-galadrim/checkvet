@@ -96,9 +96,6 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
 
-  # ----------------------------------------------------------
-  # Méthodes d'enregistrement audio
-  # ----------------------------------------------------------
   def handle_recording(self, audio_blob, **event_args):
     """This event handler is called by the RecordingWidget."""
     self.process_recording(audio_blob)
@@ -119,9 +116,6 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     except Exception as e:
       alert(f"Erreur lors du traitement de l'enregistrement : {str(e)}")
 
-  # ----------------------------------------------------------
-  # Nouvelle méthode pour relancer l'IA à partir du transcript
-  # ----------------------------------------------------------
   def relaunch_ai(self, **event_args):
     print("relaunch_ai() appelé avec transcript:", self.transcript)
     try:
@@ -131,10 +125,6 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       self.call_js("displayBanner", "Rapport mis à jour avec succès", "success")
     except Exception as e:
       alert("Erreur lors du relancement de l'IA : " + str(e))
-
-  # ----------------------------------------------------------
-  # Sélection du Statut
-  # ----------------------------------------------------------
 
   def report_footer_1_status_clicked(self, **event_args):
     print("[DEBUG] report_footer_1_status_clicked called")
@@ -153,9 +143,6 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       )
     return choice
 
-  # ----------------------------------------------------------
-  # Mise à jour du rapport (Sauvegarder)
-  # ----------------------------------------------------------
   def report_footer_1_save_clicked(
     self, ignored_file_name, content_json, images, **event_args
   ):
@@ -173,12 +160,12 @@ class AudioManagerEdit(AudioManagerEditTemplate):
 
       result = anvil.server.call(
         "write_report",
-        file_name_to_use,  # Utiliser toujours le nom de fichier original
-        self.animal_name,  # Nom de l'animal tel qu'originel
-        None,  # vet : laisser le serveur utiliser l'utilisateur actuel
-        None,  # last_modified : laissé au serveur
-        html_content,  # report_rich : contenu mis à jour
-        statut,  # statut : mis à jour
+        file_name_to_use,
+        self.animal_name,
+        None,
+        None,
+        html_content,
+        statut,
       )
 
       if result:
@@ -190,28 +177,3 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       print("Exception dans update_report :", e)
       alert("Erreur lors de la mise à jour du rapport : " + str(e))
     return True
-
-  # ----------------------------------------------------------
-  # Partager le rapport (Export PDF)
-  # ----------------------------------------------------------
-  def build_report_pdf_relay(self, placeholders, images):
-    print(
-      "DEBUG: build_report_pdf_relay appelé en mode édition avec placeholders :",
-      placeholders,
-      "et images :",
-      images,
-    )
-    pdf_base64 = anvil.server.call("build_report_pdf_base64", placeholders, images)
-    return pdf_base64
-
-  def get_media_url_relay(self, pdf_media):
-    import anvil
-
-    return anvil.get_url(pdf_media)
-
-  # ----------------------------------------------------------
-  # Bouton Retour
-  # ----------------------------------------------------------
-  def retour_clicked(self, **event_args):
-    """Retourner à la page Archives sans confirmation."""
-    open_form("Archives.Archives")

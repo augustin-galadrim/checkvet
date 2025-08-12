@@ -61,58 +61,6 @@ class Templates(TemplatesTemplate):
       print("Ouverture de l'éditeur de template pour créer un nouveau template")
       open_form("Templates.TemplateEditor")
 
-  # --------------------------------------
-  # Logique du modal pour "Créer" => Transformation PDF en template
-  # --------------------------------------
-  def show_pdf_modal(self, **event_args):
-    """
-    Appelé depuis JS lors du clic sur le bouton "+ Créer".
-    Affiche le modal de téléchargement PDF.
-    """
-    print("Affichage du modal PDF...")
-    self.call_js("openPdfModal")
-
-  def transform_pdf_to_template(self, base64_pdf, template_name, **event_args):
-    """
-    1) Convertir base64_pdf en anvil.BlobMedia
-    2) Traiter le PDF avec un premier prompt puis retraiter avec un second prompt
-    3) Enregistrer le résultat final dans la base de données
-    4) Afficher une bannière de succès
-    """
-    print(f"Appel de transform_pdf_to_template avec template_name={template_name}")
-
-    # 1) Convertir la chaîne Base64 en BlobMedia PDF
-    pdf_bytes = base64.b64decode(base64_pdf)
-    pdf_file = anvil.BlobMedia(
-      content_type="application/pdf", content=pdf_bytes, name="uploaded.pdf"
-    )
-
-    # 2) Définir les prompts
-    first_prompt = anvil.server.call("get_prompt", "pdf_structure", "fr")
-    second_prompt = anvil.server.call("get_prompt", "pdf_system_prompt", "fr")
-    try:
-      # Traiter le texte du PDF avec le premier prompt
-      initial_result = anvil.server.call("process_pdf", first_prompt, pdf_file)
-      print("Résultat du premier traitement (tronqué) :", initial_result[:100])
-
-      # Retraiter avec le second prompt
-      final_result = anvil.server.call(
-        "reprocess_output_with_prompt", initial_result, second_prompt
-      )
-
-      # 3) Enregistrer le résultat final dans la base de données
-      anvil.server.call("store_final_output_in_db", final_result, template_name)
-    except Exception as e:
-      print("Erreur lors de la transformation du PDF en template :", e)
-      alert(f"Erreur : {str(e)}")
-      return
-
-    # 4) Afficher la bannière de succès dans le modal
-    self.call_js("showSuccessBanner")
-
-  # ----------------------
-  # Nouveau : Fonctionnalité de recherche
-  # ----------------------
   def search_templates_client(self, query, **event_args):
     print(f"search_templates_client() appelé avec la requête : {query}")
     if not query:

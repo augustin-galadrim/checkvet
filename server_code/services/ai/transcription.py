@@ -16,7 +16,7 @@ WEBM_MAGIC = b"\x1a\x45\xdf\xa3"
 
 
 @anvil.server.callable
-def process_audio_whisper(audio_blob, language="fr"):
+def process_audio_whisper(audio_blob, language):
   return anvil.server.launch_background_task(
     "bg_process_audio_whisper", audio_blob, language
   )

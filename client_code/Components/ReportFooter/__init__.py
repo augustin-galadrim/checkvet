@@ -31,7 +31,7 @@ class ReportFooter(ReportFooterTemplate):
     Handles the status button click internally, gets options from the server,
     shows the dialog, and raises an event with the result.
     """
-    status_options = anvil.server.call("get_status_options")
+    status_options = anvil.server.call_s("get_status_options")
 
     buttons = [(opt.replace("_", " ").title(), opt) for opt in status_options]
     buttons.append(("Cancel", None))

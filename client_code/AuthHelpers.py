@@ -25,7 +25,7 @@ def setup_auth_handlers(form):
   def refresh_session_relay(self, **event_args):
     """Relay session refresh from JS to server"""
     try:
-      result = anvil.server.call("check_session")
+      result = anvil.server.call_s("check_session")
 
       if result['status'] == 'expired':
         # Session expired, redirect to login

@@ -9,7 +9,7 @@ def load_language(lang_code="en"):
   try:
     lang_code = lang_code.lower()
     # Use call_cache to automatically handle caching on the client
-    TRANSLATIONS = anvil.server.call("get_translations_for_lang", lang_code)
+    TRANSLATIONS = anvil.server.call_s("get_translations_for_lang", lang_code)
     CURRENT_LANG = lang_code
     print(f"Successfully loaded language: {lang_code}")
   except Exception as e:

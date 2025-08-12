@@ -4,11 +4,13 @@ import anvil.server
 import anvil.users
 from ... import TranslationService as t
 from ...Cache import user_settings_cache
+from ...AppEvents import events
 
 
 class Settings(SettingsTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
+    events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.on_form_show)
 
   def on_form_show(self, **event_args):
@@ -16,9 +18,14 @@ class Settings(SettingsTemplate):
     Called when the form is shown. Fetches user data and populates the form fields.
     """
     print("Settings form is visible. Loading user and modal data...")
+    self.update_ui_texts()
     self.load_vet_data()
     self.load_favorite_language_modal()
     print("Data loading complete.")
+
+  def update_ui_texts(self, **event_args):
+    """Sets all translatable text on the form."""
+    pass
 
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS."""
@@ -102,8 +109,9 @@ class Settings(SettingsTemplate):
 
   def submit_click(self, **event_args):
     """
-    Gathers all data from the form and calls the server to update the user's record.
+    Gathers all data, saves it, and now reloads the TranslationService on language change.
     """
+
     try:
       form_data = {
         "name": self.call_js("getValueById", "name"),
@@ -111,18 +119,27 @@ class Settings(SettingsTemplate):
         "favorite_language": self.call_js("getValueById", "favorite-language"),
       }
 
-      success = anvil.server.call("write_user", **form_data)
+      new_language = form_data.get("favorite_language")
+
+      success = anvil.server.call_s("write_user", **form_data)
 
       if success:
-        # *** FIX: Invalidate the language cache after a successful update ***
+        # Invalidate the language cache so the next full app load fetches the new preference
         user_settings_cache["language"] = None
 
-        self.call_js("displayBanner", "Settings updated successfully!", "success")
-        self.load_vet_data()
+        # Check if the language has actually changed
+        if new_language != t.CURRENT_LANG:
+          print(f"Language changed to {new_language}. Reloading translations.")
+          # Load the new language into the TranslationService
+          t.load_language(new_language)
+          events.publish("language_changed")
+
+        self.call_js("displayBanner", t.t("settings_update_success_banner"), "success")
+        self.load_vet_data()  # Reload data to ensure consistency
       else:
-        alert("Failed to update settings. Please try again.")
+        alert(t.t("settings_update_fail_alert"))
     except Exception as e:
-      alert(f"An error occurred during submission: {str(e)}")
+      alert(f"{t.t('settings_submit_error_alert')}: {str(e)}")
 
   def cancel_click(self, **event_args):
     """Discards any changes by reloading the user data from the server."""

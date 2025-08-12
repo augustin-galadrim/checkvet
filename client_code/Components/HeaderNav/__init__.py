@@ -3,11 +3,13 @@ from anvil import *
 import anvil.server
 import anvil.users
 from ... import TranslationService as t
+from ...AppEvents import events
 
 
 class HeaderNav(HeaderNavTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
+    events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
 
   def form_show(self, **event_args):

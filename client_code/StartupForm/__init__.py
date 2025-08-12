@@ -3,6 +3,7 @@ from anvil import *
 import anvil.server
 import anvil.users
 from .. import TranslationService as t
+from ..Cache import user_settings_cache
 
 
 class StartupForm(StartupFormTemplate):
@@ -19,17 +20,31 @@ class StartupForm(StartupFormTemplate):
         # --- User is now logged in ---
         anvil.server.call("ensure_persistent_session")
 
-        # 2. REGISTRATION CHECK: Verify if the user has completed the initial setup.
-        additional_info_complete = anvil.server.call("get_user_info", "additional_info")
+        # 2. REGISTRATION CHECK (Updated with Caching)
+        additional_info_complete = user_settings_cache.get("additional_info")
+        if additional_info_complete is None:
+          # If not in cache, fetch from the server
+          print("Startup cache miss: Fetching 'additional_info'.")
+          additional_info_complete = anvil.server.call(
+            "get_user_info", "additional_info"
+          )
+          # Store the result in the cache for this session
+          user_settings_cache["additional_info"] = additional_info_complete
 
         if not additional_info_complete:
-          # If registration is not complete, redirect to the registration flow first.
+          # If registration is not complete, redirect to the registration flow.
           print("User has not completed registration. Redirecting to RegistrationFlow.")
           open_form("RegistrationFlow")
         else:
-          # 3. LOAD MAIN APP: If registration is complete, proceed to the main application.
-          # Use the new, correct server function to get the user's language.
-          lang_code = anvil.server.call("get_user_info", "favorite_language") or "en"
+          # 3. LOAD MAIN APP (Updated with Caching)
+          lang_code = user_settings_cache.get("language")
+          if lang_code is None:
+            # If not in cache, fetch the user's language from the server.
+            print("Startup cache miss: Fetching 'favorite_language'.")
+            lang_code = anvil.server.call("get_user_info", "favorite_language") or "en"
+            # Store the result in the cache. Note the key is 'language'.
+            user_settings_cache["language"] = lang_code
+
           t.load_language(lang_code)
 
           # Open the main production form for online users.

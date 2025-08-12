@@ -24,7 +24,7 @@ def search_reports_for_all_vets_in_structure(search_input):
     print("Processed search term:", search_term)
 
     # Get the current user's structure name (using your existing pick_user_info function)
-    structure_name = anvil.server.call("pick_user_info", "structure")
+    structure_name = anvil.server.call_s("pick_user_info", "structure")
     if not structure_name:
       raise Exception("No structure found for current user.")
     print("Structure name:", structure_name)

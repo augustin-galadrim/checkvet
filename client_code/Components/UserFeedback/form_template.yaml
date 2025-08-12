@@ -1,0 +1,53 @@
+components: []
+container:
+  properties:
+    html: |-
+      <div class="user-feedback-container" id="feedback-container">
+        <style>
+          .user-feedback-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            gap: 15px;
+          }
+          .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3; /* Light grey base */
+            border-top: 5px solid #4CAF50; /* Checkvet Green */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          }
+          .status-text {
+            font-size: 16px;
+            color: #555;
+            font-weight: 500;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+        <div class="spinner" id="feedback-spinner"></div>
+        <p class="status-text" id="feedback-status-text">Processing...</p>
+      </div>
+
+      <script>
+        // Use a guard to define functions once
+        if (!window.__user_feedback_globals) {
+          window.__user_feedback_globals = true;
+
+          // Function callable from Python to set the status message
+          window.uf_setStatus = function(newStatus) {
+            const statusEl = document.getElementById("feedback-status-text");
+            if (statusEl) {
+              statusEl.textContent = newStatus;
+            }
+          };
+        }
+      </script>
+  type: HtmlTemplate
+custom_component: true
+is_package: true

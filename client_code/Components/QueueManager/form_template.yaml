@@ -2,7 +2,6 @@ components: []
 container:
   properties:
     html: |-
-      <!-- Main button to view the queue -->
       <button class="queue-button" id="qm-viewQueueBtn">
         <span>Queue</span>
         <span class="queue-badge" id="qm-queueBadge">0</span>
@@ -182,38 +181,52 @@ container:
                 ? `<button class=\"button button-primary\" disabled title=\"Import is not available in this mode\">Import</button>`
                 : `<button class=\"button button-primary import-btn\" data-id=\"${item.id}\">Import</button>`;
               div.innerHTML = `
-                <div>
-                  <div class=\"queue-item-title\">${item.title}</div>
-                  <div class=\"queue-item-status\">Status: <strong>${item.status}</strong></div>
-                </div>
-                <div class=\"queue-item-actions\">
-                  ${importButtonHTML}
-                  <button class=\"button delete-btn\" data-id=\"${item.id}\">Delete</button>
-                </div>`;
+                      <div>
+                        <div class=\"queue-item-title\">${item.title}</div>
+                        <div class=\"queue-item-status\">Status: <strong>${item.status}</strong></div>
+                      </div>
+                      <div class=\"queue-item-actions\">
+                        ${importButtonHTML}
+                        <button class=\"button delete-btn\" data-id=\"${item.id}\">Delete</button>
+                      </div>`;
               container.appendChild(div);
             });
           }
 
           // --- Attach Event Listeners ---
           function attachQueueManagerEvents() {
-            const componentRoot = document.getElementById('qm-viewQueueBtn');
-            document.getElementById('qm-viewQueueBtn').addEventListener('click', async () => {
+            const reattach = (selector, event, handler) => {
+              const element = document.querySelector(selector);
+              if (element) {
+                const newElement = element.cloneNode(true);
+                element.parentNode.replaceChild(newElement, element);
+                newElement.addEventListener(event, handler);
+              }
+            };
+
+            reattach('#qm-viewQueueBtn', 'click', async () => {
               await renderQueue();
               document.getElementById('qm-queueModal').style.display = 'flex';
             });
-            document.getElementById('qm-closeQueueModalBtn').addEventListener('click', () => {
+
+            reattach('#qm-closeQueueModalBtn', 'click', () => {
               document.getElementById('qm-queueModal').style.display = 'none';
             });
-            document.getElementById('qm-queueListContainer').addEventListener('click', async (e) => {
+
+            reattach('#qm-queueListContainer', 'click', async (e) => {
+              const anvilContext = document.getElementById('qm-viewQueueBtn');
+              if (!anvilContext) return;
+
               const target = e.target;
               const id = target.dataset.id;
               if (!id) return;
+
               if (target.classList.contains('import-btn')) {
                 const queue = await getQueuedRecordings();
                 const item = queue.find(i => i.id === id);
                 if (item) {
                   const blob = new Blob([item.audioData], { type: item.mimeType });
-                  anvil.call(componentRoot, 'handle_import_click', item.id, blob);
+                  anvil.call(anvilContext, 'handle_import_click', item.id, blob);
                   document.getElementById('qm-queueModal').style.display = 'none';
                 }
               } else if (target.classList.contains('delete-btn')) {
@@ -221,20 +234,25 @@ container:
                   await deleteFromQueue(id);
                   await renderQueue();
                   await updateQueueBadge();
-                  anvil.call(componentRoot, 'handle_queue_updated');
+                  anvil.call(anvilContext, 'handle_queue_updated');
                 }
               }
             });
-            document.getElementById('qm-cancelTitleBtn').addEventListener('click', () => {
+
+            reattach('#qm-cancelTitleBtn', 'click', () => {
               document.getElementById('qm-titleModal').style.display = 'none';
             });
-            document.getElementById('qm-confirmTitleBtn').addEventListener('click', () => {
+
+            reattach('#qm-confirmTitleBtn', 'click', () => {
+              const anvilContext = document.getElementById('qm-viewQueueBtn');
+              if (!anvilContext) return;
               const title = document.getElementById('qm-recordingTitle').value.trim() || `Recording from ${new Date().toLocaleString()}`;
-              anvil.call(componentRoot, 'handle_confirm_save', title);
+              anvil.call(anvilContext, 'handle_confirm_save', title);
               document.getElementById('qm-titleModal').style.display = 'none';
             });
           }
 
+          window.qm_reattach_events = attachQueueManagerEvents;
           attachQueueManagerEvents();
         }
       </script>

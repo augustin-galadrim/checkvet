@@ -1,5 +1,3 @@
-# In client_code/Components/QueueManager/__init__.py
-
 from ._anvil_designer import QueueManagerTemplate
 from anvil import *
 import anvil.js
@@ -14,9 +12,10 @@ class QueueManager(QueueManagerTemplate):
     self.add_event_handler("show", self.form_show)
 
   def form_show(self, **event_args):
-    """Called when the component is shown. Initializes JS."""
+    """Called when the component is shown. Initializes JS and re-attaches events."""
     disable_import_flag = getattr(self, "disable_import", False)
     anvil.js.call_js("qm_initialize", disable_import_flag)
+    anvil.js.call_js("qm_reattach_events")
 
   # --- Public methods (Callable by the parent form) ---
 

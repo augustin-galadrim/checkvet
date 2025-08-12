@@ -242,7 +242,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
     """Handles the x-clear-recording event from the AudioPlayback component."""
     print("AudioManagerForm: Clearing recording.")
     self.audio_playback_1.visible = False
-    self.audio_playback_1.audio_blob = None
+    self.audio_playback_1.call_js(
+      "resetAudioPlayback"
+    )  # Explicitly reset the component's UI
     self.recording_widget.visible = True
     anvil.js.call_js("setAudioWorkflowState", "input")
 

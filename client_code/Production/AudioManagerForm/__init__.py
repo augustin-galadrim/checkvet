@@ -39,7 +39,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       "recording_complete", self.handle_new_recording
     )
     self.audio_playback_1.set_event_handler(
-      "x_clear_recording", self.clear_recording_handler
+      "x-clear_recording", self.clear_recording_handler
     )
     # Store user-provided parameters
     self.clicked_value = clicked_value
@@ -268,21 +268,25 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def process_recording(self, **event_args):
     """
     Orchestrates the processing of the audio.
+    - It gets the template HTML from the text editor.
     - If ONLINE, it converts the blob to an Anvil Media object for the server.
     - If OFFLINE, it passes the raw JS Blob Proxy to the QueueManager component.
     """
     print("AMF PY: process_recording initiated.")
 
-    # We start with the raw JavaScript Blob Proxy from the playback component.
-    # It has not been converted yet.
     js_blob_proxy = self.audio_playback_1.audio_blob
-    print(
-      f"AMF PY [LOG 1]: Retrieved raw JS Blob Proxy from playback. Type: {type(js_blob_proxy)}"
-    )
-
     if not js_blob_proxy:
-      print("[ERROR] No audio blob found in the playback component.")
-      self.call_js("displayBanner", "No audio available to process.", "error")
+      alert("No audio available to process.")
+      self.recording_widget.visible = False
+      self.audio_playback_1.visible = True
+      anvil.js.call_js("setAudioWorkflowState", "decision")
+      return "ERROR"
+
+    # MODIFICATION: Get the template content directly from the editor.
+    template = self.text_editor_1.get_content()
+    if not template or not template.strip():
+      alert("Cannot process without a template. Please select a template first.")
+      # Reset UI to the decision state so the user can try again.
       self.recording_widget.visible = False
       self.audio_playback_1.visible = True
       anvil.js.call_js("setAudioWorkflowState", "decision")
@@ -294,7 +298,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
     try:
       transcription = self._transcribe_audio(anvil_media_blob, lang)
       report_content = self._generate_report_from_transcription(transcription, lang)
-      final_html = self._format_report(report_content, lang)
+      # MODIFICATION: Pass the retrieved template to the format function.
+      final_html = self._format_report(report_content, template, lang)
       self.text_editor_1.html_content = final_html
       print("[DEBUG] process_recording completed successfully.")
       return "OK"
@@ -312,6 +317,10 @@ class AudioManagerForm(AudioManagerFormTemplate):
         self.queue_manager_1.open_title_modal(js_blob_proxy)
         return "OFFLINE_SAVE"
       else:
+        # Reset UI to decision state after error
+        self.recording_widget.visible = False
+        self.audio_playback_1.visible = True
+        anvil.js.call_js("setAudioWorkflowState", "decision")
         return "ERROR"
 
   def _transcribe_audio(self, audio_blob, lang):
@@ -337,9 +346,12 @@ class AudioManagerForm(AudioManagerFormTemplate):
     """Helper to handle the report generation step."""
     return anvil.server.call_s("generate_report", transcription, lang)
 
-  def _format_report(self, report_content, lang):
-    """Helper to format and display the final report."""
-    final_html = anvil.server.call_s("format_report", report_content, lang)
+  def _format_report(self, report_content, template, lang):
+    """
+    MODIFICATION: Helper to format and display the final report.
+    It now accepts the template content and passes it to the server.
+    """
+    final_html = anvil.server.call_s("format_report", report_content, template, lang)
     return final_html
 
   # 1) called for each chunk

@@ -15,14 +15,18 @@ from ..prompts_service import get_prompt
 
 
 @anvil.server.callable
-def format_report(transcription, language):
+def format_report(transcription, template, language):
   """Generate report using GPT-4"""
 
   formatting_prompt_template = get_prompt("formatting", language)
   try:
+    user_prompt = f"""
+    Transcription: {transcription}\n Template: {template}
+    """
+
     messages = [
       {"role": "system", "content": formatting_prompt_template},
-      {"role": "user", "content": transcription},
+      {"role": "user", "content": user_prompt},
     ]
 
     response = client.chat.completions.create(

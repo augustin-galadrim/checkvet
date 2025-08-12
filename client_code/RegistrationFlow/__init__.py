@@ -81,7 +81,7 @@ class RegistrationFlow(RegistrationFlowTemplate):
   def finalize_registration(self):
     """Makes the single, consolidated server call and invalidates the cache on success."""
     try:
-      result = anvil.server.call("register_user_and_setup", self.registration_data)
+      result = anvil.server.call_s("register_user_and_setup", self.registration_data)
       if result.get("success"):
         user_settings_cache["additional_info"] = None
 

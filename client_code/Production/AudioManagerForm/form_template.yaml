@@ -8,7 +8,7 @@ components:
   name: report_footer_1
   properties: {}
   type: form:Components.ReportFooter
-- event_bindings: {x_clear_recording: audio_playback_1_x_clear_recording}
+- event_bindings: {}
   layout_properties: {slot: playback_slot}
   name: audio_playback_1
   properties: {}
@@ -19,7 +19,7 @@ components:
   type: form:Components.TextEditor
 - data_bindings:
   - {code: '', property: item, writeback: false}
-  event_bindings: {recording_complete: recording_widget_recording_complete}
+  event_bindings: {}
   layout_properties: {slot: recorder_slot}
   name: recording_widget
   properties: {}

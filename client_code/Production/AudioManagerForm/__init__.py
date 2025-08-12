@@ -207,7 +207,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     """
     Gets the currently selected language based on the flag emoji
     in the language dropdown.
-    Returns: 'FR' or 'EN'
+    Returns: 'fr' or 'en'
     """
     try:
       language_emoji = self.call_js("getDropdownSelectedValue", "langueDropdown")
@@ -217,8 +217,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
       elif language_emoji == "🇬🇧":
         return "en"
       else:
-        # Default to EN if unknown
-        print(f"[DEBUG] Unknown language emoji: {language_emoji}, defaulting to EN")
+        # Default to en if unknown
+        print(f"[DEBUG] Unknown language emoji: {language_emoji}, defaulting to en")
         return "en"
     except Exception as e:
       print(f"[ERROR] Error getting selected language: {e}")
@@ -288,60 +288,34 @@ class AudioManagerForm(AudioManagerFormTemplate):
       anvil.js.call_js("setAudioWorkflowState", "decision")
       return "ERROR"
 
+    anvil_media_blob = anvil.js.to_media(js_blob_proxy)
+    lang = self.get_selected_language()
+
     try:
-      # --- THE ONLINE PATH ---
-      # We are about to call the server, so NOW we must convert the proxy
-      # into an Anvil Media Object that the server can understand.
-      print(
-        f"AMF PY [LOG 2 - ONLINE]: Converting proxy to Anvil Media Object for server call."
-      )
-      anvil_media_blob = anvil.js.to_media(js_blob_proxy)
-      print(
-        f"AMF PY [LOG 3 - ONLINE]: Conversion successful. Type: {type(anvil_media_blob)}"
-      )
-
-      # Now, proceed with server-side processing using the converted object.
-      transcription = self._transcribe_audio(anvil_media_blob)
-      report_content = self._generate_report_from_transcription(transcription)
-      self._format_and_display_report(report_content)
-
-      print("[DEBUG] process_recording completed successfully (ONLINE).")
+      transcription = self._transcribe_audio(anvil_media_blob, lang)
+      report_content = self._generate_report_from_transcription(transcription, lang)
+      final_html = self._format_report(report_content, lang)
+      self.text_editor_1.html_content = final_html
+      print("[DEBUG] process_recording completed successfully.")
       return "OK"
 
     except anvil.server.AppOfflineError:
-      # --- THE OFFLINE PATH ---
-      # The conversion to anvil.media failed or the app is offline.
-      # The 'anvil_media_blob' was never successfully created.
       print("[DEBUG] AppOfflineError caught. Triggering offline save.")
       alert("Connection lost. Your recording has been saved to the offline queue.")
-
-      # We pass the ORIGINAL, UNCONVERTED js_blob_proxy to the QueueManager.
-      # The component's JavaScript needs this raw proxy, not an Anvil Media Object.
-      print(
-        f"AMF PY [LOG 4 - OFFLINE]: Passing UNCONVERTED JS Blob Proxy to QueueManager."
-      )
       self.queue_manager_1.open_title_modal(js_blob_proxy)
       return "OFFLINE_SAVE"
 
     except Exception as e:
-      # --- THE GENERIC ERROR PATH ---
-      # Any other error occurred. We should still offer to save offline.
       print(f"[ERROR] An exception occurred in process_recording: {e}")
       self.call_js("displayBanner", f"Error: {e}", "error")
       if confirm("An unexpected error occurred. Save to offline queue?"):
-        # We pass the ORIGINAL, UNCONVERTED js_blob_proxy to the QueueManager.
-        print(
-          f"AMF PY [LOG 5 - ERROR]: Passing UNCONVERTED JS Blob Proxy to QueueManager."
-        )
         self.queue_manager_1.open_title_modal(js_blob_proxy)
         return "OFFLINE_SAVE"
       else:
         return "ERROR"
 
-  def _transcribe_audio(self, audio_blob):
+  def _transcribe_audio(self, audio_blob, lang):
     """Helper to handle the transcription step."""
-    lang = self.get_selected_language()
-
     task = anvil.server.call_s("process_audio_whisper", audio_blob, language=lang)
 
     elapsed = 0
@@ -359,20 +333,14 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.raw_transcription = transcription
     return transcription
 
-  def _generate_report_from_transcription(self, transcription):
+  def _generate_report_from_transcription(self, transcription, lang):
     """Helper to handle the report generation step."""
-    lang = self.get_selected_language()
     return anvil.server.call_s("generate_report", transcription, lang)
 
-  def _format_and_display_report(self, report_content):
+  def _format_report(self, report_content, lang):
     """Helper to format and display the final report."""
-    # Get the selected language from the UI.
-    lang = self.get_selected_language()
-
-    # Always call the single, unified 'format_report' function with the language.
     final_html = anvil.server.call_s("format_report", report_content, lang)
-
-    self.text_editor_1.html_content = final_html
+    return final_html
 
   # 1) called for each chunk
   def receive_audio_chunk(self, b64_chunk, index, total, **event_args):

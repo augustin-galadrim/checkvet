@@ -177,8 +177,6 @@ class Settings(SettingsTemplate):
       return False
 
     admin_emails = [
-      "cristobal.navarro@me.com",
-      "biffy071077@gmail.com",
       "augustincramer.galadrim@gmail.com",
     ]
     return user["email"].lower() in admin_emails

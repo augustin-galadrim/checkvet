@@ -10,16 +10,29 @@ import uuid
 @anvil.server.callable
 def read_templates():
   current_user = anvil.users.get_user()
+  if not current_user:
+    return {"templates": [], "default_template_id": None}
 
-  # Fetch the user's default template link
-  default_template_link = current_user["default_template"]
-  default_template_id = default_template_link["id"] if default_template_link else None
+  # --- MODIFIED: Use a try-except block for safety ---
+  default_template_id = None
+  try:
+    # Fetch the user's default template link
+    default_template_link = current_user["default_template"]
+    if default_template_link:
+      # --- MODIFIED: Use the reliable get_id() method ---
+      default_template_id = default_template_link.get_id()
+  except Exception as e:
+    print(
+      f"WARN: Could not retrieve default template for user {current_user['email']}. Error: {e}"
+    )
+    # This can happen if the 'default_template' column doesn't exist or is empty.
 
   # Fetch all templates owned by the user
   templates = app_tables.custom_templates.search(owner=current_user)
 
   result_list = [
-    {"id": t["id"], "name": t["name"], "html": t["html"], "display": t["display"]}
+    # --- MODIFIED: Use t.get_id() for each template in the list ---
+    {"id": t.get_id(), "name": t["name"], "html": t["html"], "display": t["display"]}
     for t in templates
   ]
 
@@ -27,34 +40,17 @@ def read_templates():
   return {"templates": result_list, "default_template_id": default_template_id}
 
 
+# --- The write_template function should also be corrected to use Anvil's ID ---
 @anvil.server.callable
-def write_template(
-  template_id=None,
-  name=None,
-  html=None,
-  display=None,
-):
-  print(
-    f"writing template with the following args : name={name}, html={html}, id={template_id}"
-  )
+def write_template(template_id=None, name=None, html=None, display=None):
   current_user = anvil.users.get_user()
-
   if template_id:
-    print("writing template : entered EDIT mode")
-    template_row = app_tables.custom_templates.get(id=template_id)
-    print(template_row)
+    template_row = app_tables.custom_templates.get_by_id(template_id)
     if not template_row or template_row["owner"] != current_user:
-      raise anvil.server.PermissionDenied(
-        "You do not have permission to edit this template or it does not exist."
-      )
+      raise anvil.server.PermissionDenied("Permission denied.")
   else:
-    # CREATE mode
-    print("writing template : entered CREATE mode")
-    template_row = app_tables.custom_templates.add_row(
-      id=str(uuid.uuid4()), owner=current_user
-    )
+    template_row = app_tables.custom_templates.add_row(owner=current_user)
 
-  # Update the row's properties (works for both edit and create)
   if name is not None:
     template_row["name"] = name
   if html is not None:

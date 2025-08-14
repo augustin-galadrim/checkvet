@@ -33,7 +33,9 @@ class Templates(TemplatesTemplate):
     self.all_templates = template_data.get("templates", [])
     self.default_template_id = template_data.get("default_template_id")
 
-    print(f"Loading {len(self.all_templates)} templates. Default ID: {self.default_template_id}")
+    print(
+      f"Loading {len(self.all_templates)} templates. Default ID: {self.default_template_id}"
+    )
     self.call_js("populateTemplates", self.all_templates, self.default_template_id)
 
   def refresh_session_relay(self, **event_args):
@@ -46,7 +48,6 @@ class Templates(TemplatesTemplate):
 
   def open_template_editor(self, template_id=None, **event_args):
     """
-    *** FIX: Invalidates the cache before navigating to the editor. ***
     This ensures that if a change is made, the cache will be refreshed on return.
     """
 
@@ -96,7 +97,9 @@ class Templates(TemplatesTemplate):
     """
     try:
       # Call the existing server function to update the template's display property
-      success = anvil.server.call("write_template", template_id=template_id, display=new_display_state)
+      success = anvil.server.call(
+        "write_template", template_id=template_id, display=new_display_state
+      )
 
       if success:
         # On success, invalidate the cache and reload the form to show the change
@@ -112,11 +115,11 @@ class Templates(TemplatesTemplate):
     Called from JavaScript to set the user's default template.
     """
     try:
-      success = anvil.server.call('set_default_template', template_id)
+      success = anvil.server.call("set_default_template", template_id)
       if success:
         # Invalidate cache so the new default is fetched next time
-        template_cache_manager.invalidate() 
-        self.form_show() # Refresh the view to show the change immediately
+        template_cache_manager.invalidate()
+        self.form_show()  # Refresh the view to show the change immediately
       else:
         alert("Could not set the default template.")
     except Exception as e:

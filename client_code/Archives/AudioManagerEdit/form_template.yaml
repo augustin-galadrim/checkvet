@@ -9,7 +9,7 @@ components:
   type: form:Components.AudioPlayback
 - layout_properties: {slot: editor_slot}
   name: text_editor_1
-  properties: {}
+  properties: {show_undo_redo_buttons: true}
   type: form:Components.TextEditor
 - event_bindings: {x_save_clicked: report_footer_1_save_clicked, x_status_clicked: report_footer_1_status_clicked}
   layout_properties: {slot: bottom_buttons_slot}

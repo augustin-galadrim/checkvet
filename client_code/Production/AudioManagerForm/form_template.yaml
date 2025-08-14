@@ -15,7 +15,7 @@ components:
   type: form:Components.AudioPlayback
 - layout_properties: {slot: editor_slot}
   name: text_editor_1
-  properties: {}
+  properties: {show_undo_redo_buttons: true}
   type: form:Components.TextEditor
 - data_bindings:
   - {code: '', property: item, writeback: false}

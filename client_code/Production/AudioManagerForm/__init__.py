@@ -163,6 +163,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     self.call_js("rebuildPatientSearchInput")
     self.queue_manager_1.refresh_badge()
+    self.text_editor_1.call_js("initializeEditor")
+
     print("[DEBUG] form_show completed.")
 
   def search_template_relay(self, search_term, **event_args):

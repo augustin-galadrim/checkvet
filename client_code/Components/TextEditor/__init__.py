@@ -11,6 +11,7 @@ class TextEditor(TextEditorTemplate):
     self.redo_stack = []
 
     self.init_components(**properties)
+    print("DEBUG: TextEditor -> Component initialized.")
     self.add_event_handler("show", self.form_show)
 
   # --- Public Properties & Methods ---
@@ -53,6 +54,7 @@ class TextEditor(TextEditorTemplate):
 
   def form_show(self, **event_args):
     """Called when the component is shown. Sets up UI and initial state."""
+    print("DEBUG: TextEditor -> form_show: Event triggered.")
     # Set initial content and button visibility from properties
     self.call_js("setEditorContent", self._html_content or "")
     self._update_button_visibility("styleButtons", self.show_style_buttons)
@@ -65,7 +67,14 @@ class TextEditor(TextEditorTemplate):
     self.undo_stack = [self._html_content or ""]
     self.redo_stack = []
     self._update_undo_redo_buttons()
+
+    # --- FIX & LOGGING ---
+    # Explicitly call the JavaScript initialization function. This is more robust
+    # than relying on the script executing on its own.
+    print("DEBUG: TextEditor -> form_show: Explicitly calling JS function 'initializeEditor'.")
     self.call_js("initializeEditor")
+    # --- END OF FIX & LOGGING ---
+
 
   # --- Internal Undo/Redo Logic ---
 

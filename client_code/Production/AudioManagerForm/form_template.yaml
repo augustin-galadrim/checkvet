@@ -1,4 +1,11 @@
 components:
+- data_bindings:
+  - {code: '', property: item, writeback: false}
+  event_bindings: {}
+  layout_properties: {slot: recorder_slot}
+  name: recording_widget
+  properties: {}
+  type: form:Components.RecordingWidget
 - layout_properties: {slot: time_display_slot}
   name: time_display_1
   properties: {}
@@ -17,13 +24,6 @@ components:
   name: text_editor_1
   properties: {show_undo_redo_buttons: true}
   type: form:Components.TextEditor
-- data_bindings:
-  - {code: '', property: item, writeback: false}
-  event_bindings: {}
-  layout_properties: {slot: recorder_slot}
-  name: recording_widget
-  properties: {}
-  type: form:Components.RecordingWidget
 - layout_properties: {slot: default}
   name: header_nav_1
   properties: {active_tab: Production}
@@ -40,7 +40,947 @@ components:
   type: form:Components.QueueManager
 container:
   properties:
-    html: "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <!-- Responsive for mobile devices -->\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>Audio Management Interface</title>\n\n    <!-- External libraries for iOS compatibility and functionality -->\n    <script src=\"https://www.webrtc-experiment.com/RecordRTC.js\"></script>\n    <script src=\"https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js\"></script>\n\n    <style>\n      /* =====================================================\n      Variables & Basic styles\n      ===================================================== */\n      :root {\n        /*\n        * FIX: Use a CSS variable for footer height to avoid 'magic numbers'.\n        * This makes the layout easier to maintain.\n        */\n        --footer-height: 75px;\n      }\n      * {\n        box-sizing: border-box;\n        font-family: Arial, sans-serif;\n        margin: 0;\n        padding: 0;\n      }\n      body {\n        background-color: #f5f5f5;\n        height: 100vh;\n        overflow: hidden;\n      }\n      .container {\n        display: flex;\n        flex-direction: column;\n        height: 100vh;\n        width: 100%;\n        max-width: 800px;\n        margin: 0 auto;\n        background-color: white;\n        box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n      }\n      /* =====================================================\n      Fixed section (tabs + actions)\n      ===================================================== */\n      .actions-row {\n        display: flex;\n        align-items: center;\n        padding: 15px 20px;\n      }\n      .actions-row > [anvil-slot=\"time_display_slot\"] {\n        margin-left: auto;\n      }\n      /* =====================================================\n      Scrollable content\n      ===================================================== */\n      .scrollable-content {\n        flex: 1;\n        overflow-y: auto;\n        -webkit-overflow-scrolling: touch;\n        /* FIX: Use the variable for bottom padding to avoid overlap with the footer. */\n        padding: 20px 20px var(--footer-height) 20px;\n      }\n\n      /* =====================================================\n      Audio Section\n      ===================================================== */\n      .audio-section {\n        position: relative; /* FIX: Establishes a positioning context for any absolutely positioned children. */\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        /*\n        * FIX: Set a minimum height to prevent layout jumps.\n        * This stabilizes the UI when switching between the recorder, spinner, and playback controls.\n        */\n        min-height: 250px;\n      }\n\n      /* State Containers: One for each step of the workflow */\n      #audioInputContainer,\n      #audioDecisionContainer,\n      #audioProcessingContainer {\n        width: 100%;\n        display: none; /* Hidden by default; JS makes one visible at a time */\n      }\n      #audioDecisionContainer {\n        display: flex; /* Overridden by JS when active */\n        flex-direction: column;\n        align-items: center;\n        gap: 15px;\n      }\n\n      /* --- Slide Toggle for Record/Upload --- */\n      .slide-toggle-container {\n        display: flex;\n        position: relative;\n        width: 320px;\n        margin: 20px auto;\n        background-color: #f0f0f0;\n        border-radius: 25px;\n        padding: 5px;\n        border: 1px solid #ddd;\n      }\n      .toggle-option {\n        flex: 1;\n        text-align: center;\n        padding: 10px 0;\n        cursor: pointer;\n        color: #555;\n        font-weight: 500;\n        z-index: 2; /* Keep text above the slider */\n        transition: color 0.3s ease;\n        user-select: none;\n      }\n      .toggle-option.active {\n        color: #ffffff;\n      }\n      .toggle-slider {\n        position: absolute;\n        top: 5px;\n        left: 5px;\n        height: calc(100% - 10px);\n        width: calc(50% - 5px);\n        background-color: #4CAF50;\n        border-radius: 25px;\n        transition: transform 0.3s ease-in-out;\n        box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n        z-index: 1;\n      }\n      .slide-toggle-container.upload-active .toggle-slider {\n        transform: translateX(100%);\n      }\n\n      /* --- Upload Area Styling --- */\n      .upload-section {\n        margin: 20px auto;\n        max-width: 400px;\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n      }\n      .upload-container {\n        width: 100%;\n        border: 2px dashed #aaa;\n        border-radius: 10px;\n        padding: 20px;\n        text-align: center;\n        background-color: #f8f8f8;\n        transition: all 0.3s ease;\n        cursor: pointer;\n        margin-bottom: 15px;\n      }\n      .upload-container:hover, .upload-container.dragover {\n        border-color: #4CAF50;\n        background-color: #f0f9f0;\n      }\n      .upload-icon {\n        font-size: 40px;\n        color: #666;\n        margin-bottom: 10px;\n      }\n      .upload-text {\n        font-size: 16px;\n        margin-bottom: 5px;\n      }\n      .upload-description {\n        color: #666;\n        font-size: 14px;\n        margin-bottom: 15px;\n      }\n      .upload-button {\n        background-color: #4CAF50;\n        color: white;\n        border: none;\n        padding: 10px 20px;\n        border-radius: 5px;\n        font-size: 16px;\n        cursor: pointer;\n      }\n      #audioFileInput {\n        display: none;\n      }\n\n      /* --- Decision Buttons (Process/Discard) --- */\n      .decision-button {\n        padding: 10px 20px;\n        border-radius: 4px;\n        border: 1px solid #ddd;\n        cursor: pointer;\n        font-size: 14px;\n        font-weight: bold;\n      }\n      .decision-button.process {\n        background-color: #4CAF50;\n        color: white;\n        border-color: #4CAF50;\n      }\n      .decision-button.discard {\n        background-color: #f44336;\n        color: white;\n        border-color: #f44336;\n      }\n\n      /* =====================================================\n      Settings & Parameters Section\n      ===================================================== */\n      .parameters-section {\n        background: white;\n        padding: 20px;\n        border-radius: 8px;\n        margin-bottom: 20px;\n      }\n      .parameter-row {\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        margin-bottom: 15px;\n      }\n      .parameter-row label {\n        font-weight: bold;\n        margin-right: 10px;\n      }\n      .template-select-container .select-button, .dropdown {\n        min-width: 200px;\n        padding: 8px;\n        border: 1px solid #ddd;\n        border-radius: 4px;\n        background: white;\n        cursor: pointer;\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n      }\n\n      /* =====================================================\n      Modals (Patient & Template Selection)\n      ===================================================== */\n      /*\n      * FIX: Consolidated common modal styles and lowered z-index values\n      * to more sensible, maintainable numbers.\n      */\n      .modal {\n        display: none;\n        position: fixed;\n        top: 0; left: 0;\n        width: 100%; height: 100%;\n        background-color: rgba(0, 0, 0, 0.5);\n        z-index: 1000;\n        align-items: center;\n        justify-content: center;\n      }\n      .modal-content {\n        position: relative;\n        background-color: white;\n        padding: 20px;\n        width: 90%;\n        max-width: 500px;\n        border-radius: 8px;\n        box-shadow: 0 4px 10px rgba(0,0,0,0.2);\n      }\n      .modal-header {\n        font-size: 18px;\n        font-weight: bold;\n        margin-bottom: 15px;\n      }\n      .modal-footer {\n        display: flex;\n        justify-content: flex-end;\n        gap: 10px;\n        margin-top: 20px;\n      }\n      .search-container {\n        position: relative;\n        margin-bottom: 20px;\n      }\n      .search-icon {\n        position: absolute;\n        left: 12px;\n        top: 50%;\n        transform: translateY(-50%);\n        width: 16px; height: 16px;\n        color: #666;\n      }\n      .search-input {\n        width: 100%;\n        padding: 8px 12px 8px 36px;\n        border: 1px solid #ddd;\n        border-radius: 6px;\n        font-size: 14px;\n      }\n      .new-patient-btn, .patient-item, .template-item {\n        display: block;\n        width: 100%;\n        padding: 8px 12px;\n        background: none;\n        border: none;\n        border-radius: 6px;\n        text-align: left;\n        cursor: pointer;\n        font-size: 14px;\n      }\n      .patient-item:hover, .template-item:hover {\n        background-color: #f3f4f6;\n      }\n      .patients-list, .templates-list {\n        max-height: 300px;\n        overflow-y: auto;\n      }\n      .close-button {\n        position: absolute;\n        top: 15px; right: 15px;\n        background: none;\n        border: none;\n        cursor: pointer;\n        padding: 5px;\n        color: #666;\n      }\n      .divider {\n        height: 1px;\n        background-color: #ddd;\n        margin: 15px 0;\n      }\n\n      /* =====================================================\n      Banners (temporary messages)\n      ===================================================== */\n      #bannerContainer {\n        position: fixed;\n        top: 20px;\n        left: 50%;\n        transform: translateX(-50%);\n        z-index: 2000; /* Higher than modals */\n        width: 90%;\n        max-width: 400px;\n      }\n      .banner {\n        margin-bottom: 10px;\n        padding: 10px 20px;\n        border-radius: 4px;\n        color: #fff;\n        text-align: center;\n      }\n      .banner-success { background-color: #4caf50; }\n      .banner-error { background-color: #f44336; }\n\n      /* =====================================================\n      Responsive design (mobile)\n      ===================================================== */\n      @media (max-width: 800px) {\n        .container {\n          height: 100vh;\n        }\n        .actions-row {\n          padding: 10px 15px;\n        }\n        /* Improve touch targets on iOS devices */\n        @supports (-webkit-touch-callout: none) {\n          .upload-button, .decision-button {\n            padding: 12px 20px;\n            min-height: 44px; /* Apple's recommended minimum */\n            font-size: 16px;\n          }\n        }\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"container\">\n      <!-- Fixed section: Tabs + Actions -->\n      <div class=\"fixed-section\">\n        <div anvil-slot=\"default\"></div>\n        <div class=\"actions-row\">\n          <div anvil-slot=\"queue\"></div>\n          <div anvil-slot=\"time_display_slot\"></div>\n        </div>\n      </div>\n\n      <!-- Scrollable content -->\n      <div class=\"scrollable-content\">\n        <!-- Settings Section -->\n        <div class=\"parameters-section\">\n          <div class=\"parameter-row\">\n            <label id=\"label_template\">Template</label>\n            <div class=\"template-select-container\">\n              <button class=\"select-button\" id=\"templateSelectBtn\">\n                <span id=\"select_template_placeholder\">Select a template</span>\n                <span>▼</span>\n              </button>\n            </div>\n          </div>\n          <div class=\"parameter-row\">\n            <label id=\"label_language\">Language</label>\n            <div class=\"dropdown\" id=\"langueDropdown\">\n              <span>🇬🇧</span>\n              <span class=\"arrow\">▼</span>\n              <div class=\"dropdown-menu\">\n                <div data-value=\"🇫🇷\">🇫🇷</div>\n                <div data-value=\"🇬🇧\">🇬🇧</div>\n              </div>\n            </div>\n          </div>\n        </div>\n        <!-- Audio Section (Playback + Recording) -->\n        <!-- ADD THIS NEW BLOCK IN ITS PLACE -->\n        <div class=\"audio-section\">\n\n          <!-- Container for the initial input state -->\n          <div id=\"audioInputContainer\">\n            <!-- Mode toggle -->\n            <div class=\"slide-toggle-container\">\n              <div class=\"toggle-option active\" id=\"recordToggle\">Record</div>\n              <div class=\"toggle-option\" id=\"uploadToggle\">Upload</div>\n              <div class=\"toggle-slider\"></div>\n            </div>\n\n            <!-- Recording Mode -->\n            <div class=\"recording-controls\" id=\"recordingMode\">\n              <div anvil-slot=\"recorder_slot\"></div>\n            </div>\n\n            <!-- Upload Mode -->\n            <div class=\"upload-section\" id=\"uploadMode\" style=\"display: none;\">\n              <div class=\"upload-container\" id=\"dropZone\">\n                <div class=\"upload-icon\">📋</div>\n                <div class=\"upload-text\" id=\"upload_text_drop\">Drop your voice memo here</div>\n                <div class=\"upload-description\" id=\"upload_description_select\">or click to select a file</div>\n                <input type=\"file\" id=\"audioFileInput\" accept=\"audio/*,.m4a,.caf\">\n                <label for=\"audioFileInput\" class=\"upload-button\" id=\"upload_button_select\">Select file</label>\n              </div>\n              <div class=\"ios-instructions\" style=\"display: none;\"> <!-- Hidden by default -->\n                <h4>For iPhone users:</h4>\n                <p>To use your voice memos:</p>\n                <ol>\n                  <li>Open the <strong>Files</strong> app on your iPhone.</li>\n                  <li>Locate the voice memo (e.g., in <strong>On My iPhone > Voice Memos</strong>).</li>\n                  <li>Tap and hold the file, choose <strong>Share</strong>, then <strong>Save to Files</strong>.</li>\n                  <li>Save it to an accessible location like <strong>iCloud Drive</strong>.</li>\n                  <li>Return here and use the <strong>\"Select file\"</strong> button.</li>\n                </ol>\n              </div>\n            </div>\n          </div>\n\n          <!-- Container for the decision state (Process/Discard) -->\n          <div id=\"audioDecisionContainer\" style=\"display: none;\">\n            <div anvil-slot=\"playback_slot\"></div>\n            <div class=\"decision-buttons\">\n              <button id=\"discardAudioBtn\" class=\"decision-button discard\">Discard Audio</button>\n              <button id=\"processAudioBtn\" class=\"decision-button process\">Process Audio</button>\n            </div>\n          </div>\n          <div id=\"audioProcessingContainer\" style=\"display: none;\">\n            <div anvil-slot=\"feedback_slot\"></div>\n          </div>\n        </div>\n\n        <!-- Editor Section -->\n        <div anvil-slot=\"editor_slot\"></div>\n\n        <!-- Stable anchor for Python calls that might occur when other elements are hidden -->\n        <div id=\"stableAnchor\" style=\"display:none;\"></div>\n      </div>\n\n      <!-- Bottom buttons -->\n      <div anvil-slot=\"bottom_buttons_slot\"></div>\n    </div>\n\n    <!-- Modals -->\n    <div class=\"patient-select-container\">\n      <div class=\"modal\" id=\"patientModal\">\n        <div class=\"modal-content\">\n          <button class=\"close-button\" id=\"closePatientModalBtn\">✕</button>\n          <div class=\"modal-header\">\n            <h3 class=\"modal-title\" id=\"select_patient_title\">Select a patient</h3>\n            <div class=\"search-container\">\n              <svg class=\"search-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\">\n                <circle cx=\"11\" cy=\"11\" r=\"8\"></circle><line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\"></line>\n              </svg>\n              <div id=\"patientSearchHolder\">\n                <input type=\"text\" class=\"search-input\" placeholder=\"Search for a patient...\" id=\"searchInput\">\n              </div>\n            </div>\n          </div>\n          <button class=\"new-patient-btn\" id=\"newPatientBtn\">\n            <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\">\n              <path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"></path><circle cx=\"9\" cy=\"7\" r=\"4\"></circle><line x1=\"19\" y1=\"8\" x2=\"19\" y2=\"14\"></line><line x1=\"16\" y1=\"11\" x2=\"22\" y2=\"11\"></line>\n            </svg>\n            New patient\n          </button>\n          <div class=\"divider\"></div>\n          <div class=\"patients-list\" id=\"patientsList\"></div>\n        </div>\n      </div>\n    </div>\n    <div class=\"template-select-container\">\n      <div class=\"modal\" id=\"templateModal\">\n        <div class=\"modal-content\">\n          <button class=\"close-button\" id=\"closeTemplateModalBtn\">✕</button>\n          <div class=\"modal-header\">\n            <h3 class=\"modal-title\" id=\"select_template_title\">Select a template</h3>\n            <div class=\"search-container\">\n              <svg class=\"search-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\">\n                <circle cx=\"11\" cy=\"11\" r=\"8\"></circle><line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\"></line>\n              </svg>\n              <input type=\"text\" class=\"search-input\" placeholder=\"Search for a template...\" id=\"templateSearchInput\">\n            </div>\n          </div>\n          <div class=\"templates-list\" id=\"templatesList\"></div>\n        </div>\n      </div>\n    </div>\n    <div id=\"bannerContainer\"></div>\n\n    <!-- Main script (JS) -->\n    <script>\n      // ===========================================================================================\n      // JAVASCRIPT FOR AUDIO MANAGEMENT INTERFACE\n      // ===========================================================================================\n\n      // --------------------------------------------------------------------------------------------\n      // SECTION 1: PYTHON-CALLABLE FUNCTIONS\n      // --------------------------------------------------------------------------------------------\n      window.setLanguageDropdown = function(langCode) {\n        const dropdown = document.getElementById('langueDropdown');\n        if (!dropdown) return;\n        const displaySpan = dropdown.querySelector('span:first-child');\n        if (!displaySpan) return;\n\n        if (langCode === 'FR') {\n          displaySpan.textContent = '🇫🇷';\n        } else { // Default to EN\n          displaySpan.textContent = '🇬🇧';\n        }\n      };\n\n      window.setElementText = function(elementId, newText) {\n        const element = document.getElementById(elementId);\n        if (!element) return;\n        const targetSpan = element.querySelector('span');\n        if (targetSpan && element.children.length > 0 && !targetSpan.classList.contains('arrow')) {\n          targetSpan.textContent = newText;\n        } else {\n          element.textContent = newText;\n        }\n      };\n\n      window.setPlaceholderById = function(elementId, newText) {\n        const element = document.getElementById(elementId);\n        if (element) {\n          element.placeholder = newText;\n        }\n      };\n\n      window.getDropdownSelectedValue = function(dropdownId) {\n        const dropdown = document.getElementById(dropdownId);\n        if (!dropdown) return \"\";\n        if (dropdownId === \"templateSelectBtn\" && dropdown.dataset.templateName) {\n          return dropdown.dataset.templateName;\n        }\n        const spanElem = dropdown.querySelector(\"span:first-child\");\n        return spanElem ? spanElem.textContent.trim() : \"\";\n      };\n\n      window.displayBanner = function(message, type) {\n        const bannerContainer = document.getElementById('bannerContainer');\n        if (!bannerContainer) return;\n        const banner = document.createElement('div');\n        banner.className = 'banner ' + (type === 'success' ? 'banner-success' : 'banner-error');\n        banner.textContent = message;\n        bannerContainer.appendChild(banner);\n        setTimeout(() => {\n          banner.style.opacity = '0';\n          setTimeout(() => banner.remove(), 300);\n        }, 3000);\n      };\n\n      window.rebuildPatientSearchInput = function() {\n        const searchHolder = document.getElementById(\"patientSearchHolder\");\n        if (searchHolder) {\n          const newInput = document.createElement(\"input\");\n          newInput.type = \"text\";\n          newInput.className = \"search-input\";\n          newInput.id = \"searchInput\";\n          newInput.placeholder = \"Search for a patient...\";\n          newInput.addEventListener('input', () => window.searchPatientsInModal(newInput.value));\n          searchHolder.innerHTML = \"\";\n          searchHolder.appendChild(newInput);\n        }\n      };\n\n      window.populateTemplateModal = function(templates) {\n        templates.sort((a, b) => a.name.localeCompare(b.name));\n        window.templatesData = templates;\n        let defaultTemplate = templates[0];\n        if (defaultTemplate) {\n          window.selectTemplate(defaultTemplate, false);\n        }\n        window.renderTemplates(templates);\n      };\n\n      // --------------------------------------------------------------------------------------------\n      // GOLDEN RULE 1: DEFINE GLOBAL VARIABLES AND HELPERS ONLY ONCE\n      // --------------------------------------------------------------------------------------------\n      if (!window.__my_audio_manager_globals) {\n        window.__my_audio_manager_globals = true;\n\n        window.isIOS = function() {\n          const isStandardIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;\n          const isIPadOnIOS13 = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);\n          return isStandardIOS || isIPadOnIOS13;\n        };\n\n        window.toggleMode = (mode) => {\n          const recMode = document.getElementById('recordingMode');\n          const upMode = document.getElementById('uploadMode');\n          const toggleContainer = document.querySelector('.slide-toggle-container');\n          const recordToggle = document.getElementById('recordToggle');\n          const uploadToggle = document.getElementById('uploadToggle');\n\n          const isRecord = mode === 'record';\n\n          if(recMode) recMode.style.display = isRecord ? 'block' : 'none';\n          if(upMode) upMode.style.display = isRecord ? 'none' : 'block';\n\n          if (toggleContainer) {\n            if (isRecord) {\n              toggleContainer.classList.remove('upload-active');\n              recordToggle.classList.add('active');\n              uploadToggle.classList.remove('active');\n            } else {\n              toggleContainer.classList.add('upload-active');\n              recordToggle.classList.remove('active');\n              uploadToggle.classList.add('active');\n            }\n          }\n        };\n\n        window.setAudioWorkflowState = (state) => {\n          const inputContainer = document.getElementById('audioInputContainer');\n          const decisionContainer = document.getElementById('audioDecisionContainer');\n          const processingContainer = document.getElementById('audioProcessingContainer'); // Get the new container\n\n          // Hide all containers by default\n          if(inputContainer) inputContainer.style.display = 'none';\n          if(decisionContainer) decisionContainer.style.display = 'none';\n          if(processingContainer) processingContainer.style.display = 'none';\n\n          // Show the correct container based on the state\n          if (state === 'decision') {\n            if(decisionContainer) decisionContainer.style.display = 'flex';\n          } else if (state === 'processing') {\n            if(processingContainer) processingContainer.style.display = 'block';\n          } else { // 'input' state by default\n            if(inputContainer) inputContainer.style.display = 'block';\n          }\n        };;\n\n        window.handleFileSelect = (event) => {\n          const file = event.dataTransfer ? event.dataTransfer.files[0] : event.target.files[0];\n          if (!file) return;\n          if (!file.type.startsWith('audio/') && !/\\\\.(m4a|caf|mp3|aac|wav)$/i.test(file.name)) {\n            return alert('Please select a valid audio file.');\n          }\n          const stableAnchor = document.getElementById('stableAnchor');\n          anvil.call(stableAnchor, 'process_uploaded_audio', file);\n        };\n\n          window.openModal = (id) => { document.getElementById(id).style.display = 'block'; };\n          window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };\n\n          window.renderTemplates = (templates) => {\n          const list = document.getElementById('templatesList');\n          if (!list) return;\n          list.innerHTML = '';\n          templates.forEach(t => {\n          const button = document.createElement('button');\n          button.className = 'template-item';\n          button.innerHTML = `<span>${t.name}</span>`;\n          button.addEventListener('click', () => window.selectTemplate(t));\n          list.appendChild(button);\n        });\n        };\n\n          window.selectTemplate = (template, closeModal = true) => {\n          window.selectedTemplate = template;\n          const btn = document.getElementById('templateSelectBtn');\n          if (btn) {\n          btn.dataset.templateId = template.id;\n          btn.dataset.templateName = template.name; \n          const display = btn.querySelector('span:first-child');\n          if(display) display.textContent = template.name;\n        }\n          window.setEditorContent(template.display ? template.html : '');\n          if(closeModal) window.closeModal('templateModal');\n        };\n\n          window.searchPatientsInModal = (term) => {\n          anvil.call(document.getElementById('stableAnchor'), 'search_patients_relay', term)\n          .then(patients => {\n          const list = document.getElementById('patientsList');\n          if(list) {\n          list.innerHTML = '';\n          patients.forEach(p => {\n          const btn = document.createElement('button');\n          btn.className = 'patient-item';\n          btn.textContent = p.name;\n          btn.onclick = () => window.selectPatientForSave(p); // Pass the whole patient object\n          list.appendChild(btn);\n        });\n        }\n        });\n        };\n\n          window.selectPatientForSave = (patientData) => {\n          window.selectedPatient = patientData;\n          window.closeModal('patientModal');\n          window.continueSave();\n        };\n\n          window.openPatientModalForSave = (currentContent) => {\n          window._saveContentData = { \n          content: currentContent, \n          images: []\n        };\n          window.openModal('patientModal');\n          window.rebuildPatientSearchInput();\n          window.searchPatientsInModal('');\n        };\n\n          window.continueSave = () => {\n          const content = window._saveContentData.content;\n          const images = window._saveContentData.images;\n          anvil.call(document.getElementById('stableAnchor'), 'save_report', JSON.stringify({ content }), images, window.selectedPatient)\n          .then(ok => {\n          if (ok) {\n          window.displayBanner(\"Report saved.\", 'success');\n        } else {\n          window.displayBanner(\"Save failed.\", 'error');\n        }\n        });\n        };\n\n          // --------------------------------------------------------------------------------------------\n          // GOLDEN RULE 2: ALWAYS ATTACH EVENT LISTENERS IN A DEDICATED FUNCTION\n          // --------------------------------------------------------------------------------------------\n          window.attachEvents = function() {\n          const reattach = (id, event, handler) => {\n          const el = document.getElementById(id);\n          if(el) {\n          const newEl = el.cloneNode(true);\n          el.parentNode.replaceChild(newEl, el);\n          newEl.addEventListener(event, handler);\n        }\n        };\n\n\n            reattach('recordToggle', 'click', () => window.toggleMode('record'));\n            reattach('uploadToggle', 'click', () => window.toggleMode('upload'));\n\n          const dropZone = document.getElementById('dropZone');\n          if (dropZone) {\n          const newZone = dropZone.cloneNode(true);\n          dropZone.parentNode.replaceChild(newZone, dropZone);\n          newZone.addEventListener('dragover', e => { e.preventDefault(); newZone.classList.add('dragover'); });\n          newZone.addEventListener('dragleave', () => newZone.classList.remove('dragover'));\n          newZone.addEventListener('drop', e => { e.preventDefault(); newZone.classList.remove('dragover'); window.handleFileSelect(e); });\n          newZone.addEventListener('click', e => { if (!e.target.closest('label')) newZone.querySelector('#audioFileInput').click(); });\n          newZone.querySelector('#audioFileInput').addEventListener('change', window.handleFileSelect);\n        }\n\n          reattach('discardAudioBtn', 'click', (e) => {\n          const stableAnchor = document.getElementById('stableAnchor');\n          anvil.call(stableAnchor, 'clear_recording_handler');\n        });\n\n          reattach('processAudioBtn', 'click', (e) => {\n          const stableAnchor = document.getElementById('stableAnchor');\n          anvil.call(stableAnchor, 'prepare_ui_for_processing')\n          .then(() => anvil.call(stableAnchor, 'process_recording'));\n        });\n\n          reattach('templateSelectBtn', 'click', () => window.openModal('templateModal'));\n\n          const langDropdown = document.getElementById('langueDropdown');\n          if(langDropdown) {\n          const newDd = langDropdown.cloneNode(true);\n          langDropdown.parentNode.replaceChild(newDd, langDropdown);\n          newDd.addEventListener('click', e => { if(!e.target.closest('.dropdown-menu')) newDd.querySelector('.dropdown-menu').classList.toggle('active'); });\n          newDd.querySelectorAll('.dropdown-menu div').forEach(item => {\n          item.addEventListener('click', e => {\n          e.stopPropagation();\n          newDd.querySelector('span:first-child').textContent = item.dataset.value;\n          newDd.querySelector('.dropdown-menu').classList.remove('active');\n        });\n        });\n        }\n\n          reattach('closePatientModalBtn', 'click', () => window.closeModal('patientModal'));\n          reattach('newPatientBtn', 'click', () => {\n          anvil.call(document.getElementById('stableAnchor'), 'get_new_patient_details').then(details => {\n          if (details) {\n          const patientData = {\n          unique_id: null,\n          name: details.name,\n          details: {\n          type: details.type,\n          proprietaire: details.proprietaire\n        }\n        };\n          window.selectPatientForSave(patientData);\n        }\n        });\n        });\n          reattach('closeTemplateModalBtn', 'click', () => window.closeModal('templateModal'));\n          reattach('templateSearchInput', 'input', e => anvil.call(document.getElementById('stableAnchor'), 'search_template_relay', e.target.value).then(window.renderTemplates));\n\n          window.setAudioWorkflowState('input');\n        };\n        }\n\n          // --------------------------------------------------------------------------------------------\n          // GOLDEN RULE 3: IMMEDIATELY ATTACH EVERYTHING\n          // --------------------------------------------------------------------------------------------\n          window.attachEvents();\n          </script>\n  </body>\n</html>"
+    html: |-
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <!-- Responsive for mobile devices -->
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+          <title>Audio Management Interface</title>
+
+          <!-- External libraries for iOS compatibility and functionality -->
+          <script src="https://www.webrtc-experiment.com/RecordRTC.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
+
+          <style>
+            /* =====================================================
+            Variables & Basic styles
+            ===================================================== */
+            :root {
+              /*
+              * FIX: Use a CSS variable for footer height to avoid 'magic numbers'.
+              * This makes the layout easier to maintain.
+              */
+              --footer-height: 75px;
+            }
+            * {
+              box-sizing: border-box;
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              background-color: #f5f5f5;
+              height: 100vh;
+              overflow: hidden;
+            }
+            .container {
+              display: flex;
+              flex-direction: column;
+              height: 100vh;
+              width: 100%;
+              max-width: 800px;
+              margin: 0 auto;
+              background-color: white;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            /* =====================================================
+            Fixed section (tabs + actions)
+            ===================================================== */
+            .actions-row {
+              display: flex;
+              align-items: center;
+              padding: 15px 20px;
+            }
+            .actions-row > [anvil-slot="time_display_slot"] {
+              margin-left: auto;
+            }
+            /* =====================================================
+            Scrollable content
+            ===================================================== */
+            .scrollable-content {
+              flex: 1;
+              overflow-y: auto;
+              -webkit-overflow-scrolling: touch;
+              /* FIX: Use the variable for bottom padding to avoid overlap with the footer. */
+              padding: 20px 20px var(--footer-height) 20px;
+            }
+
+            /* =====================================================
+            Audio Section
+            ===================================================== */
+            .audio-section {
+              /* UPDATED: Reduced vertical padding. */
+              padding: 5px 0;
+              width: 100%;
+            }
+
+            /* --- ADDED: Style for the recording controls container --- */
+            /* This ensures the microphone has proper spacing and isn't crammed at the top. */
+            .recording-controls {
+              padding: 20px 0;
+            }
+
+            /* State Containers: One for each step of the workflow */
+            #audioInputContainer,
+            #audioDecisionContainer,
+            #audioProcessingContainer {
+              width: 100%;
+              display: none; /* Hidden by default; JS makes one visible at a time */
+            }
+            #audioDecisionContainer {
+              display: flex; /* Overridden by JS when active */
+              flex-direction: column;
+              align-items: center;
+              gap: 15px;
+            }
+            .slide-toggle-container {
+              display: flex;
+              position: relative;
+              width: 320px;
+              /* UPDATED: Reduced top and bottom margin to bring it closer to other elements. */
+              margin: 10px auto;
+              background-color: #f0f0f0;
+              border-radius: 25px;
+              padding: 5px;
+              border: 1px solid #ddd;
+            }
+            .toggle-option {
+              flex: 1;
+              text-align: center;
+              padding: 10px 0;
+              cursor: pointer;
+              color: #555;
+              font-weight: 500;
+              z-index: 2; /* Keep text above the slider */
+              transition: color 0.3s ease;
+              user-select: none;
+            }
+            .toggle-option.active {
+              color: #ffffff;
+            }
+            .toggle-slider {
+              position: absolute;
+              top: 5px;
+              left: 5px;
+              height: calc(100% - 10px);
+              width: calc(50% - 5px);
+              background-color: #4CAF50;
+              border-radius: 25px;
+              transition: transform 0.3s ease-in-out;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              z-index: 1;
+            }
+            .slide-toggle-container.upload-active .toggle-slider {
+              transform: translateX(100%);
+            }
+
+            /* --- Upload Area Styling --- */
+            .upload-section {
+              max-width: 400px;
+              margin: 0 auto; /* Keep it centered horizontally */
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .upload-container {
+              width: 100%;
+              border: 2px dashed #aaa;
+              border-radius: 10px;
+              padding: 20px;
+              text-align: center;
+              background-color: #f8f8f8;
+              transition: all 0.3s ease;
+              cursor: pointer;
+              margin-bottom: 15px;
+            }
+            .upload-container:hover, .upload-container.dragover {
+              border-color: #4CAF50;
+              background-color: #f0f9f0;
+            }
+            .upload-icon {
+              font-size: 40px;
+              color: #666;
+              margin-bottom: 10px;
+            }
+            .upload-text {
+              font-size: 16px;
+              margin-bottom: 5px;
+            }
+            .upload-description {
+              color: #666;
+              font-size: 14px;
+              margin-bottom: 15px;
+            }
+            .upload-button {
+              background-color: #4CAF50;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 5px;
+              font-size: 16px;
+              cursor: pointer;
+            }
+            #audioFileInput {
+              display: none;
+            }
+
+            /* --- Decision Buttons (Process/Discard) --- */
+            .decision-button {
+              padding: 10px 20px;
+              border-radius: 4px;
+              border: 1px solid #ddd;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: bold;
+            }
+            .decision-button.process {
+              background-color: #4CAF50;
+              color: white;
+              border-color: #4CAF50;
+            }
+            .decision-button.discard {
+              background-color: #f44336;
+              color: white;
+              border-color: #f44336;
+            }
+
+            /* =====================================================
+            Settings & Parameters Section
+            ===================================================== */
+            .parameters-section {
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              /* UPDATED: Removed the bottom margin to tighten the layout. */
+              margin-bottom: 0;
+            }
+            .parameter-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 15px;
+            }
+            .parameter-row label {
+              font-weight: bold;
+              margin-right: 10px;
+            }
+            .template-select-container .select-button, .dropdown {
+              min-width: 200px;
+              padding: 8px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              background: white;
+              cursor: pointer;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+
+            .dropdown {
+              position: relative; /* Required for absolute positioning of the menu */
+            }
+
+            .dropdown-menu {
+              display: none; /* Hidden by default */
+              position: absolute;
+              top: 100%;
+              left: 0;
+              background-color: white;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+              z-index: 100;
+              min-width: 100%;
+            }
+
+            .dropdown-menu.active {
+              display: block; /* Show the menu when active */
+            }
+
+            .dropdown-menu div {
+              padding: 10px;
+              cursor: pointer;
+            }
+
+            .dropdown-menu div:hover {
+              background-color: #f5f5f5;
+            }
+
+            /* =====================================================
+            Modals (Patient & Template Selection)
+            ===================================================== */
+            /*
+            * FIX: Consolidated common modal styles and lowered z-index values
+            * to more sensible, maintainable numbers.
+            */
+            .modal {
+              display: none; /* Hidden by default */
+              position: fixed;
+              z-index: 1000; /* Base layer for modals */
+              left: 0;
+              top: 0;
+              width: 100%;
+              height: 100%;
+              background-color: rgba(0,0,0,0.5);
+              align-items: center;
+              justify-content: center;
+            }
+            #newPatientEntryModal {
+              z-index: 1001; /* Ensure this modal appears on top of the patient list modal */
+            }
+
+            .modal-content {
+              position: relative;
+              background-color: white;
+              padding: 20px;
+              width: 90%;
+              max-width: 500px;
+              border-radius: 8px;
+              box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            }
+            .modal-header {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 15px;
+            }
+            .modal-footer {
+              display: flex;
+              justify-content: flex-end;
+              gap: 10px;
+              margin-top: 20px;
+            }
+            .search-container {
+              position: relative;
+              margin-bottom: 20px;
+            }
+            .search-icon {
+              position: absolute;
+              left: 12px;
+              top: 50%;
+              transform: translateY(-50%);
+              width: 16px; height: 16px;
+              color: #666;
+            }
+            .search-input {
+              width: 100%;
+              padding: 8px 12px 8px 36px;
+              border: 1px solid #ddd;
+              border-radius: 6px;
+              font-size: 14px;
+            }
+            .new-patient-btn, .patient-item, .template-item {
+              display: block;
+              width: 100%;
+              padding: 8px 12px;
+              background: none;
+              border: none;
+              border-radius: 6px;
+              text-align: left;
+              cursor: pointer;
+              font-size: 14px;
+            }
+            .patient-item:hover, .template-item:hover {
+              background-color: #f3f4f6;
+            }
+            .patients-list, .templates-list {
+              max-height: 300px;
+              overflow-y: auto;
+            }
+            .close-button {
+              position: absolute;
+              top: 15px; right: 15px;
+              background: none;
+              border: none;
+              cursor: pointer;
+              padding: 5px;
+              color: #666;
+            }
+            .divider {
+              height: 1px;
+              background-color: #ddd;
+              margin: 15px 0;
+            }
+
+            /* =====================================================
+            Banners (temporary messages)
+            ===================================================== */
+            #bannerContainer {
+              position: fixed;
+              top: 20px;
+              left: 50%;
+              transform: translateX(-50%);
+              z-index: 2000; /* Higher than modals */
+              width: 90%;
+              max-width: 400px;
+            }
+            .banner {
+              margin-bottom: 10px;
+              padding: 10px 20px;
+              border-radius: 4px;
+              color: #fff;
+              text-align: center;
+            }
+            .banner-success { background-color: #4caf50; }
+            .banner-error { background-color: #f44336; }
+
+            /* =====================================================
+            Responsive design (mobile)
+            ===================================================== */
+            @media (max-width: 800px) {
+              .container {
+                height: 100vh;
+              }
+              .actions-row {
+                padding: 10px 15px;
+              }
+              /* Improve touch targets on iOS devices */
+              @supports (-webkit-touch-callout: none) {
+                .upload-button, .decision-button {
+                  padding: 12px 20px;
+                  min-height: 44px; /* Apple's recommended minimum */
+                  font-size: 16px;
+                }
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <!-- Fixed section: Tabs + Actions -->
+            <div class="fixed-section">
+              <div anvil-slot="default"></div>
+              <div class="actions-row">
+                <div anvil-slot="queue"></div>
+                <div anvil-slot="time_display_slot"></div>
+              </div>
+            </div>
+
+            <!-- Scrollable content -->
+            <div class="scrollable-content">
+              <!-- Settings Section -->
+              <div class="parameters-section">
+                <div class="parameter-row">
+                  <label id="label_template">Template</label>
+                  <div class="template-select-container">
+                    <button class="select-button" id="templateSelectBtn">
+                      <span id="select_template_placeholder">Select a template</span>
+                      <span>▼</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="parameter-row">
+                  <label id="label_language">Language</label>
+                  <div class="dropdown" id="langueDropdown">
+                    <span>🇬🇧</span>
+                    <span class="arrow">▼</span>
+                    <div class="dropdown-menu">
+                      <div data-value="🇫🇷">🇫🇷</div>
+                      <div data-value="🇬🇧">🇬🇧</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Audio Section (Playback + Recording) -->
+              <!-- ADD THIS NEW BLOCK IN ITS PLACE -->
+              <div class="audio-section">
+
+                <!-- Container for the initial input state -->
+                <div id="audioInputContainer">
+                  <!-- Mode toggle -->
+                  <div class="slide-toggle-container">
+                    <div class="toggle-option active" id="recordToggle">Record</div>
+                    <div class="toggle-option" id="uploadToggle">Upload</div>
+                    <div class="toggle-slider"></div>
+                  </div>
+
+                  <!-- Recording Mode -->
+                  <div class="recording-controls" id="recordingMode">
+                    <div anvil-slot="recorder_slot"></div>
+                  </div>
+
+                  <!-- Upload Mode -->
+                  <div class="upload-section" id="uploadMode" style="display: none;">
+                    <div class="upload-container" id="dropZone">
+                      <div class="upload-icon">📋</div>
+                      <div class="upload-text" id="upload_text_drop">Drop your voice memo here</div>
+                      <div class="upload-description" id="upload_description_select">or click to select a file</div>
+                      <input type="file" id="audioFileInput" accept="audio/*,.m4a,.caf">
+                      <label for="audioFileInput" class="upload-button" id="upload_button_select">Select file</label>
+                    </div>
+                    <div class="ios-instructions" style="display: none;"> <!-- Hidden by default -->
+                      <h4>For iPhone users:</h4>
+                      <p>To use your voice memos:</p>
+                      <ol>
+                        <li>Open the <strong>Files</strong> app on your iPhone.</li>
+                        <li>Locate the voice memo (e.g., in <strong>On My iPhone > Voice Memos</strong>).</li>
+                        <li>Tap and hold the file, choose <strong>Share</strong>, then <strong>Save to Files</strong>.</li>
+                        <li>Save it to an accessible location like <strong>iCloud Drive</strong>.</li>
+                        <li>Return here and use the <strong>"Select file"</strong> button.</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Container for the decision state (Process/Discard) -->
+                <div id="audioDecisionContainer" style="display: none;">
+                  <div anvil-slot="playback_slot"></div>
+                  <div class="decision-buttons">
+                    <button id="discardAudioBtn" class="decision-button discard">Discard Audio</button>
+                    <button id="processAudioBtn" class="decision-button process">Process Audio</button>
+                  </div>
+                </div>
+                <div id="audioProcessingContainer" style="display: none;">
+                  <div anvil-slot="feedback_slot"></div>
+                </div>
+              </div>
+
+              <!-- Editor Section -->
+              <div anvil-slot="editor_slot"></div>
+
+              <!-- Stable anchor for Python calls that might occur when other elements are hidden -->
+              <div id="stableAnchor" style="display:none;"></div>
+            </div>
+
+            <!-- Bottom buttons -->
+            <div anvil-slot="bottom_buttons_slot"></div>
+          </div>
+
+          <!-- Modals -->
+          <div class="modal" id="newPatientEntryModal" style="display: none;">
+            <div class="modal-content">
+              <button class="close-button" id="closeNewPatientModalBtn">✕</button>
+              <div class="modal-header">
+                <h3 class="modal-title">Create New Patient</h3>
+              </div>
+              <div class="form-group">
+                <label for="new-patient-name">Name</label>
+                <input type="text" id="new-patient-name" class="search-input" placeholder="e.g., Fido">
+              </div>
+              <div class="form-group">
+                <label for="new-patient-type">Species</label>
+                <input type="text" id="new-patient-type" class="search-input" placeholder="e.g., Canine">
+              </div>
+              <div class="form-group">
+                <label for="new-patient-owner">Owner</label>
+                <input type="text" id="new-patient-owner" class="search-input" placeholder="e.g., Jane Doe">
+              </div>
+              <div class="modal-footer">
+                <button class="button" id="cancelNewPatientBtn">Cancel</button>
+                <button class="button button-primary" id="saveNewPatientBtn">Create and Select</button>
+              </div>
+            </div>
+          </div>
+          <div class="patient-select-container">
+            <div class="modal" id="patientModal">
+              <div class="modal-content">
+                <button class="close-button" id="closePatientModalBtn">✕</button>
+                <div class="modal-header">
+                  <h3 class="modal-title" id="select_patient_title">Select a patient</h3>
+                  <div class="search-container">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <div id="patientSearchHolder">
+                      <input type="text" class="search-input" placeholder="Search for a patient..." id="searchInput">
+                    </div>
+                  </div>
+                </div>
+                <button class="new-patient-btn" id="newPatientBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="16" y1="11" x2="22" y2="11"></line>
+                  </svg>
+                  New patient
+                </button>
+                <div class="divider"></div>
+                <div class="patients-list" id="patientsList"></div>
+              </div>
+            </div>
+          </div>
+          <div class="template-select-container">
+            <div class="modal" id="templateModal">
+              <div class="modal-content">
+                <button class="close-button" id="closeTemplateModalBtn">✕</button>
+                <div class="modal-header">
+                  <h3 class="modal-title" id="select_template_title">Select a template</h3>
+                  <div class="search-container">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="search-input" placeholder="Search for a template..." id="templateSearchInput">
+                  </div>
+                </div>
+                <div class="templates-list" id="templatesList"></div>
+              </div>
+            </div>
+          </div>
+          <div id="bannerContainer"></div>
+
+          <!-- Main script (JS) -->
+          <script>
+            // ===========================================================================================
+            // JAVASCRIPT FOR AUDIO MANAGEMENT INTERFACE
+            // ===========================================================================================
+            console.log("DEBUG: AudioManagerForm HTML -> Main script block started execution.");
+
+            // --------------------------------------------------------------------------------------------
+            // SECTION 1: PYTHON-CALLABLE FUNCTIONS
+            // --------------------------------------------------------------------------------------------
+            window.setLanguageDropdown = function(langCode) {
+              const dropdown = document.getElementById('langueDropdown');
+              if (!dropdown) return;
+              const displaySpan = dropdown.querySelector('span:first-child');
+              if (!displaySpan) return;
+
+              if (langCode === 'FR') {
+                displaySpan.textContent = '🇫🇷';
+              } else { // Default to EN
+                displaySpan.textContent = '🇬🇧';
+              }
+            };
+
+            window.setElementText = function(elementId, newText) {
+              const element = document.getElementById(elementId);
+              if (!element) return;
+              const targetSpan = element.querySelector('span');
+              if (targetSpan && element.children.length > 0 && !targetSpan.classList.contains('arrow')) {
+                targetSpan.textContent = newText;
+              } else {
+                element.textContent = newText;
+              }
+            };
+
+            window.setPlaceholderById = function(elementId, newText) {
+              const element = document.getElementById(elementId);
+              if (element) {
+                element.placeholder = newText;
+              }
+            };
+
+            window.getDropdownSelectedValue = function(dropdownId) {
+              const dropdown = document.getElementById(dropdownId);
+              if (!dropdown) return "";
+              if (dropdownId === "templateSelectBtn" && dropdown.dataset.templateName) {
+                return dropdown.dataset.templateName;
+              }
+              const spanElem = dropdown.querySelector("span:first-child");
+              return spanElem ? spanElem.textContent.trim() : "";
+            };
+
+            window.displayBanner = function(message, type) {
+              const bannerContainer = document.getElementById('bannerContainer');
+              if (!bannerContainer) return;
+              const banner = document.createElement('div');
+              banner.className = 'banner ' + (type === 'success' ? 'banner-success' : 'banner-error');
+              banner.textContent = message;
+              bannerContainer.appendChild(banner);
+              setTimeout(() => {
+                banner.style.opacity = '0';
+                setTimeout(() => banner.remove(), 300);
+              }, 3000);
+            };
+
+            window.rebuildPatientSearchInput = function() {
+              const searchHolder = document.getElementById("patientSearchHolder");
+              if (searchHolder) {
+                const newInput = document.createElement("input");
+                newInput.type = "text";
+                newInput.className = "search-input";
+                newInput.id = "searchInput";
+                newInput.placeholder = "Search for a patient...";
+                newInput.addEventListener('input', () => window.searchPatientsInModal(newInput.value));
+                searchHolder.innerHTML = "";
+                searchHolder.appendChild(newInput);
+              }
+            };
+
+            window.populateTemplateModal = function(templates) {
+              templates.sort((a, b) => a.name.localeCompare(b.name));
+              window.templatesData = templates;
+              let defaultTemplate = templates[0];
+              if (defaultTemplate) {
+                window.selectTemplate(defaultTemplate, false);
+              }
+              window.renderTemplates(templates);
+            };
+
+            // --------------------------------------------------------------------------------------------
+            // GOLDEN RULE 1: DEFINE GLOBAL VARIABLES AND HELPERS ONLY ONCE
+            // --------------------------------------------------------------------------------------------
+            if (!window.__my_audio_manager_globals) {
+              window.__my_audio_manager_globals = true;
+              console.log("DEBUG: AudioManagerForm HTML -> Defining global functions for the first time.");
+
+
+              window.isIOS = function() {
+                const isStandardIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                const isIPadOnIOS13 = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                return isStandardIOS || isIPadOnIOS13;
+              };
+
+              window.toggleMode = (mode) => {
+                const recMode = document.getElementById('recordingMode');
+                const upMode = document.getElementById('uploadMode');
+                const toggleContainer = document.querySelector('.slide-toggle-container');
+                const recordToggle = document.getElementById('recordToggle');
+                const uploadToggle = document.getElementById('uploadToggle');
+
+                const isRecord = mode === 'record';
+
+                if(recMode) recMode.style.display = isRecord ? 'block' : 'none';
+                if(upMode) upMode.style.display = isRecord ? 'none' : 'block';
+
+                if (toggleContainer) {
+                  if (isRecord) {
+                    toggleContainer.classList.remove('upload-active');
+                    recordToggle.classList.add('active');
+                    uploadToggle.classList.remove('active');
+                  } else {
+                    toggleContainer.classList.add('upload-active');
+                    recordToggle.classList.remove('active');
+                    uploadToggle.classList.add('active');
+                  }
+                }
+              };
+
+              window.setAudioWorkflowState = (state) => {
+                console.log(`DEBUG: AudioManagerForm HTML -> setAudioWorkflowState called with state: '${state}'.`);
+                const inputContainer = document.getElementById('audioInputContainer');
+                const decisionContainer = document.getElementById('audioDecisionContainer');
+                const processingContainer = document.getElementById('audioProcessingContainer'); // Get the new container
+
+                // Hide all containers by default
+                if(inputContainer) inputContainer.style.display = 'none';
+                if(decisionContainer) decisionContainer.style.display = 'none';
+                if(processingContainer) processingContainer.style.display = 'none';
+
+                // Show the correct container based on the state
+                if (state === 'decision') {
+                  if(decisionContainer) decisionContainer.style.display = 'flex';
+                } else if (state === 'processing') {
+                  if(processingContainer) processingContainer.style.display = 'block';
+                } else { // 'input' state by default
+                  if(inputContainer) inputContainer.style.display = 'block';
+                }
+              };;
+
+              window.handleFileSelect = (event) => {
+                const file = event.dataTransfer ? event.dataTransfer.files[0] : event.target.files[0];
+                if (!file) return;
+                if (!file.type.startsWith('audio/') && !/\\.(m4a|caf|mp3|aac|wav)$/i.test(file.name)) {
+                  return alert('Please select a valid audio file.');
+                }
+                const stableAnchor = document.getElementById('stableAnchor');
+                anvil.call(stableAnchor, 'process_uploaded_audio', file);
+              };
+
+              window.openModal = (id) => { document.getElementById(id).style.display = 'flex'; };
+              window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
+
+              window.renderTemplates = (templates) => {
+                const list = document.getElementById('templatesList');
+                if (!list) return;
+                list.innerHTML = '';
+                templates.forEach(t => {
+                  const button = document.createElement('button');
+                  button.className = 'template-item';
+                  button.innerHTML = `<span>${t.name}</span>`;
+                  button.addEventListener('click', () => window.selectTemplate(t));
+                  list.appendChild(button);
+                });
+              };
+
+              window.selectTemplate = (template, closeModal = true) => {
+                window.selectedTemplate = template;
+                const btn = document.getElementById('templateSelectBtn');
+                if (btn) {
+                  btn.dataset.templateId = template.id;
+                  btn.dataset.templateName = template.name;
+                  const display = btn.querySelector('span:first-child');
+                  if(display) display.textContent = template.name;
+                }
+                console.log("DEBUG: AudioManagerForm HTML -> Setting editor content from selected template.");
+                // This will call the TextEditor's global function
+                window.setEditorContent(template.display ? template.html : '');
+                if(closeModal) window.closeModal('templateModal');
+              };
+
+              window.searchPatientsInModal = (term) => {
+                anvil.call(document.getElementById('stableAnchor'), 'search_patients_relay', term)
+                  .then(patients => {
+                    const list = document.getElementById('patientsList');
+                    if(list) {
+                      list.innerHTML = '';
+                      patients.forEach(p => {
+                        const btn = document.createElement('button');
+                        btn.className = 'patient-item';
+                        btn.textContent = p.name;
+                        btn.onclick = () => window.selectPatientForSave(p); // Pass the whole patient object
+                        list.appendChild(btn);
+                      });
+                    }
+                  });
+              };
+
+              window.selectPatientForSave = (patientData) => {
+                window.selectedPatient = patientData;
+                window.closeModal('patientModal');
+                window.continueSave();
+              };
+
+              window.openPatientModalForSave = (currentContent) => {
+                window._saveContentData = {
+                  content: currentContent,
+                  images: []
+                };
+                window.openModal('patientModal');
+                window.rebuildPatientSearchInput();
+                window.searchPatientsInModal('');
+              };
+
+              window.continueSave = () => {
+                const content = window._saveContentData.content;
+                const images = window._saveContentData.images;
+                anvil.call(document.getElementById('stableAnchor'), 'save_report', JSON.stringify({ content }), images, window.selectedPatient)
+                  .then(ok => {
+                    if (ok) {
+                      window.displayBanner("Report saved.", 'success');
+                    } else {
+                      window.displayBanner("Save failed.", 'error');
+                    }
+                  });
+              };
+
+              // --------------------------------------------------------------------------------------------
+              // GOLDEN RULE 2: ALWAYS ATTACH EVENT LISTENERS IN A DEDICATED FUNCTION
+              // --------------------------------------------------------------------------------------------
+              window.attachEvents = function() {
+                console.log("DEBUG: AudioManagerForm HTML -> attachEvents() called. Re-attaching all listeners.");
+                const reattach = (id, event, handler) => {
+                  const el = document.getElementById(id);
+                  if(el) {
+                    const newEl = el.cloneNode(true);
+                    el.parentNode.replaceChild(newEl, el);
+                    newEl.addEventListener(event, handler);
+                    console.log(`DEBUG: AudioManagerForm HTML -> Attached '${event}' listener to #${id}.`);
+                  } else {
+                    console.warn(`DEBUG: AudioManagerForm HTML -> Element #${id} not found during event attachment.`);
+                  }
+                };
+
+
+                reattach('recordToggle', 'click', () => window.toggleMode('record'));
+                reattach('uploadToggle', 'click', () => window.toggleMode('upload'));
+
+                const dropZone = document.getElementById('dropZone');
+                if (dropZone) {
+                  const newZone = dropZone.cloneNode(true);
+                  dropZone.parentNode.replaceChild(newZone, dropZone);
+                  newZone.addEventListener('dragover', e => { e.preventDefault(); newZone.classList.add('dragover'); });
+                  newZone.addEventListener('dragleave', () => newZone.classList.remove('dragover'));
+                  newZone.addEventListener('drop', e => { e.preventDefault(); newZone.classList.remove('dragover'); window.handleFileSelect(e); });
+                  newZone.addEventListener('click', e => { if (!e.target.closest('label')) newZone.querySelector('#audioFileInput').click(); });
+                  newZone.querySelector('#audioFileInput').addEventListener('change', window.handleFileSelect);
+                }
+
+                reattach('discardAudioBtn', 'click', (e) => {
+                  const stableAnchor = document.getElementById('stableAnchor');
+                  anvil.call(stableAnchor, 'clear_recording_handler');
+                });
+
+                reattach('processAudioBtn', 'click', (e) => {
+                  const stableAnchor = document.getElementById('stableAnchor');
+                  anvil.call(stableAnchor, 'prepare_ui_for_processing')
+                    .then(() => anvil.call(stableAnchor, 'process_recording'));
+                });
+
+                reattach('templateSelectBtn', 'click', () => window.openModal('templateModal'));
+
+                const langDropdown = document.getElementById('langueDropdown');
+                if(langDropdown) {
+                  const newDd = langDropdown.cloneNode(true);
+                  langDropdown.parentNode.replaceChild(newDd, langDropdown);
+                  newDd.addEventListener('click', e => { if(!e.target.closest('.dropdown-menu')) newDd.querySelector('.dropdown-menu').classList.toggle('active'); });
+                  newDd.querySelectorAll('.dropdown-menu div').forEach(item => {
+                    item.addEventListener('click', e => {
+                      e.stopPropagation();
+                      newDd.querySelector('span:first-child').textContent = item.dataset.value;
+                      newDd.querySelector('.dropdown-menu').classList.remove('active');
+                    });
+                  });
+                }
+
+                reattach('closePatientModalBtn', 'click', () => window.closeModal('patientModal'));
+                // --- MODIFIED: Event listener for the "New Patient" button ---
+                reattach('newPatientBtn', 'click', () => {
+                  // 1. Close the patient selection modal first.
+                  window.closeModal('patientModal');
+
+                  // 2. Clear any old data from the input fields.
+                  document.getElementById('new-patient-name').value = '';
+                  document.getElementById('new-patient-type').value = '';
+                  document.getElementById('new-patient-owner').value = '';
+
+                  // 3. Open the "Create New Patient" modal.
+                  window.openModal('newPatientEntryModal');
+                });
+
+                // --- NEW: Helper function for the "Cancel" action ---
+                // This function closes the creation modal and re-opens the selection modal.
+                const cancelAndReturnToPatientList = () => {
+                  window.closeModal('newPatientEntryModal');
+                  window.openModal('patientModal'); // Re-open the patient list
+                };
+
+                // Attach the cancel logic to both the 'X' and 'Cancel' buttons.
+                reattach('closeNewPatientModalBtn', 'click', cancelAndReturnToPatientList);
+                reattach('cancelNewPatientBtn', 'click', cancelAndReturnToPatientList);
+
+                // --- MODIFIED: Event listener for the "Create and Select" button ---
+                reattach('saveNewPatientBtn', 'click', () => {
+                  const newDetails = {
+                    name: document.getElementById('new-patient-name').value.trim(),
+                    type: document.getElementById('new-patient-type').value.trim(),
+                    proprietaire: document.getElementById('new-patient-owner').value.trim()
+                  };
+
+                  if (!newDetails.name) {
+                    alert('Patient name is required.');
+                    return;
+                  }
+
+                  const patientData = {
+                    unique_id: null,
+                    name: newDetails.name,
+                    details: {
+                      type: newDetails.type,
+                      proprietaire: newDetails.proprietaire
+                    }
+                  };
+
+                  // 1. Close the creation modal.
+                  window.closeModal('newPatientEntryModal');
+
+                  // 2. Proceed directly to the save action. DO NOT reopen the patient list.
+                  window.selectPatientForSave(patientData);
+                });
+                reattach('closeTemplateModalBtn', 'click', () => window.closeModal('templateModal'));
+                reattach('templateSearchInput', 'input', e => anvil.call(document.getElementById('stableAnchor'), 'search_template_relay', e.target.value).then(window.renderTemplates));
+
+                console.log("DEBUG: AudioManagerForm HTML -> Setting initial audio workflow state to 'input'.");
+                window.setAudioWorkflowState('input');
+              };
+            }
+
+            // --------------------------------------------------------------------------------------------
+            // GOLDEN RULE 3: IMMEDIATELY ATTACH EVERYTHING
+            // --------------------------------------------------------------------------------------------
+            window.attachEvents();
+            console.log("DEBUG: AudioManagerForm HTML -> Script block finished execution.");
+          </script>
+        </body>
+      </html>
     visible: true
   type: HtmlTemplate
 is_package: true

@@ -1,4 +1,11 @@
 components:
+- data_bindings:
+  - {code: '', property: item, writeback: false}
+  event_bindings: {}
+  layout_properties: {slot: recorder_slot}
+  name: recording_widget
+  properties: {}
+  type: form:Components.RecordingWidget
 - layout_properties: {slot: time_display_slot}
   name: time_display_1
   properties: {}
@@ -17,13 +24,6 @@ components:
   name: text_editor_1
   properties: {show_undo_redo_buttons: true}
   type: form:Components.TextEditor
-- data_bindings:
-  - {code: '', property: item, writeback: false}
-  event_bindings: {}
-  layout_properties: {slot: recorder_slot}
-  name: recording_widget
-  properties: {}
-  type: form:Components.RecordingWidget
 - layout_properties: {slot: default}
   name: header_nav_1
   properties: {active_tab: Production}
@@ -111,16 +111,15 @@ container:
             Audio Section
             ===================================================== */
             .audio-section {
-              position: relative; /* FIX: Establishes a positioning context for any absolutely positioned children. */
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              /*
-              * FIX: Set a minimum height to prevent layout jumps.
-              * This stabilizes the UI when switching between the recorder, spinner, and playback controls.
-              */
-              min-height: 250px;
+              /* UPDATED: Reduced vertical padding. */
+              padding: 5px 0;
+              width: 100%;
+            }
+
+            /* --- ADDED: Style for the recording controls container --- */
+            /* This ensures the microphone has proper spacing and isn't crammed at the top. */
+            .recording-controls {
+              padding: 20px 0;
             }
 
             /* State Containers: One for each step of the workflow */
@@ -136,13 +135,12 @@ container:
               align-items: center;
               gap: 15px;
             }
-
-            /* --- Slide Toggle for Record/Upload --- */
             .slide-toggle-container {
               display: flex;
               position: relative;
               width: 320px;
-              margin: 20px auto;
+              /* UPDATED: Reduced top and bottom margin to bring it closer to other elements. */
+              margin: 10px auto;
               background-color: #f0f0f0;
               border-radius: 25px;
               padding: 5px;
@@ -180,8 +178,8 @@ container:
 
             /* --- Upload Area Styling --- */
             .upload-section {
-              margin: 20px auto;
               max-width: 400px;
+              margin: 0 auto; /* Keep it centered horizontally */
               display: flex;
               flex-direction: column;
               align-items: center;
@@ -255,7 +253,8 @@ container:
               background: white;
               padding: 20px;
               border-radius: 8px;
-              margin-bottom: 20px;
+              /* UPDATED: Removed the bottom margin to tighten the layout. */
+              margin-bottom: 0;
             }
             .parameter-row {
               display: flex;
@@ -279,6 +278,36 @@ container:
               align-items: center;
             }
 
+            .dropdown {
+              position: relative; /* Required for absolute positioning of the menu */
+            }
+
+            .dropdown-menu {
+              display: none; /* Hidden by default */
+              position: absolute;
+              top: 100%;
+              left: 0;
+              background-color: white;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+              z-index: 100;
+              min-width: 100%;
+            }
+
+            .dropdown-menu.active {
+              display: block; /* Show the menu when active */
+            }
+
+            .dropdown-menu div {
+              padding: 10px;
+              cursor: pointer;
+            }
+
+            .dropdown-menu div:hover {
+              background-color: #f5f5f5;
+            }
+
             /* =====================================================
             Modals (Patient & Template Selection)
             ===================================================== */
@@ -287,15 +316,21 @@ container:
             * to more sensible, maintainable numbers.
             */
             .modal {
-              display: none;
+              display: none; /* Hidden by default */
               position: fixed;
-              top: 0; left: 0;
-              width: 100%; height: 100%;
-              background-color: rgba(0, 0, 0, 0.5);
-              z-index: 1000;
+              z-index: 1000; /* Base layer for modals */
+              left: 0;
+              top: 0;
+              width: 100%;
+              height: 100%;
+              background-color: rgba(0,0,0,0.5);
               align-items: center;
               justify-content: center;
             }
+            #newPatientEntryModal {
+              z-index: 1001; /* Ensure this modal appears on top of the patient list modal */
+            }
+
             .modal-content {
               position: relative;
               background-color: white;
@@ -513,6 +548,30 @@ container:
           </div>
 
           <!-- Modals -->
+          <div class="modal" id="newPatientEntryModal" style="display: none;">
+            <div class="modal-content">
+              <button class="close-button" id="closeNewPatientModalBtn">✕</button>
+              <div class="modal-header">
+                <h3 class="modal-title">Create New Patient</h3>
+              </div>
+              <div class="form-group">
+                <label for="new-patient-name">Name</label>
+                <input type="text" id="new-patient-name" class="search-input" placeholder="e.g., Fido">
+              </div>
+              <div class="form-group">
+                <label for="new-patient-type">Species</label>
+                <input type="text" id="new-patient-type" class="search-input" placeholder="e.g., Canine">
+              </div>
+              <div class="form-group">
+                <label for="new-patient-owner">Owner</label>
+                <input type="text" id="new-patient-owner" class="search-input" placeholder="e.g., Jane Doe">
+              </div>
+              <div class="modal-footer">
+                <button class="button" id="cancelNewPatientBtn">Cancel</button>
+                <button class="button button-primary" id="saveNewPatientBtn">Create and Select</button>
+              </div>
+            </div>
+          </div>
           <div class="patient-select-container">
             <div class="modal" id="patientModal">
               <div class="modal-content">
@@ -716,7 +775,7 @@ container:
                 anvil.call(stableAnchor, 'process_uploaded_audio', file);
               };
 
-              window.openModal = (id) => { document.getElementById(id).style.display = 'block'; };
+              window.openModal = (id) => { document.getElementById(id).style.display = 'flex'; };
               window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
 
               window.renderTemplates = (templates) => {
@@ -853,20 +912,58 @@ container:
                 }
 
                 reattach('closePatientModalBtn', 'click', () => window.closeModal('patientModal'));
+                // --- MODIFIED: Event listener for the "New Patient" button ---
                 reattach('newPatientBtn', 'click', () => {
-                  anvil.call(document.getElementById('stableAnchor'), 'get_new_patient_details').then(details => {
-                    if (details) {
-                      const patientData = {
-                        unique_id: null,
-                        name: details.name,
-                        details: {
-                          type: details.type,
-                          proprietaire: details.proprietaire
-                        }
-                      };
-                      window.selectPatientForSave(patientData);
+                  // 1. Close the patient selection modal first.
+                  window.closeModal('patientModal');
+
+                  // 2. Clear any old data from the input fields.
+                  document.getElementById('new-patient-name').value = '';
+                  document.getElementById('new-patient-type').value = '';
+                  document.getElementById('new-patient-owner').value = '';
+
+                  // 3. Open the "Create New Patient" modal.
+                  window.openModal('newPatientEntryModal');
+                });
+
+                // --- NEW: Helper function for the "Cancel" action ---
+                // This function closes the creation modal and re-opens the selection modal.
+                const cancelAndReturnToPatientList = () => {
+                  window.closeModal('newPatientEntryModal');
+                  window.openModal('patientModal'); // Re-open the patient list
+                };
+
+                // Attach the cancel logic to both the 'X' and 'Cancel' buttons.
+                reattach('closeNewPatientModalBtn', 'click', cancelAndReturnToPatientList);
+                reattach('cancelNewPatientBtn', 'click', cancelAndReturnToPatientList);
+
+                // --- MODIFIED: Event listener for the "Create and Select" button ---
+                reattach('saveNewPatientBtn', 'click', () => {
+                  const newDetails = {
+                    name: document.getElementById('new-patient-name').value.trim(),
+                    type: document.getElementById('new-patient-type').value.trim(),
+                    proprietaire: document.getElementById('new-patient-owner').value.trim()
+                  };
+
+                  if (!newDetails.name) {
+                    alert('Patient name is required.');
+                    return;
+                  }
+
+                  const patientData = {
+                    unique_id: null,
+                    name: newDetails.name,
+                    details: {
+                      type: newDetails.type,
+                      proprietaire: newDetails.proprietaire
                     }
-                  });
+                  };
+
+                  // 1. Close the creation modal.
+                  window.closeModal('newPatientEntryModal');
+
+                  // 2. Proceed directly to the save action. DO NOT reopen the patient list.
+                  window.selectPatientForSave(patientData);
                 });
                 reattach('closeTemplateModalBtn', 'click', () => window.closeModal('templateModal'));
                 reattach('templateSearchInput', 'input', e => anvil.call(document.getElementById('stableAnchor'), 'search_template_relay', e.target.value).then(window.renderTemplates));

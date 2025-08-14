@@ -33,7 +33,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
   ):
     print("[DEBUG] AudioManagerForm: Initializing...")
     self.init_components(**properties)
-    print("[DEBUG] AudioManagerForm: Components (including TextEditor) have been initialized in Python.")
+    print(
+      "[DEBUG] AudioManagerForm: Components (including TextEditor) have been initialized in Python."
+    )
 
     self.recording_widget.set_event_handler(
       "recording_complete", self.handle_new_recording
@@ -159,7 +161,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
         self.call_js("selectTemplate", default_template, False)
 
     if self.initial_content:
-      print("[DEBUG] AudioManagerForm: Setting TextEditor content from 'initial_content' parameter.")
+      print(
+        "[DEBUG] AudioManagerForm: Setting TextEditor content from 'initial_content' parameter."
+      )
       self.text_editor_1.html_content = self.initial_content
     elif self.clicked_value is not None:
       self.load_report_content()
@@ -190,16 +194,18 @@ class AudioManagerForm(AudioManagerFormTemplate):
       return False
 
   def load_report_content(self):
-    print(f"[DEBUG] AudioManagerForm: Loading report content for clicked_value: {self.clicked_value}")
+    print(
+      f"[DEBUG] AudioManagerForm: Loading report content for clicked_value: {self.clicked_value}"
+    )
     try:
       content, error = anvil.server.call_s("load_report_content", self.clicked_value)
-      print(
-        f"[DEBUG] AudioManagerForm: Result from load_report_content: error={error}"
-      )
+      print(f"[DEBUG] AudioManagerForm: Result from load_report_content: error={error}")
       if error:
         alert(error)
       elif content:
-        print("[DEBUG] AudioManagerForm: Setting TextEditor content from loaded report.")
+        print(
+          "[DEBUG] AudioManagerForm: Setting TextEditor content from loaded report."
+        )
         self.text_editor_1.html_content = content
       else:
         alert("Unexpected error: no content returned.")
@@ -316,7 +322,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
       self.user_feedback_1.set_status("Formatting final report...")
       final_html = self._format_report(report_content, template, lang)
 
-      print("[DEBUG] AudioManagerForm: Setting final generated content into TextEditor.")
+      print(
+        "[DEBUG] AudioManagerForm: Setting final generated content into TextEditor."
+      )
       self.text_editor_1.html_content = final_html
       print("[DEBUG] AudioManagerForm: process_recording completed successfully.")
       return "OK"
@@ -406,19 +414,19 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Error checking audio format: {e}")
       return audio_blob
 
-  def report_footer_1_status_clicked(self, **event_args):
-    status_options = anvil.server.call_s("get_status_options")
-    buttons = [(opt.replace("_", " ").title(), opt) for opt in status_options] + [
-      ("Cancel", None)
-    ]
-    choice = alert("Choose status:", buttons=buttons)
-    if choice:
-      self.selected_statut = choice
-      self.report_footer_1.update_status_display(choice)
+  def report_footer_1_status_clicked(self, status_key, **event_args):
+    """
+    Handles the status change from the footer component.
+    The dialog is now handled entirely within the component.
+    """
+    if status_key:
+      self.selected_statut = status_key
+      self.report_footer_1.update_status_display(status_key)
       self.call_js(
-        "displayBanner", f"Status chosen: {choice.replace('_', ' ').title()}", "success"
+        "displayBanner",
+        f"Status chosen: {status_key.replace('_', ' ').title()}",
+        "success",
       )
-    return choice
 
   def report_footer_1_save_clicked(self, **event_args):
     html_content = self.text_editor_1.get_content()
@@ -464,27 +472,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Exception in save_report: {e}")
       raise
     return True
-
-  def get_new_patient_details(self):
-    form_content = ColumnPanel(spacing=10, tag=self)
-    form_content.add_component(TextBox(placeholder="Name"))
-    form_content.add_component(TextBox(placeholder="Species"))
-    form_content.add_component(TextBox(placeholder="Owner"))
-    if (
-      alert(
-        content=form_content,
-        title="Enter new patient details",
-        buttons=["OK", "Cancel"],
-      )
-      == "OK"
-    ):
-      components = form_content.get_components()
-      return {
-        "name": components[0].text,
-        "type": components[1].text,
-        "proprietaire": components[2].text,
-      }
-    return None
 
   def search_patients_relay(self, search_term, **event_args):
     print(f"[DEBUG] search_patients_relay called with search_term: {search_term}")

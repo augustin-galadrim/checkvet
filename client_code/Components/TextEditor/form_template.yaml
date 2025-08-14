@@ -8,54 +8,43 @@ container:
           #toolbar { padding: 10px; background: #f8f8f8; border-bottom: 1px solid #ddd; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
           .toolbar-button { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; }
           .toolbar-button:hover { background: #f5f5f5; }
-          .toolbar-button svg { vertical-align: middle; } /* Styling for icons */
+          .toolbar-button.active { background-color: #d0ebff; border-color: #66b0ff; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+          .toolbar-button svg { vertical-align: middle; }
           #editor { min-height: 300px; padding: 20px; overflow-y: auto; font-size: 16px; line-height: 1.5; }
-          #editor p, #editor div { margin: 0; } /* Ensure no default margins on blocks */
+          #editor p, #editor div { margin: 0; }
           .toolbar-group { display: inline-flex; gap: 5px; }
-          .toolbar-button.disabled {
-            background-color: #cccccc;
-            color: #666666;
-            cursor: not-allowed;
-            pointer-events: none;
-            border-color: #bbbbbb;
-          }
-
-          .toolbar-button.disabled:hover {
-            background-color: #cccccc;
-            border-color: #bbbbbb;
-          }
+          .toolbar-button.disabled { background-color: #cccccc; color: #666666; cursor: not-allowed; pointer-events: none; border-color: #bbbbbb; }
+          .toolbar-button.disabled:hover { background-color: #cccccc; border-color: #bbbbbb; }
         </style>
 
         <div id="toolbar">
+          <div id="undoRedoButtons" class="toolbar-group">
+            <button id="undoBtn" class="toolbar-button" title="Undo">↩️</button>
+            <button id="redoBtn" class="toolbar-button" title="Redo">↪️</button>
+          </div>
           <div id="styleButtons" class="toolbar-group">
-            <button class="toolbar-button" onclick="formatDoc('bold')"><b>B</b></button>
-            <button class="toolbar-button" onclick="formatDoc('italic')"><i>I</i></button>
-            <button class="toolbar-button" onclick="formatDoc('underline')"><u>U</u></button>
+            <button id="format-bold-btn" class="toolbar-button"><b>B</b></button>
+            <button id="format-italic-btn" class="toolbar-button"><i>I</i></button>
+            <button id="format-underline-btn" class="toolbar-button"><u>U</u></button>
           </div>
           <div id="alignButtons" class="toolbar-group">
-            <!-- MODIFICATION: Changed onclick to call the new applyAlignment function -->
-            <button class="toolbar-button" onclick="applyAlignment('left')" title="Align Left">
-              <svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M1 3h14a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2zm0 4h10a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2zm0 4h14a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2z"/></svg>
-            </button>
-            <button class="toolbar-button" onclick="applyAlignment('center')" title="Align Center">
-              <svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M3 3h10a1 1 0 0 1 0 2H3a1 1 0 0 1 0-2zm-2 4h14a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2zm2 4h10a1 1 0 0 1 0 2H3a1 1 0 0 1 0-2z"/></svg>
-            </button>
-            <button class="toolbar-button" onclick="applyAlignment('right')" title="Align Right">
-              <svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M5 3h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2zM1 7h14a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2zm4 4h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2z"/></svg>
-            </button>
+            <button id="align-left-btn" class="toolbar-button" title="Align Left"><svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M1 3h14a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2zm0 4h10a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2zm0 4h14a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2z"/></svg></button>
+            <button id="align-center-btn" class="toolbar-button" title="Align Center"><svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M3 3h10a1 1 0 0 1 0 2H3a1 1 0 0 1 0-2zm-2 4h14a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2zm2 4h10a1 1 0 0 1 0 2H3a1 1 0 0 1 0-2z"/></svg></button>
+            <button id="align-right-btn" class="toolbar-button" title="Align Right"><svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M5 3h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2zM1 7h14a1 1 0 0 1 0 2H1a1 1 0 0 1 0-2zm4 4h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2z"/></svg></button>
           </div>
-          <button id="insertImageBtn" class="toolbar-button disabled" onclick="insertImage()">Image</button>
+          <button id="insertImageBtn" class="toolbar-button disabled">Image</button>
           <span style="margin-left:auto;"></span>
-          <button id="copyBtn" class="toolbar-button" onclick="copyEditorContent()">Copy</button>
+          <button id="copyBtn" class="toolbar-button">Copy</button>
         </div>
         <div id="editor" contenteditable="true"></div>
       </div>
 
       <script>
+        // Use a guard to ensure function definitions are only loaded once per page.
         if (!window.__editor_component_globals) {
           window.__editor_component_globals = true;
 
-          // Python-Callable Functions
+          // --- Python-Callable Functions (Component's Public JS API) ---
           window.getEditorContent = function() {
             const editor = document.getElementById("editor");
             return editor ? editor.innerHTML : "";
@@ -64,7 +53,6 @@ container:
           window.setEditorContent = function(value) {
             const editor = document.getElementById("editor");
             if (editor) {
-              // Ensure default content is wrapped in block elements for consistent behavior
               if (value && !value.startsWith('<')) {
                 editor.innerHTML = `<div>${value.replace(/\\n/g, '</div><div>')}</div>`;
               } else {
@@ -78,48 +66,39 @@ container:
             if (elem) elem.style.display = isVisible ? '' : 'none';
           };
 
-          // Helper Functions
-          window.formatDoc = function(cmd) {
-            document.execCommand(cmd, false, null);
+          window.setButtonEnabled = function(buttonId, isEnabled) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+              button.disabled = !isEnabled;
+              button.classList.toggle('disabled', !isEnabled);
+            }
           };
 
-          // MODIFICATION: Added new, more precise alignment function
+          // --- Internal Helper Functions & Event Handlers ---
           window.applyAlignment = function(align) {
             const editor = document.getElementById("editor");
             if (!editor) return;
-
             const selection = window.getSelection();
             if (!selection.rangeCount) return;
-
             let node = selection.anchorNode;
             if (!node) return;
-
-            // Find the block-level element (P or DIV) that contains the current selection
             while (node && node !== editor) {
               if (node.nodeType === Node.ELEMENT_NODE && ['DIV', 'P'].includes(node.tagName.toUpperCase())) {
-                // Apply the style directly to the block element and stop
                 node.style.textAlign = align;
                 return;
               }
               node = node.parentNode;
             }
-
-            // Fallback: if no block element is found, wrap the current line in a DIV and apply the style.
-            // This handles cases where the text is not already in a block.
             document.execCommand('formatBlock', false, 'div');
-
-            // Get the newly created div and apply the alignment.
             const newBlock = window.getSelection().anchorNode.parentNode;
-            if(newBlock && newBlock.style) {
+            if (newBlock && newBlock.style) {
               newBlock.style.textAlign = align;
             }
           };
 
           window.insertImage = function() {
             const button = document.getElementById("insertImageBtn");
-            if (button && button.classList.contains("disabled")) {
-              return;
-            }
+            if (button && button.classList.contains("disabled")) { return; }
             const input = document.createElement("input");
             input.type = "file";
             input.accept = "image/*";
@@ -156,6 +135,92 @@ container:
             }
             sel.removeAllRanges();
           };
+
+          window.updateToolbarState = function() {
+            const simpleCommands = {
+              'format-bold-btn': 'bold',
+              'format-italic-btn': 'italic',
+              'format-underline-btn': 'underline'
+            };
+            for (const [buttonId, command] of Object.entries(simpleCommands)) {
+              const button = document.getElementById(buttonId);
+              if (button) {
+                try {
+                  const isActive = document.queryCommandState(command);
+                  button.classList.toggle('active', isActive);
+                } catch (e) { /* Fails in some edge cases, ignore */ }
+              }
+            }
+            let alignment = 'left';
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+              let node = selection.anchorNode;
+              const editor = document.getElementById('editor');
+              while (node && node !== editor) {
+                if (node.nodeType === Node.ELEMENT_NODE && node.style.textAlign) {
+                  alignment = node.style.textAlign;
+                  break;
+                }
+                node = node.parentNode;
+              }
+            }
+            const leftBtn = document.getElementById('align-left-btn');
+            const centerBtn = document.getElementById('align-center-btn');
+            const rightBtn = document.getElementById('align-right-btn');
+            if (leftBtn) leftBtn.classList.toggle('active', alignment === 'left' || alignment === '');
+            if (centerBtn) centerBtn.classList.toggle('active', alignment === 'center');
+            if (rightBtn) rightBtn.classList.toggle('active', alignment === 'right');
+          };
+
+          // --- THE SINGLE, ROBUST INITIALIZATION FUNCTION (Called from Python) ---
+          window.initializeEditor = function(retryCount = 0) {
+            const editorDiv = document.getElementById('editor');
+            if (!editorDiv) {
+              if (retryCount < 20) {
+                setTimeout(() => window.initializeEditor(retryCount + 1), 50);
+              } else {
+                console.error("TextEditor Fatal Error: #editor element not found after multiple retries.");
+              }
+              return;
+            }
+
+            const addButtonListener = (buttonId, handler) => {
+              const button = document.getElementById(buttonId);
+              if (button) {
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
+                newButton.addEventListener('mousedown', (event) => {
+                  event.preventDefault();
+                  if (!newButton.disabled) { handler(); }
+                });
+              }
+            };
+
+            addButtonListener('undoBtn', () => anvil.call(editorDiv.closest('.anvil-container'), 'undo_change'));
+            addButtonListener('redoBtn', () => anvil.call(editorDiv.closest('.anvil-container'), 'redo_change'));
+            addButtonListener('format-bold-btn', () => { document.execCommand('bold', false, null); window.updateToolbarState(); });
+            addButtonListener('format-italic-btn', () => { document.execCommand('italic', false, null); window.updateToolbarState(); });
+            addButtonListener('format-underline-btn', () => { document.execCommand('underline', false, null); window.updateToolbarState(); });
+            addButtonListener('align-left-btn', () => { window.applyAlignment('left'); window.updateToolbarState(); });
+            addButtonListener('align-center-btn', () => { window.applyAlignment('center'); window.updateToolbarState(); });
+            addButtonListener('align-right-btn', () => { window.applyAlignment('right'); window.updateToolbarState(); });
+            addButtonListener('copyBtn', window.copyEditorContent);
+            addButtonListener('insertImageBtn', window.insertImage);
+
+            if (!editorDiv.dataset.stateListenersAttached) {
+              editorDiv.dataset.stateListenersAttached = 'true';
+              editorDiv.addEventListener('mouseup', window.updateToolbarState);
+              editorDiv.addEventListener('keyup', window.updateToolbarState);
+              editorDiv.addEventListener('focus', window.updateToolbarState);
+            }
+
+            if (!editorDiv.dataset.blurAttached) {
+              editorDiv.dataset.blurAttached = 'true';
+              editorDiv.addEventListener('blur', () => {
+                anvil.call(editorDiv.closest('.anvil-container'), 'on_blur_handler');
+              });
+            }
+          };
         }
       </script>
   type: HtmlTemplate
@@ -166,3 +231,4 @@ properties:
 - {default_value: true, important: true, name: show_style_buttons, type: boolean}
 - {default_value: true, important: true, name: show_copy_button, type: boolean}
 - {default_value: true, important: true, name: show_align_buttons, type: boolean}
+- {default_value: false, important: true, name: show_undo_redo_buttons, type: boolean}

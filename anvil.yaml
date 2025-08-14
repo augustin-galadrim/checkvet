@@ -53,7 +53,7 @@ db_schema:
     server: full
     title: Base_templates
   custom_templates:
-    client: search
+    client: none
     columns:
     - admin_ui: {order: 0, width: 200}
       name: name
@@ -242,6 +242,10 @@ db_schema:
     - admin_ui: {order: 18, width: 200}
       name: mobile_installation
       type: bool
+    - admin_ui: {order: 19, width: 200}
+      name: default_template
+      target: custom_templates
+      type: link_single
     server: full
     title: Users
 exported_table_schema:

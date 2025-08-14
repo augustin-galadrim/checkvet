@@ -26,14 +26,16 @@ def edit_report(transcription, report, language):
   Returns:
       str: The edited report content
   """
-  edition_prompt_template = get_prompt("edition", language)
+  edition_prompt = get_prompt("edition", language)
 
   try:
-    formatted_prompt = edition_prompt_template.format(
-      report=report, transcription=transcription
-    )
+    system_prompt = edition_prompt
+    user_prompt = f"Report: {report}\nTranscription: {transcription}"
 
-    messages = [{"role": "system", "content": formatted_prompt}]
+    messages = [
+      {"role": "system", "content": system_prompt},
+      {"role": "user", "content": user_prompt},
+    ]
 
     response = client.chat.completions.create(
       model=DEFAULT_MODEL,

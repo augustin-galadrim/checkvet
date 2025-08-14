@@ -122,7 +122,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
         open_form("MobileInstallationFlow")
         return
 
-    # *** FIX: Language Caching Logic (already implemented) ***
     cached_lang = user_settings_cache.get("language")
     if cached_lang:
       self.call_js("setLanguageDropdown", cached_lang)
@@ -135,15 +134,27 @@ class AudioManagerForm(AudioManagerFormTemplate):
         print(f"[ERROR] Could not set user's language: {e}")
         self.call_js("setLanguageDropdown", "en")
 
-    # *** FIX: Template Caching Logic (already implemented) ***
-    cached_templates = template_cache_manager.get()
-    if cached_templates is not None:
-      self.all_templates = cached_templates
-    else:
-      self.all_templates = anvil.server.call_s("read_templates")
-      template_cache_manager.set(self.all_templates)
+    template_data = template_cache_manager.get()
+    if template_data is None:
+      print("Fetching fresh templates from server.")
+      template_data = anvil.server.call_s("read_templates")
+      template_cache_manager.set(template_data)
 
-    self.call_js("populateTemplateModal", self.all_templates)
+    self.all_templates = template_data.get("templates", [])
+    default_template_id = template_data.get("default_template_id")
+
+    displayable_templates = [t for t in self.all_templates if t.get("display") is True]
+
+    self.call_js("populateTemplateModal", displayable_templates)
+
+    # Automatically select the default template if one is set
+    if default_template_id:
+      default_template = next(
+        (t for t in displayable_templates if t["id"] == default_template_id), None
+      )
+      if default_template:
+        # The 'false' argument prevents the modal from trying to close
+        self.call_js("selectTemplate", default_template, False)
 
     if self.initial_content:
       self.text_editor_1.html_content = self.initial_content
@@ -152,15 +163,20 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     self.call_js("rebuildPatientSearchInput")
     self.queue_manager_1.refresh_badge()
+
     print("[DEBUG] form_show completed.")
 
   def search_template_relay(self, search_term, **event_args):
-    """MODIFIED to use the local self.all_templates list."""
+    """MODIFIED to filter by the 'display' property and use the local self.all_templates list."""
     print(f"[DEBUG] Client-side template search with term: {search_term}")
+
+    searchable_templates = [t for t in self.all_templates if t.get("display") is True]
+
     search_term = search_term.lower()
     if not search_term:
-      return self.all_templates
-    return [t for t in self.all_templates if search_term in t.get("name", "").lower()]
+      return searchable_templates
+
+    return [t for t in searchable_templates if search_term in t.get("name", "").lower()]
 
   def refresh_session_relay(self, **event_args):
     """Called when the application comes back online or the tab returns to foreground, to keep user session active."""

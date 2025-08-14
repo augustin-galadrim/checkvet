@@ -10,13 +10,21 @@ import uuid
 @anvil.server.callable
 def read_templates():
   current_user = anvil.users.get_user()
+
+  # Fetch the user's default template link
+  default_template_link = current_user["default_template"]
+  default_template_id = default_template_link["id"] if default_template_link else None
+
+  # Fetch all templates owned by the user
   templates = app_tables.custom_templates.search(owner=current_user)
-  # Return dictionaries with the new schema: id, name, html, display
-  result = [
+
+  result_list = [
     {"id": t["id"], "name": t["name"], "html": t["html"], "display": t["display"]}
     for t in templates
   ]
-  return result
+
+  # Return a dictionary containing both the list and the default ID
+  return {"templates": result_list, "default_template_id": default_template_id}
 
 
 @anvil.server.callable

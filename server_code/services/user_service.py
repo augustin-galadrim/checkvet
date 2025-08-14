@@ -40,9 +40,9 @@ def get_full_user_info():
     return None
 
   return {
-      "signature_image": user_row['signature_image'],
-      "report_header_image": user_row['report_header_image'],
-      "report_footer_image": user_row['report_footer_image']
+    "signature_image": user_row['signature_image'],
+    "report_header_image": user_row['report_header_image'],
+    "report_footer_image": user_row['report_footer_image']
   }
 
 
@@ -69,7 +69,7 @@ def pick_user_email(user, header):
 def create_user(email, name):
   """Create a new user with basic information"""
   try:
-  # Check if user already exists
+    # Check if user already exists
     existing_user = app_tables.users.get(email=email)
     if existing_user:
       print(f"DEBUG: User with email {email} already exists")
@@ -103,7 +103,7 @@ def update_user(user_id, **kwargs):
     if 'structure' in kwargs:
       structure_value = kwargs.pop('structure')
       if structure_value and structure_value != "Indépendant":
-    # Set to a structure row
+        # Set to a structure row
         structure_row = app_tables.structures.get(name=structure_value)
         if structure_row:
           user_row['structure'] = structure_row
@@ -121,4 +121,25 @@ def update_user(user_id, **kwargs):
     return True
   except Exception as e:
     print(f"ERROR: Failed to update user: {str(e)}")
+    return False
+
+@anvil.server.callable(require_user=True)
+def set_default_template(template_id):
+  """
+    Sets the default template for the current user.
+    """
+  user = anvil.users.get_user()
+  if not user:
+    raise anvil.server.PermissionDenied("You must be logged in to set a default template.")
+
+  template_to_set = app_tables.custom_templates.get(id=template_id, owner=user)
+  if not template_to_set:
+    raise anvil.server.PermissionDenied("Template not found or you do not have permission to access it.")
+
+  try:
+    user['default_template'] = template_to_set
+    print(f"User '{user['email']}' set default template to '{template_to_set['name']}'.")
+    return True
+  except Exception as e:
+    print(f"Error setting default template for user '{user['email']}': {e}")
     return False

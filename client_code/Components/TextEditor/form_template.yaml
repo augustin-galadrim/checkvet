@@ -43,6 +43,7 @@ container:
         // Use a guard to ensure function definitions are only loaded once per page.
         if (!window.__editor_component_globals) {
           window.__editor_component_globals = true;
+          console.log("DEBUG: TextEditor JS -> Defining global functions for the first time.");
 
           // --- Python-Callable Functions (Component's Public JS API) ---
           window.getEditorContent = function() {
@@ -174,25 +175,31 @@ container:
 
           // --- THE SINGLE, ROBUST INITIALIZATION FUNCTION (Called from Python) ---
           window.initializeEditor = function(retryCount = 0) {
+            console.log("DEBUG: TextEditor JS -> initializeEditor() called.");
             const editorDiv = document.getElementById('editor');
             if (!editorDiv) {
               if (retryCount < 20) {
+                console.warn(`DEBUG: TextEditor JS -> #editor element not found. Retrying... (Attempt ${retryCount + 1})`);
                 setTimeout(() => window.initializeEditor(retryCount + 1), 50);
               } else {
                 console.error("TextEditor Fatal Error: #editor element not found after multiple retries.");
               }
               return;
             }
+            console.log("DEBUG: TextEditor JS -> #editor element found. Attaching listeners.");
 
             const addButtonListener = (buttonId, handler) => {
               const button = document.getElementById(buttonId);
               if (button) {
+                console.log(`DEBUG: TextEditor JS -> Attaching listener to #${buttonId}`);
                 const newButton = button.cloneNode(true);
                 button.parentNode.replaceChild(newButton, button);
                 newButton.addEventListener('mousedown', (event) => {
                   event.preventDefault();
                   if (!newButton.disabled) { handler(); }
                 });
+              } else {
+                console.warn(`DEBUG: TextEditor JS -> Button #${buttonId} not found.`);
               }
             };
 
@@ -222,6 +229,7 @@ container:
             }
           };
         }
+        console.log("DEBUG: TextEditor JS -> Script block loaded. Initialization will be triggered by Python.");
       </script>
   type: HtmlTemplate
 custom_component: true

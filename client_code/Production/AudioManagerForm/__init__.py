@@ -31,8 +31,12 @@ class AudioManagerForm(AudioManagerFormTemplate):
     prompt=None,
     **properties,
   ):
-    print("[DEBUG] Initializing AudioManagerForm")
+    print("[DEBUG] AudioManagerForm: Initializing...")
     self.init_components(**properties)
+    print(
+      "[DEBUG] AudioManagerForm: Components (including TextEditor) have been initialized in Python."
+    )
+
     self.recording_widget.set_event_handler(
       "recording_complete", self.handle_new_recording
     )
@@ -67,7 +71,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     self.add_event_handler("show", self.form_show)
     self.audio_playback_1.visible = False
-    print("[DEBUG] __init__ completed.")
+    print("[DEBUG] AudioManagerForm: __init__ completed.")
 
   def update_ui_texts(self):
     """Sets all text on the form using the TranslationService."""
@@ -96,7 +100,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     )
 
   def form_show(self, **event_args):
-    print("[DEBUG] Starting form_show in AudioManagerForm")
+    print("[DEBUG] AudioManagerForm: form_show event triggered.")
     self.update_ui_texts()
 
     additional_info = user_settings_cache.get("additional_info")
@@ -122,7 +126,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
         open_form("MobileInstallationFlow")
         return
 
-    # *** FIX: Language Caching Logic (already implemented) ***
     cached_lang = user_settings_cache.get("language")
     if cached_lang:
       self.call_js("setLanguageDropdown", cached_lang)
@@ -135,32 +138,52 @@ class AudioManagerForm(AudioManagerFormTemplate):
         print(f"[ERROR] Could not set user's language: {e}")
         self.call_js("setLanguageDropdown", "en")
 
-    # *** FIX: Template Caching Logic (already implemented) ***
-    cached_templates = template_cache_manager.get()
-    if cached_templates is not None:
-      self.all_templates = cached_templates
-    else:
-      self.all_templates = anvil.server.call_s("read_templates")
-      template_cache_manager.set(self.all_templates)
+    template_data = template_cache_manager.get()
+    if template_data is None:
+      print("Fetching fresh templates from server.")
+      template_data = anvil.server.call_s("read_templates")
+      template_cache_manager.set(template_data)
 
-    self.call_js("populateTemplateModal", self.all_templates)
+    self.all_templates = template_data.get("templates", [])
+    default_template_id = template_data.get("default_template_id")
+
+    displayable_templates = [t for t in self.all_templates if t.get("display") is True]
+
+    self.call_js("populateTemplateModal", displayable_templates)
+
+    # Automatically select the default template if one is set
+    if default_template_id:
+      default_template = next(
+        (t for t in displayable_templates if t["id"] == default_template_id), None
+      )
+      if default_template:
+        # The 'false' argument prevents the modal from trying to close
+        self.call_js("selectTemplate", default_template, False)
 
     if self.initial_content:
+      print(
+        "[DEBUG] AudioManagerForm: Setting TextEditor content from 'initial_content' parameter."
+      )
       self.text_editor_1.html_content = self.initial_content
     elif self.clicked_value is not None:
       self.load_report_content()
 
     self.call_js("rebuildPatientSearchInput")
     self.queue_manager_1.refresh_badge()
-    print("[DEBUG] form_show completed.")
+
+    print("[DEBUG] AudioManagerForm: form_show completed.")
 
   def search_template_relay(self, search_term, **event_args):
-    """MODIFIED to use the local self.all_templates list."""
+    """MODIFIED to filter by the 'display' property and use the local self.all_templates list."""
     print(f"[DEBUG] Client-side template search with term: {search_term}")
+
+    searchable_templates = [t for t in self.all_templates if t.get("display") is True]
+
     search_term = search_term.lower()
     if not search_term:
-      return self.all_templates
-    return [t for t in self.all_templates if search_term in t.get("name", "").lower()]
+      return searchable_templates
+
+    return [t for t in searchable_templates if search_term in t.get("name", "").lower()]
 
   def refresh_session_relay(self, **event_args):
     """Called when the application comes back online or the tab returns to foreground, to keep user session active."""
@@ -171,15 +194,18 @@ class AudioManagerForm(AudioManagerFormTemplate):
       return False
 
   def load_report_content(self):
-    print(f"[DEBUG] Loading report content for clicked_value: {self.clicked_value}")
+    print(
+      f"[DEBUG] AudioManagerForm: Loading report content for clicked_value: {self.clicked_value}"
+    )
     try:
       content, error = anvil.server.call_s("load_report_content", self.clicked_value)
-      print(
-        f"[DEBUG] Result from load_report_content: content={content}, error={error}"
-      )
+      print(f"[DEBUG] AudioManagerForm: Result from load_report_content: error={error}")
       if error:
         alert(error)
       elif content:
+        print(
+          "[DEBUG] AudioManagerForm: Setting TextEditor content from loaded report."
+        )
         self.text_editor_1.html_content = content
       else:
         alert("Unexpected error: no content returned.")
@@ -262,13 +288,14 @@ class AudioManagerForm(AudioManagerFormTemplate):
     """
     Orchestrates the processing of the audio with user feedback.
     """
-    print("AMF PY: process_recording initiated.")
+    print("[DEBUG] AudioManagerForm: process_recording initiated.")
     js_blob_proxy = self.audio_playback_1.audio_blob
     if not js_blob_proxy:
       alert("No audio available to process.")
       self.call_js("setAudioWorkflowState", "decision")  # Revert UI
       return "ERROR"
 
+    print("[DEBUG] AudioManagerForm: Getting template content from TextEditor.")
     template = self.text_editor_1.get_content()
     if not template or not template.strip():
       alert("Cannot process without a template. Please select a template first.")
@@ -295,8 +322,11 @@ class AudioManagerForm(AudioManagerFormTemplate):
       self.user_feedback_1.set_status("Formatting final report...")
       final_html = self._format_report(report_content, template, lang)
 
+      print(
+        "[DEBUG] AudioManagerForm: Setting final generated content into TextEditor."
+      )
       self.text_editor_1.html_content = final_html
-      print("[DEBUG] process_recording completed successfully.")
+      print("[DEBUG] AudioManagerForm: process_recording completed successfully.")
       return "OK"
 
     except anvil.server.AppOfflineError:
@@ -384,19 +414,19 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Error checking audio format: {e}")
       return audio_blob
 
-  def report_footer_1_status_clicked(self, **event_args):
-    status_options = anvil.server.call_s("get_status_options")
-    buttons = [(opt.replace("_", " ").title(), opt) for opt in status_options] + [
-      ("Cancel", None)
-    ]
-    choice = alert("Choose status:", buttons=buttons)
-    if choice:
-      self.selected_statut = choice
-      self.report_footer_1.update_status_display(choice)
+  def report_footer_1_status_clicked(self, status_key, **event_args):
+    """
+    Handles the status change from the footer component.
+    The dialog is now handled entirely within the component.
+    """
+    if status_key:
+      self.selected_statut = status_key
+      self.report_footer_1.update_status_display(status_key)
       self.call_js(
-        "displayBanner", f"Status chosen: {choice.replace('_', ' ').title()}", "success"
+        "displayBanner",
+        f"Status chosen: {status_key.replace('_', ' ').title()}",
+        "success",
       )
-    return choice
 
   def report_footer_1_save_clicked(self, **event_args):
     html_content = self.text_editor_1.get_content()
@@ -442,27 +472,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Exception in save_report: {e}")
       raise
     return True
-
-  def get_new_patient_details(self):
-    form_content = ColumnPanel(spacing=10, tag=self)
-    form_content.add_component(TextBox(placeholder="Name"))
-    form_content.add_component(TextBox(placeholder="Species"))
-    form_content.add_component(TextBox(placeholder="Owner"))
-    if (
-      alert(
-        content=form_content,
-        title="Enter new patient details",
-        buttons=["OK", "Cancel"],
-      )
-      == "OK"
-    ):
-      components = form_content.get_components()
-      return {
-        "name": components[0].text,
-        "type": components[1].text,
-        "proprietaire": components[2].text,
-      }
-    return None
 
   def search_patients_relay(self, search_term, **event_args):
     print(f"[DEBUG] search_patients_relay called with search_term: {search_term}")

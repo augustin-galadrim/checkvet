@@ -285,57 +285,47 @@ def get_reports_by_structure(structure_name):
   print(
     f"DEBUG: Entering get_reports_by_structure with structure_name='{structure_name}'"
   )
-
   try:
-    # 1) Look up the structure row
     structure_row = app_tables.structures.get(name=structure_name)
     if not structure_row:
-      print(f"DEBUG: No 'structures' row found with name '{structure_name}'")
       return []
 
-    # 2) Get all users in that structure
     users_in_structure = app_tables.users.search(structure=structure_row)
-    user_rows = list(users_in_structure)  # convert to a list for re-use
-
-    print(f"DEBUG: Found {len(user_rows)} user(s) in structure '{structure_name}'")
-
+    user_rows = list(users_in_structure)
     if not user_rows:
       return []
 
-    # 3) Search for reports whose 'vet' is in the user_rows list
-    reports_query = app_tables.reports.search(vet=q.any_of(*user_rows))
+    reports_query = app_tables.reports.search(
+      tables.order_by("last_modified", ascending=False), vet=q.any_of(*user_rows)
+    )
 
-    # 4) Build a list of dicts to return
     results = []
     for report_row in reports_query:
-      # Safely pull the animal's name
       animal_row = report_row["animal"]
       animal_name = animal_row["name"] if animal_row else None
-
-      # Format last_modified as a string (optional)
-      dt_str = None
-      if report_row["last_modified"]:
-        dt_str = report_row["last_modified"].strftime("%Y-%m-%d %H:%M:%S")
-
-      # NEW: Get the vet's display name (name or email)
+      dt_str = (
+        report_row["last_modified"].strftime("%Y-%m-%d %H:%M:%S")
+        if report_row["last_modified"]
+        else None
+      )
       vet_display_name = "Unknown Vet"
       vet_row = report_row["vet"]
       if vet_row:
         vet_display_name = vet_row["name"] or vet_row["email"]
 
       results.append({
+        "id": report_row.get_id(),  # --- MODIFIED: Return Anvil's unique Row ID
         "file_name": report_row["file_name"],
         "name": animal_name,
         "last_modified": dt_str,
         "owner_email": report_row["vet"]["email"] if report_row["vet"] else None,
         "report_rich": report_row["report_rich"],
         "statut": report_row["statut"],
-        "vet_display_name": vet_display_name,  # Add the new field
+        "vet_display_name": vet_display_name,
       })
 
     print(f"DEBUG: Returning {len(results)} report(s) for structure '{structure_name}'")
     return results
-
   except Exception as e:
     print(f"ERROR: Unexpected error in get_reports_by_structure: {e}")
     return []

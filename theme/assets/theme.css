@@ -17,3 +17,41 @@
   border: none !important;
   box-shadow: none !important;
 }
+
+#global-banner-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999; /* Ensure it's on top of other elements */
+  width: auto;
+  max-width: 90%;
+}
+
+.global-banner {
+  padding: 12px 24px;
+  color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  margin-bottom: 10px;
+  opacity: 0; /* Start invisible for fade-in */
+  transform: translateY(-20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.global-banner.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.global-banner.banner-success {
+  background-color: #4CAF50; /* Green */
+}
+
+.global-banner.banner-error {
+  background-color: #f44336; /* Red */
+}
+
+.global-banner.banner-info {
+  background-color: #2196F3; /* Blue */
+}

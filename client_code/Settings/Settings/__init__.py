@@ -134,7 +134,9 @@ class Settings(SettingsTemplate):
           t.load_language(new_language)
           events.publish("language_changed")
 
-        self.call_js("displayBanner", t.t("settings_update_success_banner"), "success")
+        anvil.js.call_js(
+          "displayBanner", "testing_new", "success"
+        )
         self.load_vet_data()  # Reload data to ensure consistency
       else:
         alert(t.t("settings_update_fail_alert"))

@@ -1,4 +1,9 @@
-// === Global Helper Functions ===
+// ============================================================================
+// ===                      GLOBAL HELPER FUNCTIONS                         ===
+// ============================================================================
+// This file contains globally accessible JavaScript utility functions for the
+// Anvil application. They can be called from any form's Python code using
+// anvil.js.call_js('functionName', ...args).
 
 /**
  * Displays a non-blocking notification banner at the top of the page.
@@ -7,38 +12,110 @@
  * @param {number} [duration=3000] The time in milliseconds for the banner to be visible.
  */
 window.displayBanner = function(message, type = 'info', duration = 3000) {
-  // Find or create the main container for all banners
   let container = document.getElementById('global-banner-container');
   if (!container) {
     container = document.createElement('div');
     container.id = 'global-banner-container';
     document.body.appendChild(container);
   }
-
-  // Create the new banner element
   const banner = document.createElement('div');
-  banner.className = `global-banner banner-${type}`; // e.g., 'global-banner banner-success'
+  banner.className = `global-banner banner-${type}`;
   banner.textContent = message;
-
-  // Add the banner to the container
   container.appendChild(banner);
-
-  // Trigger the fade-in animation
-  // We use a short timeout to allow the browser to render the element first
   setTimeout(() => {
     banner.classList.add('visible');
   }, 10);
-
-  // Set a timer to remove the banner
   setTimeout(() => {
-    // Trigger the fade-out animation
     banner.classList.remove('visible');
-
-    // After the animation finishes, remove the element from the DOM
     setTimeout(() => {
       if (banner.parentNode) {
         banner.parentNode.removeChild(banner);
       }
-    }, 300); // This should match the CSS transition duration
+    }, 300);
   }, duration);
+};
+
+/**
+ * Sets the text content of an element by its ID. Ideal for labels, titles, buttons, etc.
+ * @param {string} elementId The ID of the target element.
+ * @param {string} newText The new text to display.
+ */
+window.setElementText = function(elementId, newText) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.textContent = newText;
+  } else {
+    console.warn(`setElementText: Element with ID '${elementId}' not found.`);
+  }
+};
+
+/**
+ * Sets the placeholder attribute of an input element by its ID.
+ * @param {string} elementId The ID of the target input element.
+ * @param {string} newText The new placeholder text.
+ */
+window.setPlaceholder = function(elementId, newText) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.placeholder = newText;
+  } else {
+    console.warn(`setPlaceholder: Element with ID '${elementId}' not found.`);
+  }
+};
+
+/**
+ * Sets the value of a form input element (like <input> or <textarea>) by its ID.
+ * @param {string} elementId The ID of the target input element.
+ * @param {string} newValue The new value to set.
+ */
+window.setValue = function(elementId, newValue) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.value = newValue;
+  } else {
+    console.warn(`setValue: Element with ID '${elementId}' not found.`);
+  }
+};
+
+/**
+ * Sets the HTML title attribute of an element, which appears as a tooltip on hover.
+ * @param {string} elementId The ID of the target element.
+ * @param {string} newTitle The new title text for the tooltip.
+ */
+window.setElementTitle = function(elementId, newTitle) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.title = newTitle;
+  } else {
+    console.warn(`setElementTitle: Element with ID '${elementId}' not found.`);
+  }
+};
+
+/**
+ * Shows or hides an element by toggling its display style.
+ * @param {string} elementId The ID of the target element.
+ * @param {boolean} isVisible If true, sets display to its default; if false, sets to 'none'.
+ */
+window.setElementVisibility = function(elementId, isVisible) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.style.display = isVisible ? '' : 'none';
+  } else {
+    console.warn(`setElementVisibility: Element with ID '${elementId}' not found.`);
+  }
+};
+
+/**
+ * Enables or disables a button and adds/removes a 'disabled' class for styling.
+ * @param {string} buttonId The ID of the target button element.
+ * @param {boolean} isEnabled If true, enables the button; if false, disables it.
+ */
+window.setButtonEnabled = function(buttonId, isEnabled) {
+  const button = document.getElementById(buttonId);
+  if (button) {
+    button.disabled = !isEnabled;
+    button.classList.toggle('disabled', !isEnabled);
+  } else {
+    console.warn(`setButtonEnabled: Button with ID '${buttonId}' not found.`);
+  }
 };

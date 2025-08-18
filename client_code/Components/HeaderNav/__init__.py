@@ -19,10 +19,10 @@ class HeaderNav(HeaderNavTemplate):
       self.call_js("setActiveTab", self.active_tab)
 
   def update_ui_texts(self):
-    self.call_js("setElementText", "nav_production", t.t("nav_production"))
-    self.call_js("setElementText", "nav_templates", t.t("nav_templates"))
-    self.call_js("setElementText", "nav_archives", t.t("nav_archives"))
-    self.call_js("setElementText", "nav_settings", t.t("nav_settings"))
+    anvil.js.call_js("setElementText", "nav_production", t.t("nav_production"))
+    anvil.js.call_js("setElementText", "nav_templates", t.t("nav_templates"))
+    anvil.js.call_js("setElementText", "nav_archives", t.t("nav_archives"))
+    anvil.js.call_js("setElementText", "nav_settings", t.t("nav_settings"))
 
   def open_production_form(self, **event_args):
     open_form("Production.AudioManagerForm")

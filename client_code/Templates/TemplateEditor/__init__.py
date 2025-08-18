@@ -92,7 +92,7 @@ class TemplateEditor(TemplateEditorTemplate):
       )
 
       if result:
-        self.js.call_js("displayBanner", "Template saved successfully", "success")
+        anvil.js.call_js("displayBanner", "Template saved successfully", "success")
         open_form("Templates.Templates")
       else:
         alert("Failed to save template. Please try again.")

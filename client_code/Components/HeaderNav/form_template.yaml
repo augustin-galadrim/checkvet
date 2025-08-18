@@ -72,7 +72,7 @@ container:
           <div class="fixed-section">
             <div class="nav-tabs">
               <button class="nav-tab" data-tab="Production" id="nav_production">Production</button>
-              <button class="nav-tab" data-tab="Templates/AI" id="nav_templates">Templates/AI</button>
+              <button class="nav-tab" data-tab="Templates/AI" id="nav_templates">Templates</button>
               <button class="nav-tab" data-tab="Archives" id="nav_archives">Archives</button>
               <button class="nav-tab" data-tab="Settings" id="nav_settings">Settings</button>
             </div>
@@ -82,14 +82,6 @@ container:
             // --- ADDED THIS BLOCK TO MAKE THE COMPONENT SELF-CONTAINED ---
             if (!window.__header_nav_globals) {
               window.__header_nav_globals = true;
-
-              // This function is now defined inside the component that uses it.
-              window.setElementText = function(elementId, newText) {
-                const element = document.getElementById(elementId);
-                if (element) {
-                  element.textContent = newText;
-                }
-              };
 
               // This function was also missing and is now included.
               window.updateTime = function() {

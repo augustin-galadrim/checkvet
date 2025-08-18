@@ -75,28 +75,28 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def update_ui_texts(self):
     """Sets all text on the form using the TranslationService."""
-    self.call_js("setElementText", "recordButton", t.t("record_button"))
-    self.call_js("setElementText", "uploadButton", t.t("upload_button"))
-    self.call_js("setElementText", "upload_text_drop", t.t("upload_text_drop"))
-    self.call_js(
+    anvil.js.call_js("setElementText", "recordButton", t.t("record_button"))
+    anvil.js.call_js("setElementText", "uploadButton", t.t("upload_button"))
+    anvil.js.call_js("setElementText", "upload_text_drop", t.t("upload_text_drop"))
+    anvil.js.call_js(
       "setElementText", "upload_description_select", t.t("upload_description_select")
     )
-    self.call_js("setElementText", "upload_button_select", t.t("upload_button_select"))
-    self.call_js("setElementText", "label_template", t.t("label_template"))
-    self.call_js("setElementText", "label_language", t.t("label_language"))
-    self.call_js(
+    anvil.js.call_js("setElementText", "upload_button_select", t.t("upload_button_select"))
+    anvil.js.call_js("setElementText", "label_template", t.t("label_template"))
+    anvil.js.call_js("setElementText", "label_language", t.t("label_language"))
+    anvil.js.call_js(
       "setElementText",
       "select_template_placeholder",
       t.t("select_template_placeholder"),
     )
-    self.call_js("setElementText", "select_patient_title", t.t("select_patient_title"))
-    self.call_js("setElementText", "newPatientBtn", t.t("new_patient_button"))
-    self.call_js(
+    anvil.js.call_js("setElementText", "select_patient_title", t.t("select_patient_title"))
+    anvil.js.call_js("setElementText", "newPatientBtn", t.t("new_patient_button"))
+    anvil.js.call_js(
       "setElementText", "select_template_title", t.t("select_template_title")
     )
-    self.call_js("setPlaceholderById", "searchInput", t.t("search_patient_placeholder"))
-    self.call_js(
-      "setPlaceholderById", "templateSearchInput", t.t("search_template_placeholder")
+    anvil.js.call_js("setPlaceholder", "searchInput", t.t("search_patient_placeholder"))
+    anvil.js.call_js(
+      "setPlaceholder", "templateSearchInput", t.t("search_template_placeholder")
     )
 
   def form_show(self, **event_args):
@@ -337,7 +337,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     except Exception as e:
       print(f"[ERROR] An exception occurred in process_recording: {e}")
-      self.js.call_js("displayBanner", f"Error: {e}", "error")
+      anvil.js.call_js("displayBanner", f"Error: {e}", "error")
       if confirm("An unexpected error occurred. Save to offline queue?"):
         self.queue_manager_1.open_title_modal(js_blob_proxy)
         return "OFFLINE_SAVE"
@@ -465,7 +465,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
         transcript=self.raw_transcription,
       )
       if result:
-        self.js.call_js("displayBanner", t.t("report_save_success"), "success")
+        anvil.js.call_js("displayBanner", t.t("report_save_success"), "success")
         return True
       else:
         alert(t.t("report_save_fail"))

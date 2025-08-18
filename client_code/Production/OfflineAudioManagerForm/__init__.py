@@ -54,7 +54,7 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
       # JS Blob Proxy to save. This is the correct format for the component.
       self.queue_manager_1.open_title_modal(audio_proxy)
     else:
-      self.js.call_js("displayBanner", "No recording available to save.", "error")
+      anvil.js.call_js("displayBanner", "No recording available to save.", "error")
 
   def on_queue_updated(self, **event_args):
     """

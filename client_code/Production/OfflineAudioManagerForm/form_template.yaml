@@ -97,22 +97,9 @@ container:
             </div>
           </div>
 
-          <!-- Banner container for notifications -->
-          <div id="bannerContainer"></div>
-
           <script>
             if (!window.__offline_form_globals) {
               window.__offline_form_globals = true;
-
-              window.displayBanner = function(message, type) {
-                const container = document.getElementById('bannerContainer');
-                if (!container) return;
-                const banner = document.createElement('div');
-                banner.className = `banner banner-${type}`;
-                banner.textContent = message;
-                container.appendChild(banner);
-                setTimeout(() => banner.remove(), 3000);
-              };
 
               window.setAudioWorkflowState = (state) => {
                 const inputContainer = document.getElementById('audioInputContainer');

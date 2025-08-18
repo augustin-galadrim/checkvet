@@ -337,7 +337,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     except Exception as e:
       print(f"[ERROR] An exception occurred in process_recording: {e}")
-      self.call_js("displayBanner", f"Error: {e}", "error")
+      self.js.call_js("displayBanner", f"Error: {e}", "error")
       if confirm("An unexpected error occurred. Save to offline queue?"):
         self.queue_manager_1.open_title_modal(js_blob_proxy)
         return "OFFLINE_SAVE"
@@ -465,9 +465,11 @@ class AudioManagerForm(AudioManagerFormTemplate):
         transcript=self.raw_transcription,
       )
       if result:
-        self.call_js("displayBanner", "Report saved successfully", "success")
+        self.js.call_js("displayBanner", t.t("report_save_success"), "success")
+        return True
       else:
-        alert("Failed to save report. Please try again.")
+        alert(t.t("report_save_fail"))
+        return False
     except Exception as e:
       print(f"[ERROR] Exception in save_report: {e}")
       raise

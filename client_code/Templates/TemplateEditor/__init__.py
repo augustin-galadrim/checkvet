@@ -92,8 +92,8 @@ class TemplateEditor(TemplateEditorTemplate):
       )
 
       if result:
-        self.call_js("displayBanner", "Template saved successfully", "success")
-        open_form("Templates.Templates")  # Go back to templates list
+        self.js.call_js("displayBanner", "Template saved successfully", "success")
+        open_form("Templates.Templates")
       else:
         alert("Failed to save template. Please try again.")
     except Exception as e:

@@ -327,14 +327,6 @@ container:
             if (!window.__my_vet_settings_globals) {
               window.__my_vet_settings_globals = true;
 
-              window.displayBanner = function(message, type) {
-                const bannerDiv = document.createElement('div');
-                bannerDiv.textContent = message;
-                // ... (banner styling from previous step)
-                document.body.appendChild(bannerDiv);
-                setTimeout(() => { if (document.body.contains(bannerDiv)) document.body.removeChild(bannerDiv); }, 3000);
-              };
-
               // Get/set functions
               window.getValueById = (id) => document.getElementById(id)?.value || "";
               window.setValueById = (id, value) => { if(document.getElementById(id)) document.getElementById(id).value = value; };

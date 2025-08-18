@@ -611,7 +611,10 @@ exported_table_schema:
   server: full
 metadata: {logo_img: 'asset:Plan de travail 1 copie 5.png'}
 name: checkvet
-native_deps: {head_html: '<script src="https://cdnjs.cloudflare.com/ajax/libs/NoSleep.js/0.12.0/NoSleep.min.js"></script>'}
+native_deps:
+  head_html: |-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/NoSleep.js/0.12.0/NoSleep.min.js"></script>
+    <script src="_/theme/global-scripts.js"></script>
 package_name: checkvet
 runtime_options:
   client_version: '3'

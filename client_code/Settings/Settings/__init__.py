@@ -2,6 +2,7 @@ from ._anvil_designer import SettingsTemplate
 from anvil import *
 import anvil.server
 import anvil.users
+import anvil.js  # Make sure this import is present
 from ... import TranslationService as t
 from ...Cache import user_settings_cache
 from ...AppEvents import events
@@ -30,10 +31,10 @@ class Settings(SettingsTemplate):
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS."""
     try:
-      return anvil.server.call_s("check_and_refresh_session")
+      return anvil.server.call("check_and_refresh_session")
     except anvil.server.SessionExpiredError:
       anvil.server.reset_session()
-      return anvil.server.call_s("check_and_refresh_session")
+      return anvil.server.call("check_and_refresh_session")
     except Exception as e:
       print(f"[ERROR] Session refresh failed: {str(e)}")
       return False
@@ -111,7 +112,6 @@ class Settings(SettingsTemplate):
     """
     Gathers all data, saves it, and now reloads the TranslationService on language change.
     """
-
     try:
       form_data = {
         "name": self.call_js("getValueById", "name"),
@@ -124,29 +124,30 @@ class Settings(SettingsTemplate):
       success = anvil.server.call_s("write_user", **form_data)
 
       if success:
-        # Invalidate the language cache so the next full app load fetches the new preference
         user_settings_cache["language"] = None
-
-        # Check if the language has actually changed
         if new_language != t.CURRENT_LANG:
           print(f"Language changed to {new_language}. Reloading translations.")
-          # Load the new language into the TranslationService
           t.load_language(new_language)
           events.publish("language_changed")
 
+        # Use the global banner for the success message
         anvil.js.call_js(
-          "displayBanner", "testing_new", "success"
+          "displayBanner", t.t("settings_update_success_banner"), "success"
         )
-        self.load_vet_data()  # Reload data to ensure consistency
+        self.load_vet_data()
       else:
+        # Use a reliable alert for a clear failure message
         alert(t.t("settings_update_fail_alert"))
     except Exception as e:
+      # MODIFIED: Use the built-in alert() for the except block.
+      # This guarantees that if anvil.js.call_js fails, you will still see the error message.
       alert(f"{t.t('settings_submit_error_alert')}: {str(e)}")
 
   def cancel_click(self, **event_args):
     """Discards any changes by reloading the user data from the server."""
     self.load_vet_data()
-    self.call_js("displayBanner", "Changes have been discarded.", "info")
+    # Use the global banner for the info message
+    anvil.js.call_js("displayBanner", "Changes have been discarded.", "info")
 
   def logout_click(self, **event_args):
     """Logs the user out and returns to the startup form."""

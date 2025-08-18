@@ -100,11 +100,9 @@ container:
             <!-- Footer -->
             <div anvil-slot="bottom_buttons_slot"></div>
           </div>
-          <div id="bannerContainer"></div>
           <script>
             if (!window.__editor_globals) {
               window.__editor_globals = true;
-              window.displayBanner = function(message, type) { /* ... banner implementation ... */ };
 
               window.setAudioWorkflowState = (state) => {
                 const input = document.getElementById('audioInputContainer');

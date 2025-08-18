@@ -63,14 +63,11 @@ class TemplateEditor(TemplateEditorTemplate):
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS"""
     try:
-      return anvil.server.call("check_and_refresh_session")
+      return anvil.server.call_s("check_and_refresh_session")
     except Exception as e:
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
 
-  # ----------------------------------------------------------
-  # Save template
-  # ----------------------------------------------------------
   def save_template(self, name, content_json, images, **event_args):
     """
     Called when the user clicks "Save". Updates the existing template record
@@ -86,7 +83,7 @@ class TemplateEditor(TemplateEditorTemplate):
       print(
         f"calling write_template with the following args : name={name}, html={html_content}, id={self.template_id}"
       )
-      result = anvil.server.call(
+      result = anvil.server.call_s(
         "write_template",
         name=name,
         html=html_content,
@@ -103,10 +100,3 @@ class TemplateEditor(TemplateEditorTemplate):
       print("Exception in save_template:", e)
       alert("Error saving template: " + str(e))
     return True
-
-  # ----------------------------------------------------------
-  # Return button
-  # ----------------------------------------------------------
-  def return_clicked(self, **event_args):
-    """Return to the Templates page without confirmation."""
-    open_form("Templates.Templates")

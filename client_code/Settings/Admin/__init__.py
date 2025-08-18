@@ -34,10 +34,10 @@ class Admin(AdminTemplate):
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS"""
     try:
-      return anvil.server.call("check_and_refresh_session")
+      return anvil.server.call_s("check_and_refresh_session")
     except anvil.server.SessionExpiredError:
       anvil.server.reset_session()
-      return anvil.server.call("check_and_refresh_session")
+      return anvil.server.call_s("check_and_refresh_session")
     except Exception as e:
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
@@ -404,28 +404,28 @@ class Admin(AdminTemplate):
 def relay_read_structures():
   """Relay method for read_structures server function"""
   try:
-    return anvil.server.call("read_structures")
+    return anvil.server.call_s("read_structures")
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("read_structures")
+    return anvil.server.call_s("read_structures")
 
 
 def relay_write_structure(**kwargs):
   """Relay method for write_structure server function"""
   try:
-    return anvil.server.call("write_structure", **kwargs)
+    return anvil.server.call_s("write_structure", **kwargs)
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("write_structure", **kwargs)
+    return anvil.server.call_s("write_structure", **kwargs)
 
 
 def relay_search_users(search_term):
   """Relay method for search_users server function"""
   try:
-    return anvil.server.call("search_users", search_term)
+    return anvil.server.call_s("search_users", search_term)
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("search_users", search_term)
+    return anvil.server.call_s("search_users", search_term)
 
 
 def relay_write_user(**kwargs):
@@ -435,7 +435,7 @@ def relay_write_user(**kwargs):
     if "email" in kwargs:
       # We need to get user by email first
       email = kwargs.pop("email")
-      users = anvil.server.call("search_users", "")
+      users = anvil.server.call_s("search_users", "")
       user = next((u for u in users if u["email"] == email), None)
 
       if not user:
@@ -449,12 +449,12 @@ def relay_write_user(**kwargs):
           kwargs["structure"] = None
 
           # Now use the existing write_user function with the correct parameters
-      return anvil.server.call("write_user", **kwargs)
+      return anvil.server.call_s("write_user", **kwargs)
     else:
-      return anvil.server.call("write_user", **kwargs)
+      return anvil.server.call_s("write_user", **kwargs)
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("write_user", **kwargs)
+    return anvil.server.call_s("write_user", **kwargs)
   except Exception as e:
     print(f"DEBUG: Error in relay_write_user: {str(e)}")
     return False
@@ -463,43 +463,43 @@ def relay_write_user(**kwargs):
 def relay_create_user(**kwargs):
   """Relay method for create_user server function"""
   try:
-    return anvil.server.call("create_user", **kwargs)
+    return anvil.server.call_s("create_user", **kwargs)
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("create_user", **kwargs)
+    return anvil.server.call_s("create_user", **kwargs)
 
 
 def relay_update_user(**kwargs):
   """Relay method for update_user server function"""
   try:
-    return anvil.server.call("update_user", **kwargs)
+    return anvil.server.call_s("update_user", **kwargs)
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("update_user", **kwargs)
+    return anvil.server.call_s("update_user", **kwargs)
 
 
 def relay_read_templates():
   """Relay method for read_templates server function"""
   try:
-    return anvil.server.call("read_templates")
+    return anvil.server.call_s("read_templates")
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("read_templates")
+    return anvil.server.call_s("read_templates")
 
 
 def relay_write_template(**kwargs):
   """Relay method for write_template server function"""
   try:
-    return anvil.server.call("write_template", **kwargs)
+    return anvil.server.call_s("write_template", **kwargs)
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("write_template", **kwargs)
+    return anvil.server.call_s("write_template", **kwargs)
 
 
 def relay_assign_template(template_id, user_ids):
   """Relay method for assign_template server function"""
   try:
-    return anvil.server.call("assign_template_to_users", template_id, user_ids)
+    return anvil.server.call_s("assign_template_to_users", template_id, user_ids)
   except anvil.server.SessionExpiredError:
     anvil.server.reset_session()
-    return anvil.server.call("assign_template_to_users", template_id, user_ids)
+    return anvil.server.call_s("assign_template_to_users", template_id, user_ids)

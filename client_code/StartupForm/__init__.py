@@ -18,14 +18,14 @@ class StartupForm(StartupFormTemplate):
 
       if user:
         # --- User is now logged in ---
-        anvil.server.call("ensure_persistent_session")
+        anvil.server.call_s("ensure_persistent_session")
 
         # 2. REGISTRATION CHECK (Updated with Caching)
         additional_info_complete = user_settings_cache.get("additional_info")
         if additional_info_complete is None:
           # If not in cache, fetch from the server
           print("Startup cache miss: Fetching 'additional_info'.")
-          additional_info_complete = anvil.server.call(
+          additional_info_complete = anvil.server.call_s(
             "get_user_info", "additional_info"
           )
           # Store the result in the cache for this session
@@ -41,7 +41,7 @@ class StartupForm(StartupFormTemplate):
           if lang_code is None:
             # If not in cache, fetch the user's language from the server.
             print("Startup cache miss: Fetching 'favorite_language'.")
-            lang_code = anvil.server.call("get_user_info", "favorite_language") or "en"
+            lang_code = anvil.server.call_s("get_user_info", "favorite_language") or "en"
             # Store the result in the cache. Note the key is 'language'.
             user_settings_cache["language"] = lang_code
 

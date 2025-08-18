@@ -180,7 +180,7 @@ class ArchivesForm(ArchivesFormTemplate):
     if confirm("Are you sure you want to delete this report?"):
       try:
         # --- MODIFIED: Pass the reliable ID to the server
-        if anvil.server.call("delete_report", report_id):
+        if anvil.server.call_s("delete_report", report_id):
           reports_cache_manager.invalidate()
           self.form_show()
         else:

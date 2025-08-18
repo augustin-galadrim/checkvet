@@ -30,10 +30,10 @@ class Settings(SettingsTemplate):
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS."""
     try:
-      return anvil.server.call("check_and_refresh_session")
+      return anvil.server.call_s("check_and_refresh_session")
     except anvil.server.SessionExpiredError:
       anvil.server.reset_session()
-      return anvil.server.call("check_and_refresh_session")
+      return anvil.server.call_s("check_and_refresh_session")
     except Exception as e:
       print(f"[ERROR] Session refresh failed: {str(e)}")
       return False

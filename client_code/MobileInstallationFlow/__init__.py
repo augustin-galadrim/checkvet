@@ -45,7 +45,7 @@ class MobileInstallationFlow(MobileInstallationFlowTemplate):
     Logs the installation and invalidates the cache on success.
     """
     try:
-      success = anvil.server.call("write_user", mobile_installation=True)
+      success = anvil.server.call_s("write_user", mobile_installation=True)
       print(f"DEBUG: Server response for write_user: {success}")
       if success:
         # *** FIX: Invalidate the cache so the next form load gets the new value ***

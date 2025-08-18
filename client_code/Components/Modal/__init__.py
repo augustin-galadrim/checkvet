@@ -19,6 +19,7 @@ class Modal(ModalTemplate):
   def close(self):
     anvil.js.call_js("hideModalComponent")
 
+
   def raise_close_event_from_js(self, **event_args):
     """Called by JavaScript when the overlay or close button is clicked."""
     self.raise_event("x-close")

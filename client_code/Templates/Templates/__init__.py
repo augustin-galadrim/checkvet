@@ -41,7 +41,7 @@ class Templates(TemplatesTemplate):
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS"""
     try:
-      return anvil.server.call("check_and_refresh_session")
+      return anvil.server.call_s("check_and_refresh_session")
     except Exception as e:
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
@@ -80,7 +80,7 @@ class Templates(TemplatesTemplate):
   def delete_template(self, template_id, **event_args):
     if confirm("Are you sure you want to delete this template?"):
       try:
-        success = anvil.server.call("delete_template", template_id)
+        success = anvil.server.call_s("delete_template", template_id)
         if success:
           # *** FIX: Invalidate the cache after a successful deletion ***
           template_cache_manager.invalidate()
@@ -97,7 +97,7 @@ class Templates(TemplatesTemplate):
     """
     try:
       # Call the existing server function to update the template's display property
-      success = anvil.server.call(
+      success = anvil.server.call_s(
         "write_template", template_id=template_id, display=new_display_state
       )
 
@@ -115,7 +115,7 @@ class Templates(TemplatesTemplate):
     Called from JavaScript to set the user's default template.
     """
     try:
-      success = anvil.server.call("set_default_template", template_id)
+      success = anvil.server.call_s("set_default_template", template_id)
       if success:
         # Invalidate cache so the new default is fetched next time
         template_cache_manager.invalidate()

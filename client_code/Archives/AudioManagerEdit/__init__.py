@@ -65,11 +65,11 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     anvil_media_blob = anvil.js.to_media(audio_proxy)
     current_content = self.text_editor_1.get_content()
     # Assuming user's language preference can be determined or is defaulted
-    language = anvil.server.call("get_user_info", "favorite_language") or "en"
+    language = anvil.server.call_s("get_user_info", "favorite_language") or "en"
 
     try:
       # 3. Transcribe the audio command
-      task = anvil.server.call(
+      task = anvil.server.call_s(
         "process_audio_whisper", anvil_media_blob, language=language
       )
 
@@ -99,7 +99,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
 
       # 4. Apply the edit
       self.user_feedback_1.set_status("Applying modification...")
-      edited_report = anvil.server.call(
+      edited_report = anvil.server.call_s(
         "edit_report", transcription, current_content, language
       )
       self.text_editor_1.html_content = edited_report
@@ -131,7 +131,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       new_status = self.selected_statut
 
       # Call the new, dedicated server function for updating
-      success = anvil.server.call(
+      success = anvil.server.call_s(
         "update_report", report_id, new_html_content, new_status
       )
 

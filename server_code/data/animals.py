@@ -140,15 +140,3 @@ def pick_animal(nom, header):
   else:
     print(f"Header '{header}' not found")
     return None
-
-
-"""
-# To read all animals for the current veterinarian
-animals = anvil.server.call('read_animals')
-
-# To write or update an animal's information
-anvil.server.call('write_animal', 'Bella', espece='Dog', age=5, proprietaire='Jane Doe', informations='Friendly')
-
-# To pick a specific value from an animal's information
-owner = anvil.server.call('pick_animal', 'Bella', 'proprietaire')
-"""

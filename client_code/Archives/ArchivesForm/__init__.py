@@ -2,7 +2,8 @@ from ._anvil_designer import ArchivesFormTemplate
 from anvil import *
 import anvil.server
 import anvil.users
-from ...Cache import reports_cache_manager  # Import the cache manager object
+from ...Cache import reports_cache_manager
+from ... import TranslationService as t  # <-- Import the TranslationService
 import time
 
 
@@ -26,19 +27,33 @@ class ArchivesForm(ArchivesFormTemplate):
     self.structure_reports = []
     self.structure_name = None
     self.affiliated_vets = []
-    self.current_status_filter = "all"
-    self.selected_vets_emails = []
+    self.status_options_keys = [] 
+    self.my_patients = []
+
+    # Filter state variables
     self.current_search_query = ""
+    self.selected_statuses = []
+    self.selected_vets_emails = []
+    self.selected_patient_ids = []
 
   def form_show(self, **event_args):
     """
-    Called when the form is shown. It now uses the cache manager object.
+    Called when the form is shown. Now fetches filter options and translates them.
     """
     self.call_js("resetActiveTabState")
     user = anvil.users.get_user()
     self.is_supervisor = user and user["supervisor"]
     self.header_nav_1.active_tab = "Archives"
 
+    try:
+      self.status_options_keys = anvil.server.call_s('get_status_options')
+      self.my_patients = anvil.server.call_s('get_my_patients_for_filtering')
+    except Exception as e:
+      alert(f"Could not load filter options: {e}")
+      self.status_options_keys = []
+      self.my_patients = []
+
+    # --- Data fetching logic (remains the same) ---
     my_reports, structure_reports = reports_cache_manager.get()
 
     if my_reports is not None:
@@ -47,7 +62,6 @@ class ArchivesForm(ArchivesFormTemplate):
     else:
       print("Cache is invalid or expired. Fetching fresh reports from server.")
       try:
-        # *** FIX: Replaced the 'with' block with silent server calls (call_s) ***
         fresh_my_reports = anvil.server.call_s("read_reports") or []
         fresh_structure_reports = []
 
@@ -77,46 +91,42 @@ class ArchivesForm(ArchivesFormTemplate):
         self.my_reports = []
         self.structure_reports = []
 
+    # --- NEW: Translate status keys before sending to JavaScript ---
+    status_options_for_js = [
+      {"key": key, "display": t.t(key)} for key in self.status_options_keys
+    ]
+
+    # --- MODIFIED: Pass the translated status options to JS ---
     self.call_js(
       "setupUI",
       self.is_supervisor,
       self.has_structure,
       self.affiliated_vets,
       self.structure_name,
+      status_options_for_js, # <-- Pass the pre-translated list
+      self.my_patients
     )
     self.apply_filters("my_reports")
     self.call_js("reAttachArchivesEvents")
 
   def refresh_data_click(self, active_tab, **event_args):
-    """
-    Invalidates the cache and re-fetches data, then reapplies all filters
-    for the currently active tab.
-    """
     print(f"Refresh button clicked on tab: {active_tab}. Invalidating cache.")
     reports_cache_manager.invalidate()
 
-    # Re-fetch the data silently without a full form_show reset
     try:
-      # We always need to refresh both lists, as the cache is now empty
       self.my_reports = anvil.server.call_s("read_reports") or []
-
       if self.is_supervisor and self.has_structure:
         self.structure_reports = (
           anvil.server.call_s("get_reports_by_structure", self.structure_name) or []
         )
-
-        # Update the cache with the new data
       reports_cache_manager.set(
         my_reports=self.my_reports, structure_reports=self.structure_reports
       )
-
     except Exception as e:
       alert(f"An error occurred while refreshing reports: {e}")
-      # Clear local data on failure to avoid showing stale data
       self.my_reports = []
       self.structure_reports = []
 
-    # Re-apply all current filters for the tab the user was on
     self.apply_filters(active_tab)
     alert("Reports have been refreshed.")
 
@@ -124,62 +134,70 @@ class ArchivesForm(ArchivesFormTemplate):
     source_reports = (
       self.my_reports if report_type == "my_reports" else self.structure_reports
     )
-    filtered_list = source_reports
+    filtered_list = list(source_reports) # Create a copy to modify
 
     if self.current_search_query:
       search_term = self.current_search_query.lower()
       if report_type == "structure_reports":
         filtered_list = [
-          r
-          for r in filtered_list
+          r for r in filtered_list
           if (search_term in (r.get("name") or "").lower())
           or (search_term in (r.get("file_name") or "").lower())
           or (search_term in (r.get("vet_display_name") or "").lower())
         ]
       else:
         filtered_list = [
-          r
-          for r in filtered_list
+          r for r in filtered_list
           if (search_term in (r.get("name") or "").lower())
           or (search_term in (r.get("file_name") or "").lower())
         ]
 
-    if self.current_status_filter != "all":
+    if self.selected_statuses:
       filtered_list = [
-        r
-        for r in filtered_list
-        if safe_value(r, "statut", "Non spécifié") == self.current_status_filter
+        r for r in filtered_list
+        if safe_value(r, "statut", "not_specified") in self.selected_statuses
       ]
 
-    if report_type == "structure_reports" and self.selected_vets_emails:
-      filtered_list = [
-        r for r in filtered_list if r.get("owner_email") in self.selected_vets_emails
-      ]
+    if report_type == "structure_reports":
+      if self.selected_vets_emails:
+        filtered_list = [
+          r for r in filtered_list if r.get("owner_email") in self.selected_vets_emails
+        ]
+    else: 
+      if self.selected_patient_ids:
+        filtered_list = [
+          r for r in filtered_list if r.get("animal_id") in self.selected_patient_ids
+        ]
+
+    # --- NEW: Add translated status text to each report dictionary for JS ---
+    for report in filtered_list:
+      report['statut_display'] = t.t(report.get('statut', 'not_specified'))
 
     if report_type == "my_reports":
       self.call_js("populateMyReports", filtered_list)
     else:
       self.call_js("populateStructureReports", filtered_list)
 
-  def filter_reports_by_status(self, filter_val, active_tab, **event_args):
-    self.current_status_filter = filter_val
-    self.apply_filters(active_tab)
+  def apply_my_reports_filters(self, statuses, patient_ids, **event_args):
+    self.selected_statuses = statuses
+    self.selected_patient_ids = patient_ids
+    self.apply_filters("my_reports")
 
-  def filter_reports_by_vets(self, vets_emails_list, **event_args):
-    if self.is_supervisor:
-      self.selected_vets_emails = vets_emails_list
-      self.apply_filters("structure_reports")
+  def apply_structure_filters(self, statuses, vet_emails, **event_args):
+    self.selected_statuses = statuses
+    self.selected_vets_emails = vet_emails
+    self.apply_filters("structure_reports")
 
   def search_reports(self, query, active_tab, **event_args):
     self.current_search_query = query
+    self.selected_statuses = []
+    self.selected_patient_ids = []
+    self.selected_vets_emails = []
     self.apply_filters(active_tab)
 
-  def delete_report(
-    self, report_id, active_tab, **event_args
-  ):  # --- MODIFIED: Parameter is now report_id
+  def delete_report(self, report_id, active_tab, **event_args):
     if confirm("Are you sure you want to delete this report?"):
       try:
-        # --- MODIFIED: Pass the reliable ID to the server
         if anvil.server.call_s("delete_report", report_id):
           reports_cache_manager.invalidate()
           self.form_show()
@@ -189,10 +207,7 @@ class ArchivesForm(ArchivesFormTemplate):
         alert(f"An error occurred while deleting the report: {e}")
 
   def open_report_editor(self, report, **event_args):
-    # No change needed here, but confirming its logic is sound.
-    # The 'report' dict now contains the 'id' which AudioManagerEdit requires.
     try:
-      # This safe copy ensures we only pass necessary, serializable data
       safe_report = {
         "id": report.get("id"),
         "file_name": report.get("file_name"),

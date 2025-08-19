@@ -21,14 +21,20 @@ container:
               overflow: hidden;     /* Pour que les coins arrondis s'appliquent correctement */
             }
             .nav-tab {
-              flex: 1;              /* Permet aux boutons de remplir l'espace disponible */
-              padding: 10px 16px;   /* Augmente légèrement le padding vertical pour un meilleur confort visuel */
+              /* The following 3 properties are the long-form of "flex: 1" */
+              flex-grow: 1;     /* Allow the tab to grow */
+              flex-shrink: 1;   /* Allow the tab to shrink */
+              flex-basis: 0;    /* IMPORTANT: Give every tab an identical starting width of 0,
+              forcing them to distribute the total space perfectly equally. */
+
+              /* The rest of your styles */
+              padding: 10px 16px;
               cursor: pointer;
-              background: #f8f8f8;  /* Fond gris clair par défaut */
+              background: #f8f8f8;
               font-size: 14px;
               text-align: center;
-              border: none;         /* Supprime les bordures individuelles */
-              border-right: 1px solid #ddd; /* Ajoute un séparateur vertical */
+              border: none;
+              border-right: 1px solid #ddd;
               transition: background-color 0.2s;
               color: #333;
             }
@@ -72,7 +78,7 @@ container:
           <div class="fixed-section">
             <div class="nav-tabs">
               <button class="nav-tab" data-tab="Production" id="nav_production">Production</button>
-              <button class="nav-tab" data-tab="Templates/AI" id="nav_templates">Templates</button>
+              <button class="nav-tab" data-tab="Templates" id="nav_templates">Templates</button>
               <button class="nav-tab" data-tab="Archives" id="nav_archives">Archives</button>
               <button class="nav-tab" data-tab="Settings" id="nav_settings">Settings</button>
             </div>
@@ -104,7 +110,7 @@ container:
                   const tabValue = newTab.getAttribute("data-tab");
                   if (tabValue === 'Production') {
                     anvil.call(event.target, 'open_production_form');
-                  } else if (tabValue === 'Templates/AI') {
+                  } else if (tabValue === 'Templates') {
                     anvil.call(event.target, 'open_templates_form');
                   } else if (tabValue === 'Archives') {
                     anvil.call(event.target, 'open_archives_form');

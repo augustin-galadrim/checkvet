@@ -21,14 +21,6 @@ container:
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Microphone Test</title>
           <style>
-            .container {
-              display: flex;
-              flex-direction: column;
-              height: 100vh;
-              width: 100%;
-              max-width: 600px;
-              margin: 0 auto;
-            }
             .content {
               flex: 1;
               padding: 20px;
@@ -48,7 +40,7 @@ container:
           </style>
         </head>
         <body>
-          <div class="container">
+          <div class="responsive-container">
             <!-- The HeaderReturn component will go here -->
             <div anvil-slot="default"></div>
 

@@ -27,15 +27,6 @@ container:
               height: 100vh;
               overflow: hidden;
             }
-            .container {
-              display: flex;
-              flex-direction: column;
-              height: 100vh;
-              max-width: 800px;
-              margin: 0 auto;
-              background-color: white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
             .fixed-section {
               background: white;
               z-index: 10;
@@ -181,7 +172,7 @@ container:
           </style>
         </head>
         <body>
-          <div class="container">
+          <div class="responsive-container">
             <div class="fixed-section">
               <div anvil-slot="default"></div>
               <div class="actions-row">

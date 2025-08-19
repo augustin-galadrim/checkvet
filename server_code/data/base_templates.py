@@ -91,11 +91,11 @@ def _create_custom_template_from_base(base_template, user):
 
     # Create the new row in the custom_templates table.
     app_tables.custom_templates.add_row(
-      id=str(uuid.uuid4()),  # Generate a new unique ID
       name=template_name,
       html=template_html,
       owner=user,
-      display=True,  # Default to being displayable
+      display=True,
+      language=base_template["language"],
     )
 
     print(

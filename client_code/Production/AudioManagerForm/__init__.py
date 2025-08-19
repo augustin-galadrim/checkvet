@@ -51,6 +51,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     # *** FIX: Add a variable to store all templates ***
     self.all_templates = []
+    self.all_patients = []
+    self.selected_template_language = "en"
 
     # Storage for raw transcription
     self.raw_transcription = None
@@ -81,7 +83,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
     anvil.js.call_js(
       "setElementText", "upload_description_select", t.t("upload_description_select")
     )
-    anvil.js.call_js("setElementText", "upload_button_select", t.t("upload_button_select"))
+    anvil.js.call_js(
+      "setElementText", "upload_button_select", t.t("upload_button_select")
+    )
     anvil.js.call_js("setElementText", "label_template", t.t("label_template"))
     anvil.js.call_js("setElementText", "label_language", t.t("label_language"))
     anvil.js.call_js(
@@ -89,7 +93,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
       "select_template_placeholder",
       t.t("select_template_placeholder"),
     )
-    anvil.js.call_js("setElementText", "select_patient_title", t.t("select_patient_title"))
+    anvil.js.call_js(
+      "setElementText", "select_patient_title", t.t("select_patient_title")
+    )
     anvil.js.call_js("setElementText", "newPatientBtn", t.t("new_patient_button"))
     anvil.js.call_js(
       "setElementText", "select_template_title", t.t("select_template_title")
@@ -147,6 +153,13 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.all_templates = template_data.get("templates", [])
     default_template_id = template_data.get("default_template_id")
 
+    try:
+      self.all_patients = anvil.server.call_s('get_my_patients_for_filtering')
+      self.call_js("populatePatientModal", self.all_patients)
+    except Exception as e:
+      print(f"[ERROR] Could not load patients: {e}")
+      self.all_patients = []
+
     displayable_templates = [t for t in self.all_templates if t.get("display") is True]
 
     self.call_js("populateTemplateModal", displayable_templates)
@@ -159,6 +172,11 @@ class AudioManagerForm(AudioManagerFormTemplate):
       if default_template:
         # The 'false' argument prevents the modal from trying to close
         self.call_js("selectTemplate", default_template, False)
+        # ** FIX: Set the language from the default template when the form loads **
+        self.selected_template_language = default_template.get("language", "en")
+        print(
+          f"[DEBUG] Default template set. Language is now: {self.selected_template_language}"
+        )
 
     if self.initial_content:
       print(
@@ -168,7 +186,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
     elif self.clicked_value is not None:
       self.load_report_content()
 
-    self.call_js("rebuildPatientSearchInput")
     self.queue_manager_1.refresh_badge()
 
     print("[DEBUG] AudioManagerForm: form_show completed.")
@@ -215,6 +232,13 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def show_error(self, error_message, **event_args):
     print(f"[DEBUG] show_error() called with message: {error_message}")
     alert(error_message)
+
+  def set_active_template_language(self, language, **event_args):
+    """Called from JavaScript whenever a template is selected by the user."""
+    self.selected_template_language = language or "en"
+    print(
+      f"[DEBUG] User selected a new template. Language is now: {self.selected_template_language}"
+    )
 
   def process_uploaded_audio(self, audio_blob, **event_args):
     """
@@ -308,7 +332,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     # --- End of new feedback logic ---
 
     anvil_media_blob = anvil.js.to_media(js_blob_proxy)
-    lang = self.get_selected_language()
+    lang = self.selected_template_language
 
     try:
       # Step 1: Transcription
@@ -434,36 +458,39 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def save_report(self, content_json, images, selected_patient, **event_args):
     try:
+      # If the patient is a newly created one, it won't have an ID yet.
       if not isinstance(selected_patient, dict):
-        matches = self.search_patients_relay(selected_patient)
-        if len(matches) == 1:
-          selected_patient = matches[0]
-        elif len(matches) > 1:
-          alert("Multiple patients found. Please select one from the list.")
-          return
-        else:
-          alert("No patient found with this name.")
-          return
+        alert("Invalid patient data provided.")
+        return False
+
       animal_name = selected_patient.get("name")
-      unique_id = selected_patient.get("unique_id")
-      if unique_id is None:
+      animal_id = selected_patient.get("id") # Use the 'id' key which now holds the Anvil ID
+
+      # If the animal_id is None, it means it's a new patient.
+      if animal_id is None:
         details = selected_patient.get("details", {})
-        unique_id = anvil.server.call_s(
+        # The server function now returns the new row's Anvil ID
+        animal_id = anvil.server.call_s(
           "write_animal_first_time",
           animal_name,
           type=details.get("type"),
           proprietaire=details.get("proprietaire"),
         )
+
       html_content = json.loads(content_json).get("content", "")
       statut = self.selected_statut or "not_specified"
+
+      # Call the updated server function with animal_id
       result = anvil.server.call_s(
         "write_report_first_time",
         animal_name=animal_name,
         report_rich=html_content,
         statut=statut,
-        unique_id=unique_id,
+        animal_id=animal_id, # Pass the Anvil ID
         transcript=self.raw_transcription,
+        language=self.selected_template_language
       )
+
       if result:
         anvil.js.call_js("displayBanner", t.t("report_save_success"), "success")
         return True
@@ -474,14 +501,6 @@ class AudioManagerForm(AudioManagerFormTemplate):
       print(f"[ERROR] Exception in save_report: {e}")
       raise
     return True
-
-  def search_patients_relay(self, search_term, **event_args):
-    print(f"[DEBUG] search_patients_relay called with search_term: {search_term}")
-    try:
-      return anvil.server.call_s("search_patients", search_term)
-    except Exception as e:
-      print(f"[ERROR] Error in search_patients_relay: {e}")
-      return []
 
   def queue_manager_1_x_import_item(self, item_id, audio_blob, **event_args):
     print(f"AudioManagerForm: Importing item {item_id} from queue.")

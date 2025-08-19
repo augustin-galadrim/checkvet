@@ -18,6 +18,9 @@ def read_reports():
   for report in reports:
     animal_row = report["animal"]
     animal_name = animal_row["name"] if animal_row else None
+    # --- MODIFIED: Add the animal's Row ID for client-side filtering ---
+    animal_id = animal_row.get_id() if animal_row else None
+
     dt_str = (
       report["last_modified"].strftime("%Y-%m-%d %H:%M:%S")
       if report["last_modified"]
@@ -25,9 +28,10 @@ def read_reports():
     )
 
     report_dict = {
-      "id": report.get_id(),  # --- MODIFIED: Return Anvil's unique Row ID
+      "id": report.get_id(),
       "file_name": report["file_name"],
       "name": animal_name,
+      "animal_id": animal_id, # <-- ADDED
       "vet": report["vet"],
       "last_modified": dt_str,
       "report_rich": report["report_rich"],
@@ -112,11 +116,10 @@ def write_report_first_time(
   last_modified=None,
   report_rich=None,
   statut=None,
-  unique_id=None,
+  animal_id=None, # MODIFIED: Changed from unique_id to animal_id
   transcript=None,
+  language=None
 ):
-  from datetime import datetime
-
   # Get the current date string for file name generation
   current_date_str = datetime.now().strftime("%Y%m%d")
 
@@ -130,7 +133,7 @@ def write_report_first_time(
   print(
     f"[DEBUG] Starting write_report_first_time with generated file_name={file_name}, "
     f"animal_name={animal_name}, vet={vet}, last_modified={last_modified}, "
-    f"report_rich={report_rich}, statut={statut}, unique_id={unique_id}"
+    f"report_rich={report_rich}, statut={statut}, animal_id={animal_id}"
   )
 
   # Get the current user (we use this as the vet)
@@ -142,39 +145,16 @@ def write_report_first_time(
   report_row = app_tables.reports.add_row(file_name=file_name, vet=current_user)
   print(f"[DEBUG] New report_row created: {report_row}")
 
-  # Handle the animal field: find the animal by its name and assign it to the report row.
-  if animal_name is not None:
-    print(f"[DEBUG] Attempting to find animal with name '{animal_name}'...")
-    print(f"[DEBUG] Received unique_id: {unique_id} (type: {type(unique_id)})")
+  # Handle the animal field: find the animal by its Anvil ID and assign it to the report row.
+  if animal_id is not None:
+    print(f"[DEBUG] Attempting to find animal with id '{animal_id}'...")
 
-    # If unique_id is a list or tuple, take the first element
-    if isinstance(unique_id, (list, tuple)):
-      print(f"[DEBUG] unique_id is a list/tuple: {unique_id}")
-      unique_id = unique_id[0]
-      print(
-        f"[DEBUG] Using first element of unique_id: {unique_id} (type: {type(unique_id)})"
-      )
-
-    # If unique_id is a string, attempt to convert it to int
-    elif isinstance(unique_id, str):
-      print(f"[DEBUG] unique_id is a string: '{unique_id}'")
-      try:
-        unique_id = int(unique_id)
-        print(
-          f"[DEBUG] Converted unique_id to int: {unique_id} (type: {type(unique_id)})"
-        )
-      except Exception as e:
-        print(f"[ERROR] Could not convert unique_id '{unique_id}' to int: {e}")
-
-    print(
-      f"[DEBUG] Final unique_id used for search: {unique_id} (type: {type(unique_id)})"
-    )
-    animal_row = app_tables.animals.get(name=animal_name, unique_id=unique_id)
+    animal_row = app_tables.animals.get_by_id(animal_id)
     if animal_row is None:
       print(
-        f"[ERROR] No animal found with name '{animal_name}' and unique_id {unique_id}"
+        f"[ERROR] No animal found with id '{animal_id}'"
       )
-      raise ValueError(f"No animal found with name '{animal_name}'")
+      raise ValueError(f"No animal found with id '{animal_id}'")
     print(f"[DEBUG] Found animal_row: {animal_row}")
     report_row["animal"] = animal_row
     print(f"[DEBUG] Updated report_row['animal']: {report_row['animal']}")
@@ -195,6 +175,9 @@ def write_report_first_time(
   if transcript is not None:
     print(f"[DEBUG] Updating statut to {transcript}")
     report_row["transcript"] = transcript
+
+  if language is not None:
+    report_row["language"] = language
 
   # Always update the last_modified field to the current server time.
   current_time = datetime.now().date()  # Converting to date if needed.

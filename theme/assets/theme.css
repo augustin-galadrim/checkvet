@@ -18,6 +18,34 @@
   box-shadow: none !important;
 }
 
+.responsive-container {
+  width: 100%;
+  max-width: 800px; 
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+  .scrollable-content {
+    / Reduce padding on smaller screens /
+    padding: 15px;
+    padding-bottom: 90px; / Ensure space for bottom nav/buttons */
+  }
+  /* Increase default font size for better readability on mobile */
+  body {
+    font-size: 14px;
+  }
+  .custom-button, .bottom-button, .action-button {
+    /* Make buttons larger and easier to tap */
+    padding: 14px 20px;
+    font-size: 1rem;
+  }
+}
+
 #global-banner-container {
   position: fixed;
   top: 20px;

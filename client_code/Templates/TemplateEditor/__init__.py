@@ -39,13 +39,14 @@ class TemplateEditor(TemplateEditorTemplate):
         "id": None,
         "name": "",
         "html": "",
+        "language": "en",  # Default to English
       }
 
-    # Use safe_value to ensure each field is defined
     self.template = {
       "id": safe_value(template, "id", None),
       "name": safe_value(template, "name", ""),
       "html": safe_value(template, "html", ""),
+      "language": safe_value(template, "language", "en"),
     }
     self.initial_content = self.template.get("html")
     self.original_template_name = self.template.get("name")
@@ -59,6 +60,7 @@ class TemplateEditor(TemplateEditorTemplate):
     if self.initial_content:
       self.text_editor_1.html_content = self.initial_content
     self.call_js("setTemplateNameValue", self.template.get("name"))
+    self.call_js("setLanguageValue", self.template.get("language"))
 
   def refresh_session_relay(self, **event_args):
     """Relay method for refreshing the session when called from JS"""
@@ -68,7 +70,7 @@ class TemplateEditor(TemplateEditorTemplate):
       print(f"[DEBUG] Error in refresh_session_relay: {str(e)}")
       return False
 
-  def save_template(self, name, content_json, images, **event_args):
+  def save_template(self, name, language, content_json, images, **event_args):
     """
     Called when the user clicks "Save". Updates the existing template record
     by calling the server function write_template.
@@ -89,6 +91,7 @@ class TemplateEditor(TemplateEditorTemplate):
         html=html_content,
         display=True,
         template_id=self.template_id,
+        language=language,
       )
 
       if result:

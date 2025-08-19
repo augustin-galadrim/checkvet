@@ -122,19 +122,42 @@ container:
 
           window.copyEditorContent = function() {
             const editor = document.getElementById("editor");
-            if (!editor) return;
+            const copyButton = document.getElementById("copyBtn");
+            if (!editor || !copyButton) return;
+
             const range = document.createRange();
             range.selectNodeContents(editor);
             const sel = window.getSelection();
             sel.removeAllRanges();
             sel.addRange(range);
+
             try {
               document.execCommand("copy");
-              alert("Content copied!");
+              // Use the global banner for success
+              if (window.displayBanner) {
+                window.displayBanner("Content copied!", "success");
+              }
+              // Change button text to a checkmark
+              const originalText = copyButton.textContent;
+              copyButton.textContent = '✓';
+              copyButton.disabled = true;
+
+              // Revert button text after 2 seconds
+              setTimeout(() => {
+                copyButton.textContent = originalText;
+                copyButton.disabled = false;
+              }, 2000);
+
             } catch (err) {
               console.error("Error copying =>", err);
+              // Use the global banner for error
+              if (window.displayBanner) {
+                window.displayBanner("Failed to copy content.", "error");
+              }
+            } finally {
+              // Always clear the selection
+              sel.removeAllRanges();
             }
-            sel.removeAllRanges();
           };
 
           window.updateToolbarState = function() {

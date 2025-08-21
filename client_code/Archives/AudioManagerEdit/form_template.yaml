@@ -36,74 +36,99 @@ container:
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Edit Report</title>
           <style>
-            /* Basic Layout */
+            :root {
+              --footer-height: 75px; /* Hauteur approx. du pied de page principal */
+              --action-bar-height: 180px; /* Hauteur de la nouvelle barre d'action */
+            }
             * { box-sizing: border-box; font-family: Arial, sans-serif; margin: 0; padding: 0; }
             body { background-color: #f5f5f5; height: 100vh; overflow: hidden; }
-            .scrollable-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 80px; }
 
-            /* Audio Section - Now with state management */
-            .audio-section {
-              position: relative;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              min-height: 250px; /* Prevents layout jumps */
-              border-bottom: 1px solid #eee;
-              margin-bottom: 20px;
+            .scrollable-content {
+              flex: 1;
+              overflow-y: auto;
+              padding: 20px;
+              /* Espace en bas pour ne pas être masqué par les barres fixes */
+              padding-bottom: calc(var(--footer-height) + var(--action-bar-height));
             }
+
+            .edit-action-bar {
+              position: fixed;
+              bottom: var(--footer-height); /* Positionné juste au-dessus du pied de page principal */
+              left: 50%;
+              transform: translateX(-50%);
+              width: 800px;
+              max-width: 100%;
+              background: #f8f8f8;
+              border-top: 1px solid #ddd;
+              padding: 15px;
+              box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+              z-index: 9;
+              text-align: center;
+            }
+            .edit-instructions {
+              font-size: 14px; color: #555; margin-bottom: 10px;
+            }
+            .edit-instructions em {
+              color: #333;
+              background-color: #e9e9e9;
+              padding: 2px 5px;
+              border-radius: 3px;
+            }
+
             #audioInputContainer, #audioDecisionContainer, #audioProcessingContainer {
-              width: 100%;
-              display: none; /* JS will manage visibility */
+              width: 100%; display: none;
             }
             #audioDecisionContainer {
-              flex-direction: column;
-              align-items: center;
-              gap: 15px;
+              display: flex; flex-direction: column; align-items: center; gap: 10px;
             }
-            .decision-buttons { display: flex; gap: 15px; margin-top: 15px; }
+            .decision-buttons { display: flex; gap: 15px; }
             .decision-button { padding: 10px 20px; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; font-size: 14px; font-weight: bold; }
             .process { background-color: #4CAF50; color: white; border-color: #4CAF50; }
             .discard { background-color: #f44336; color: white; border-color: #f44336; }
-
-            /* Banners */
-            #bannerContainer { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; }
-            .banner { padding: 10px 20px; border-radius: 4px; color: #fff; }
-            .banner-success { background-color: #4caf50; }
-            .banner-error { background-color: #f44336; }
           </style>
         </head>
         <body>
           <div class="responsive-container" id="editor-stable-anchor">
             <div anvil-slot="default"></div>
+
             <div class="scrollable-content">
-              <!-- Audio Section -->
-              <div class="audio-section">
-                <div id="audioInputContainer">
-                  <div anvil-slot="recorder_slot"></div>
-                </div>
-                <div id="audioDecisionContainer">
-                  <div anvil-slot="playback_slot"></div>
-                  <div class="decision-buttons">
-                    <button id="discardAudioBtn" class="decision-button discard">Discard</button>
-                    <button id="processAudioBtn" class="decision-button process">Process Modification</button>
-                  </div>
-                </div>
-                <div id="audioProcessingContainer">
-                  <div anvil-slot="feedback_slot"></div>
-                </div>
-              </div>
-              <!-- Editor -->
               <div anvil-slot="editor_slot"></div>
             </div>
-            <!-- Footer -->
+
+            <div class="edit-action-bar">
+              <div id="audioInputContainer">
+                <div class="edit-instructions">
+                  <p id="audioManagerEdit-p-instructions"></p>
+                  <p>
+                    <strong id="audioManagerEdit-strong-example"></strong>
+                    <em id="audioManagerEdit-em-exampleText"></em>
+                  </p>
+                </div>
+                <div anvil-slot="recorder_slot"></div>
+              </div>
+
+              <div id="audioDecisionContainer">
+                <div anvil-slot="playback_slot"></div>
+                <div class="decision-buttons">
+                  <button id="audioManagerEdit-button-discard" class="decision-button discard"></button>
+                  <button id="audioManagerEdit-button-process" class="decision-button process"></button>
+                </div>
+              </div>
+
+              <div id="audioProcessingContainer">
+                <div anvil-slot="feedback_slot"></div>
+              </div>
+            </div>
+
             <div anvil-slot="bottom_buttons_slot"></div>
           </div>
+
           <script>
             if (!window.__editor_globals) {
               window.__editor_globals = true;
-
+              const logger = window.createLogger('AudioManagerEdit');
               window.setAudioWorkflowState = (state) => {
+                logger.log(`Setting audio workflow state to: ${state}`);
                 const input = document.getElementById('audioInputContainer');
                 const decision = document.getElementById('audioDecisionContainer');
                 const processing = document.getElementById('audioProcessingContainer');
@@ -114,23 +139,26 @@ container:
                 else if (state === 'processing') { if(processing) processing.style.display = 'block'; }
                 else { if(input) input.style.display = 'block'; }
               };
-            }
-
-            function attachEditorEvents() {
-              const stableAnchor = document.getElementById('editor-stable-anchor');
-              const discardBtn = document.getElementById('discardAudioBtn');
-              const processBtn = document.getElementById('processAudioBtn');
-
-              if(discardBtn) {
-                const newBtn = discardBtn.cloneNode(true);
-                discardBtn.parentNode.replaceChild(newBtn, discardBtn);
-                newBtn.addEventListener('click', () => anvil.call(stableAnchor, 'reset_ui_to_input_state'));
-              }
-              if(processBtn) {
-                const newBtn = processBtn.cloneNode(true);
-                processBtn.parentNode.replaceChild(newBtn, processBtn);
-                newBtn.addEventListener('click', () => anvil.call(stableAnchor, 'process_modification'));
-              }
+              window.attachEditorEvents = function() {
+                logger.log('Attaching editor event listeners.');
+                const stableAnchor = document.getElementById('editor-stable-anchor');
+                const reattach = (id, handler) => {
+                  const element = document.getElementById(id);
+                  if(element) {
+                    const newElement = element.cloneNode(true);
+                    element.parentNode.replaceChild(newElement, element);
+                    newElement.addEventListener('click', handler);
+                  } else {
+                    logger.warn(`Element with ID '${id}' not found for event attachment.`);
+                  }
+                };
+                reattach('audioManagerEdit-button-discard', () => {
+                  anvil.call(stableAnchor, 'reset_ui_to_input_state');
+                });
+                reattach('audioManagerEdit-button-process', () => {
+                  anvil.call(stableAnchor, 'process_modification');
+                });
+              };
             }
             attachEditorEvents();
           </script>

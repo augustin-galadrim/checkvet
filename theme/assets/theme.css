@@ -83,3 +83,9 @@
 .global-banner.banner-info {
   background-color: #2196F3; /* Blue */
 }
+
+.modal.active {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,20 +1,64 @@
 from ._anvil_designer import TextEditorTemplate
 from anvil import *
 import anvil.js
+from ... import TranslationService as t
+from ...AppEvents import events
 
 
 class TextEditor(TextEditorTemplate):
   def __init__(self, **properties):
-    # --- Component State ---
     self._html_content = ""
     self.undo_stack = []
     self.redo_stack = []
 
     self.init_components(**properties)
-    print("DEBUG: TextEditor -> Component initialized.")
+    events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
 
-  # --- Public Properties & Methods ---
+  def update_ui_texts(self, **event_args):
+    """Sets all translatable text on the component."""
+    self.call_js(
+      "setElementTitle", "textEditor-button-undo", t.t("textEditor_button_undo_tooltip")
+    )
+    self.call_js(
+      "setElementTitle", "textEditor-button-redo", t.t("textEditor_button_redo_tooltip")
+    )
+    self.call_js(
+      "setElementTitle", "textEditor-button-bold", t.t("textEditor_button_bold_tooltip")
+    )
+    self.call_js(
+      "setElementTitle",
+      "textEditor-button-italic",
+      t.t("textEditor_button_italic_tooltip"),
+    )
+    self.call_js(
+      "setElementTitle",
+      "textEditor-button-underline",
+      t.t("textEditor_button_underline_tooltip"),
+    )
+    self.call_js(
+      "setElementTitle",
+      "textEditor-button-alignLeft",
+      t.t("textEditor_button_alignLeft_tooltip"),
+    )
+    self.call_js(
+      "setElementTitle",
+      "textEditor-button-alignCenter",
+      t.t("textEditor_button_alignCenter_tooltip"),
+    )
+    self.call_js(
+      "setElementTitle",
+      "textEditor-button-alignRight",
+      t.t("textEditor_button_alignRight_tooltip"),
+    )
+    self.call_js(
+      "setElementText",
+      "textEditor-button-insertImage",
+      t.t("textEditor_button_insertImage"),
+    )
+    self.call_js(
+      "setElementText", "textEditor-button-copy", t.t("textEditor_button_copy")
+    )
 
   def get_content(self):
     """Returns the current HTML content from the editor."""
@@ -26,74 +70,47 @@ class TextEditor(TextEditorTemplate):
 
   @html_content.setter
   def html_content(self, value):
-    """
-    Sets the editor content and intelligently adds it as a new version.
-    """
     self._html_content = value
     if getattr(self, "parent", None):
-      # Set the content in the browser's editor
       self.call_js("setEditorContent", value or "")
-
-      # --- MODIFIED LOGIC ---
-      # Instead of resetting the history, we push this new state as a version.
-      # This handles programmatic changes (like from a voice command) correctly.
       if not self.undo_stack or (value or "") != self.undo_stack[-1]:
         self.undo_stack.append(value or "")
-        self.redo_stack = []  # Clear redo stack on new action
-        print(
-          f"TextEditor: Programmatic change created new version. Undo: {len(self.undo_stack)}"
-        )
-
+        self.redo_stack = []
       self._update_undo_redo_buttons()
 
   def record_version(self):
     """Public method for parent forms to trigger a version snapshot."""
     self._push_new_version()
 
-  # --- Form & Component Lifecycle ---
-
   def form_show(self, **event_args):
     """Called when the component is shown. Sets up UI and initial state."""
-    print("DEBUG: TextEditor -> form_show: Event triggered.")
-    # Set initial content and button visibility from properties
+    self.update_ui_texts()
     self.call_js("setEditorContent", self._html_content or "")
     self._update_button_visibility("styleButtons", self.show_style_buttons)
     self._update_button_visibility("alignButtons", self.show_align_buttons)
-    self._update_button_visibility("insertImageBtn", self.show_image_button)
-    self._update_button_visibility("copyBtn", self.show_copy_button)
+    self._update_button_visibility(
+      "textEditor-button-insertImage", self.show_image_button
+    )
+    self._update_button_visibility("textEditor-button-copy", self.show_copy_button)
     self._update_button_visibility("undoRedoButtons", self.show_undo_redo_buttons)
 
-    # Initialize the version stacks and attach the blur listener via JS
     self.undo_stack = [self._html_content or ""]
     self.redo_stack = []
     self._update_undo_redo_buttons()
-
-    # --- FIX & LOGGING ---
-    # Explicitly call the JavaScript initialization function. This is more robust
-    # than relying on the script executing on its own.
-    print("DEBUG: TextEditor -> form_show: Explicitly calling JS function 'initializeEditor'.")
     self.call_js("initializeEditor")
-    # --- END OF FIX & LOGGING ---
-
-
-  # --- Internal Undo/Redo Logic ---
 
   def _push_new_version(self):
     current_content = self.get_content()
     if not self.undo_stack or current_content != self.undo_stack[-1]:
       self.undo_stack.append(current_content)
-      self.redo_stack = []  # Clear redo stack on new action
+      self.redo_stack = []
       self._update_undo_redo_buttons()
-      print(
-        f"TextEditor: Pushed version. Undo: {len(self.undo_stack)}, Redo: {len(self.redo_stack)}"
-      )
 
   def undo_change(self, **event_args):
     """Handles the Undo button click from JS."""
     if len(self.undo_stack) > 1:
       current_state = self.undo_stack.pop()
       self.redo_stack.append(current_state)
-
       new_content = self.undo_stack[-1]
       self.call_js("setEditorContent", new_content)
       self._update_undo_redo_buttons()
@@ -103,7 +120,6 @@ class TextEditor(TextEditorTemplate):
     if self.redo_stack:
       state_to_restore = self.redo_stack.pop()
       self.undo_stack.append(state_to_restore)
-
       self.call_js("setEditorContent", state_to_restore)
       self._update_undo_redo_buttons()
 
@@ -114,8 +130,12 @@ class TextEditor(TextEditorTemplate):
   def _update_undo_redo_buttons(self):
     """Enables/disables the undo/redo buttons."""
     if getattr(self, "parent", None) and self.show_undo_redo_buttons:
-      self.call_js("setButtonEnabled", "undoBtn", len(self.undo_stack) > 1)
-      self.call_js("setButtonEnabled", "redoBtn", len(self.redo_stack) > 0)
+      self.call_js(
+        "setButtonEnabled", "textEditor-button-undo", len(self.undo_stack) > 1
+      )
+      self.call_js(
+        "setButtonEnabled", "textEditor-button-redo", len(self.redo_stack) > 0
+      )
 
   def on_blur_handler(self, **event_args):
     """Handles the blur event from JS to save a version from manual typing."""

@@ -1,6 +1,8 @@
 from ._anvil_designer import AudioPlaybackTemplate
 from anvil import *
 import anvil.js
+from ... import TranslationService as t
+from ...AppEvents import events
 
 
 class AudioPlayback(AudioPlaybackTemplate):
@@ -9,13 +11,19 @@ class AudioPlayback(AudioPlaybackTemplate):
     self._audio_blob = None
     self.add_event_handler("x-clear_recording", self.on_clear_recording)
 
-    # Add the 'show' event handler
+    # Subscribe to language changes
+    events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
 
   def form_show(self, **event_args):
     """This method is called when the component is shown on the screen."""
-    # Explicitly tell the JavaScript to attach its event listeners.
+    self.update_ui_texts()
     anvil.js.call_js("initializeAudioPlayer")
+
+  def update_ui_texts(self, **event_args):
+    """Sets all translatable text on the component."""
+    clear_tooltip = t.t("audioPlayback_button_clear_tooltip")
+    self.call_js("setElementTitle", "audioPlayback-button-clear", clear_tooltip)
 
   @property
   def audio_blob(self):
@@ -25,7 +33,6 @@ class AudioPlayback(AudioPlaybackTemplate):
   def audio_blob(self, value):
     self._audio_blob = value
     if self.parent:
-      # This part is correct and sets the audio source.
       anvil.js.call_js("setupAudioPlayback", value)
 
   def on_clear_recording(self, **event_args):

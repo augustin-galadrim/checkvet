@@ -47,8 +47,6 @@ container:
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
           <title>Audio Management Interface</title>
-          <script src="https://www.webrtc-experiment.com/RecordRTC.js"></script>
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
           <style>
             :root { --footer-height: 75px; }
             * { box-sizing: border-box; font-family: Arial, sans-serif; margin: 0; padding: 0; }
@@ -79,25 +77,32 @@ container:
             .decision-button.discard { background-color: #f44336; color: white; border-color: #f44336; }
             .parameters-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 0; }
             .parameter-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-                             .parameter-row label { font-weight: bold; margin-right: 10px; }
-                             .template-select-container .select-button, .dropdown { min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-                             .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
-                             #newPatientEntryModal { z-index: 1001; }
-                             .modal-content { position: relative; background-color: white; padding: 20px; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-                             .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
-                             .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-                             .search-container { position: relative; margin-bottom: 20px; }
-                             .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #666; }
-                             .search-input { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-                             .new-patient-btn, .patient-item, .template-item { display: block; width: 100%; padding: 8px 12px; background: none; border: none; border-radius: 6px; text-align: left; cursor: pointer; font-size: 14px; }
-                             .patient-item:hover, .template-item:hover { background-color: #f3f4f6; }
-                             .patients-list, .templates-list { max-height: 300px; overflow-y: auto; }
-                             .close-button { position: absolute; top: 15px; right: 15px; background: none; border: none; cursor: pointer; padding: 5px; color: #666; }
-                             .divider { height: 1px; background-color: #ddd; margin: 15px 0; }
-                             #modification-instructions { text-align: center; padding: 15px; margin: 10px auto; background-color: #e9f5ff; border-left: 4px solid #007bff; border-radius: 4px; max-width: 90%; color: #333; font-style: italic;}
-                             @media (max-width: 768px) { .container { height: 100vh; } .actions-row { padding: 10px 15px; } @supports (-webkit-touch-callout: none) { .upload-button, .decision-button { padding: 12px 20px; min-height: 44px; font-size: 16px; } } }
-                             @media (max-width: 600px) { .slide-toggle-container { width: 100%; } }
-                             </style>
+            .parameter-row label { font-weight: bold; margin-right: 10px; }
+            .template-select-container .select-button, .dropdown { min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+            .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+            #newPatientEntryModal { z-index: 1001; }
+            .modal-content { position: relative; background-color: white; padding: 20px; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+            .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+            .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+            .search-container { position: relative; margin-bottom: 20px; }
+            .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #666; }
+            .search-input { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+            .new-patient-btn, .patient-item, .template-item { display: block; width: 100%; padding: 8px 12px; background: none; border: none; border-radius: 6px; text-align: left; cursor: pointer; font-size: 14px; }
+            .new-patient-btn {
+              font-weight: bold;
+              color: #4CAF50; /* Vert de votre thème */
+              background-color: #f0f9f0; /* Un vert très clair pour le fond */
+              border: 1px solid #4CAF50; /* Une bordure verte */
+            }
+            .new-patient-btn:hover {
+              background-color: #e0f2e0; /* Un vert un peu plus foncé au survol */
+            }
+            .patient-item:hover, .template-item:hover { background-color: #f3f4f6; }
+            .patients-list, .templates-list { max-height: 300px; overflow-y: auto; }
+            .close-button { position: absolute; top: 15px; right: 15px; background: none; border: none; cursor: pointer; padding: 5px; color: #666; }
+            .divider { height: 1px; background-color: #ddd; margin: 15px 0; }
+            #modification-instructions { text-align: center; padding: 15px; margin: 10px auto; background-color: #e9f5ff; border-left: 4px solid #007bff; border-radius: 4px; max-width: 90%; color: #333; font-style: italic;}
+          </style>
         </head>
         <body>
           <div class="responsive-container">
@@ -111,39 +116,39 @@ container:
             <div class="scrollable-content">
               <div class="parameters-section">
                 <div class="parameter-row">
-                  <label id="label_template">Template</label>
+                  <label id="audioManager-label-template">Template</label>
                   <div class="template-select-container">
-                    <button class="select-button" id="templateSelectBtn"><span id="select_template_placeholder">Select a template</span><span>▼</span></button>
+                    <button class="select-button" id="templateSelectBtn"><span id="audioManager-span-templatePlaceholder">Select a template</span><span>▼</span></button>
                   </div>
                 </div>
               </div>
               <div class="audio-section">
                 <div id="audioInputContainer">
                   <div id="modification-instructions" style="display: none;">
-                    <strong>Modification Mode:</strong> You can now edit the report with your voice. Provide a clear command to the AI.
+                    <strong id="audioManager-strong-modTitle">Modification Mode:</strong> <span id="audioManager-span-modDesc">You can now edit the report with your voice. Provide a clear command to the AI.</span>
                   </div>
                   <div class="slide-toggle-container">
-                    <div class="toggle-option active" id="recordToggle">Record</div>
-                    <div class="toggle-option" id="uploadToggle">Upload</div>
+                    <div class="toggle-option active" id="audioManager-div-recordToggle">Record</div>
+                    <div class="toggle-option" id="audioManager-div-uploadToggle">Upload</div>
                     <div class="toggle-slider"></div>
                   </div>
                   <div class="recording-controls" id="recordingMode"><div anvil-slot="recorder_slot"></div></div>
                   <div class="upload-section" id="uploadMode" style="display: none;">
                     <div class="upload-container" id="dropZone">
                       <div class="upload-icon">📋</div>
-                      <div class="upload-text" id="upload_text_drop">Drop your voice memo here</div>
-                      <div class="upload-description" id="upload_description_select">or click to select a file</div>
+                      <div class="upload-text" id="audioManager-div-uploadText">Drop your voice memo here</div>
+                      <div class="upload-description" id="audioManager-p-uploadDesc">or click to select a file</div>
                       <input type="file" id="audioFileInput" accept="audio/*,.m4a,.caf">
-                      <label for="audioFileInput" class="upload-button" id="upload_button_select">Select file</label>
+                      <label for="audioFileInput" class="upload-button" id="audioManager-label-uploadButton">Select file</label>
                     </div>
                   </div>
                 </div>
                 <div id="audioDecisionContainer">
                   <div anvil-slot="playback_slot"></div>
                   <div class="decision-buttons">
-                    <button id="discardAudioBtn" class="decision-button discard">Discard Audio</button>
-                    <button id="processAudioBtn" class="decision-button process">Process Audio</button>
-                    <button id="processModificationBtn" class="decision-button process" style="display: none;">Process Modification</button>
+                    <button id="audioManager-button-discard" class="decision-button discard">Discard Audio</button>
+                    <button id="audioManager-button-process" class="decision-button process">Process Audio</button>
+                    <button id="audioManager-button-modify" class="decision-button process" style="display: none;">Process Modification</button>
                   </div>
                 </div>
                 <div id="audioProcessingContainer"><div anvil-slot="feedback_slot"></div></div>
@@ -158,20 +163,20 @@ container:
           <div class="modal" id="newPatientEntryModal" style="display: none;">
             <div class="modal-content">
               <button class="close-button" id="closeNewPatientModalBtn">✕</button>
-              <div class="modal-header"><h3 class="modal-title">Create New Patient</h3></div>
-              <div class="form-group"><label for="new-patient-name">Name</label><input type="text" id="new-patient-name" class="search-input" placeholder="e.g., Fido"></div>
-              <div class="form-group"><label for="new-patient-type">Species</label><input type="text" id="new-patient-type" class="search-input" placeholder="e.g., Canine"></div>
-              <div class="form-group"><label for="new-patient-owner">Owner</label><input type="text" id="new-patient-owner" class="search-input" placeholder="e.g., Jane Doe"></div>
-              <div class="modal-footer"><button class="button" id="cancelNewPatientBtn">Cancel</button><button class="button button-primary" id="saveNewPatientBtn">Create and Select</button></div>
+              <div class="modal-header"><h3 class="modal-title" id="audioManager-h3-newPatientTitle">Create New Patient</h3></div>
+              <div class="form-group"><label for="new-patient-name" id="audioManager-label-newPatientName">Name</label><input type="text" id="new-patient-name" class="search-input" placeholder="e.g., Fido"></div>
+              <div class="form-group"><label for="new-patient-type" id="audioManager-label-newPatientSpecies">Species</label><input type="text" id="new-patient-type" class="search-input" placeholder="e.g., Canine"></div>
+              <div class="form-group"><label for="new-patient-owner" id="audioManager-label-newPatientOwner">Owner</label><input type="text" id="new-patient-owner" class="search-input" placeholder="e.g., Jane Doe"></div>
+              <div class="modal-footer"><button class="button" id="audioManager-button-newPatientCancel">Cancel</button><button class="button button-primary" id="audioManager-button-newPatientSave">Create and Select</button></div>
             </div>
           </div>
           <div class="patient-select-container">
             <div class="modal" id="patientModal">
               <div class="modal-content">
                 <button class="close-button" id="closePatientModalBtn">✕</button>
-                <div class="modal-header"><h3 class="modal-title" id="select_patient_title">Select a patient</h3>
+                <div class="modal-header"><h3 class="modal-title" id="audioManager-h3-selectPatientTitle">Select a patient</h3>
                   <div class="search-container"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <div id="patientSearchHolder"><input type="text" class="search-input" placeholder="Search for a patient..." id="searchInput"></div>
+                    <input type="text" class="search-input" placeholder="Search for a patient..." id="audioManager-input-patientSearch">
                   </div>
                 </div>
                 <div class="patients-list" id="patientsList"></div>
@@ -182,8 +187,8 @@ container:
             <div class="modal" id="templateModal">
               <div class="modal-content">
                 <button class="close-button" id="closeTemplateModalBtn">✕</button>
-                <div class="modal-header"><h3 class="modal-title" id="select_template_title">Select a template</h3>
-                  <div class="search-container"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><input type="text" class="search-input" placeholder="Search for a template..." id="templateSearchInput"></div>
+                <div class="modal-header"><h3 class="modal-title" id="audioManager-h3-selectTemplateTitle">Select a template</h3>
+                  <div class="search-container"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><input type="text" class="search-input" placeholder="Search for a template..." id="audioManager-input-templateSearch"></div>
                 </div>
                 <div class="templates-list" id="templatesList"></div>
               </div>
@@ -191,206 +196,172 @@ container:
           </div>
 
           <script>
-            // FIX: The logger is now instantiated *inside* the global guard.
-            // This ensures it is only declared ONCE per page load, preventing the SyntaxError.
             if (!window.__my_audio_manager_globals) {
-            window.__my_audio_manager_globals = true;
+              window.__my_audio_manager_globals = true;
+              const logger = window.createLogger('AudioManagerForm');
+              let allPatientsData = [];
+              let currentFormMode = 'initial_generation';
+              let localeTexts = {};
 
-            // The logger is now correctly and safely declared here.
-            const logger = window.createLogger('AudioManagerForm');
-            logger.log("Defining global functions for the first time.");
+              window.setLocaleTexts = function(texts) {
+                logger.log('Setting locale texts from Python.');
+                localeTexts = { ...localeTexts, ...texts };
+              };
 
-            window.allPatientsData = [];
-            window.currentFormMode = 'initial_generation';
+              window.isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-            window.isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+              window.populatePatientModal = (patients) => allPatientsData = patients || [];
 
-            window.setLanguageDropdown = (langCode) => {
-            const el = document.getElementById('langueDropdown')?.querySelector('span:first-child');
-            if (el) el.textContent = (langCode === 'FR') ? '🇫🇷' : '🇬🇧';
-            };
+              window.populateTemplateModal = (templates) => {
+                window.templatesData = templates.sort((a, b) => a.name.localeCompare(b.name));
+                renderTemplates(window.templatesData);
+              };
 
-            window.populatePatientModal = (patients) => {
-            logger.debug(`Populating patient modal with ${patients ? patients.length : 0} patients.`);
-            window.allPatientsData = patients || [];
-            };
+              window.setFormMode = (mode) => {
+                logger.log(`Setting form mode to: '${mode}'.`);
+                currentFormMode = mode;
+                const isModification = mode === 'modification';
+                document.getElementById('modification-instructions').style.display = isModification ? 'block' : 'none';
+                document.querySelector('.slide-toggle-container').style.display = isModification ? 'none' : 'flex';
+                if (isModification) window.toggleMode('record');
+              };
 
-            window.populateTemplateModal = (templates) => {
-            logger.debug(`Populating template modal with ${templates ? templates.length : 0} templates.`);
-            window.templatesData = templates.sort((a, b) => a.name.localeCompare(b.name));
-            if (window.templatesData[0]) window.selectTemplate(window.templatesData[0], false);
-            window.renderTemplates(window.templatesData);
-            };
+              window.toggleMode = (mode) => {
+                const isRecord = mode === 'record';
+                document.getElementById('recordingMode').style.display = isRecord ? 'block' : 'none';
+                document.getElementById('uploadMode').style.display = isRecord ? 'none' : 'block';
+                document.querySelector('.slide-toggle-container').classList.toggle('upload-active', !isRecord);
+                document.getElementById('audioManager-div-recordToggle').classList.toggle('active', isRecord);
+                document.getElementById('audioManager-div-uploadToggle').classList.toggle('active', !isRecord);
+              };
 
-            window.setFormMode = (mode) => {
-            logger.log(`Setting form mode to: '${mode}'.`);
-            window.currentFormMode = mode;
-            const isModification = mode === 'modification';
-            document.getElementById('modification-instructions').style.display = isModification ? 'block' : 'none';
-            document.querySelector('.slide-toggle-container').style.display = isModification ? 'none' : 'flex';
-            if (isModification) window.toggleMode('record');
-            };
+              window.setAudioWorkflowState = (state) => {
+                const containers = { input: document.getElementById('audioInputContainer'), decision: document.getElementById('audioDecisionContainer'), processing: document.getElementById('audioProcessingContainer') };
+                Object.values(containers).forEach(c => c.style.display = 'none');
+                if (state === 'decision') {
+                  containers.decision.style.display = 'flex';
+                  const isMod = currentFormMode === 'modification';
+                  document.getElementById('audioManager-button-process').style.display = isMod ? 'none' : 'block';
+                  document.getElementById('audioManager-button-modify').style.display = isMod ? 'block' : 'none';
+                } else if (containers[state]) {
+                  containers[state].style.display = 'block';
+                }
+              };
 
-            window.toggleMode = (mode) => {
-            logger.debug(`Toggling input mode to '${mode}'.`);
-            const isRecord = mode === 'record';
-            document.getElementById('recordingMode').style.display = isRecord ? 'block' : 'none';
-            document.getElementById('uploadMode').style.display = isRecord ? 'none' : 'block';
-            document.querySelector('.slide-toggle-container').classList.toggle('upload-active', !isRecord);
-            document.getElementById('recordToggle').classList.toggle('active', isRecord);
-            document.getElementById('uploadToggle').classList.toggle('active', !isRecord);
-            };
+              window.handleFileSelect = (event) => {
+                const file = event.dataTransfer ? event.dataTransfer.files[0] : event.target.files[0];
+                if (!file) return;
+                if (!file.type.startsWith('audio/') && !/\.(m4a|caf|mp3|aac|wav)$/i.test(file.name)) {
+                  return alert(localeTexts.invalidFile);
+                }
+                anvil.call(document.getElementById('stableAnchor'), 'process_uploaded_audio', file);
+              };
 
-            window.setAudioWorkflowState = (state) => {
-            logger.debug(`Setting audio workflow to state: '${state}'. (Current form mode: '${window.currentFormMode}')`);
-            const containers = { input: document.getElementById('audioInputContainer'), decision: document.getElementById('audioDecisionContainer'), processing: document.getElementById('audioProcessingContainer') };
-            Object.values(containers).forEach(c => c.style.display = 'none');
+              window.renderTemplates = (templates) => {
+                const list = document.getElementById('templatesList');
+                if (!list) return;
+                list.innerHTML = '';
+                const langToFlag = { 'en': '🇬🇧', 'fr': '🇫🇷' };
+                templates.forEach(t => {
+                  const btn = document.createElement('button');
+                  btn.className = 'template-item';
+                  const flag = langToFlag[t.language || 'en'] || '🏳️';
+                  btn.innerHTML = `<span>${t.name} - ${flag}</span>`;
+                  btn.addEventListener('click', () => window.selectTemplate(t));
+                  list.appendChild(btn);
+                });
+              };
 
-            if (state === 'decision') {
-            containers.decision.style.display = 'flex';
-            const isMod = window.currentFormMode === 'modification';
-            logger.debug(`Decision state entered. Modification mode: ${isMod}.`);
-            document.getElementById('processAudioBtn').style.display = isMod ? 'none' : 'block';
-            document.getElementById('processModificationBtn').style.display = isMod ? 'block' : 'none';
-            } else if (containers[state]) {
-            containers[state].style.display = 'block';
+              window.selectTemplate = (template, closeModalAfter = true) => {
+                const btn = document.getElementById('templateSelectBtn')?.querySelector('span:first-child');
+                if (btn) {
+                  const flag = { 'en': '🇬🇧', 'fr': '🇫🇷' }[template.language || 'en'] || '🏳️';
+                  btn.textContent = `${template.name} - ${flag}`;
+                }
+                anvil.call(document.getElementById('stableAnchor'), 'set_editor_content', template.html);
+                anvil.call(document.getElementById('stableAnchor'), 'set_active_template_language', template.language);
+                anvil.call(document.getElementById('stableAnchor'), 'set_selected_template', template);
+                if (closeModalAfter) closeModal('templateModal');
+              };
+
+              window.renderPatients = (patients) => {
+                const list = document.getElementById('patientsList');
+                if (!list) return;
+                list.innerHTML = '';
+                patients.forEach(p => {
+                  const btn = document.createElement('button');
+                  btn.className = 'patient-item';
+                  btn.textContent = p.name;
+                  btn.onclick = () => window.selectPatientForSave(p);
+                  list.appendChild(btn);
+                });
+                list.insertAdjacentHTML('beforeend', `<div class="divider"></div><button class="new-patient-btn" id="audioManager-button-newPatient">${localeTexts.newPatientBtn}</button>`);
+                list.querySelector('#audioManager-button-newPatient').addEventListener('click', () => {
+                  closeModal('patientModal');
+                  ['new-patient-name', 'new-patient-type', 'new-patient-owner'].forEach(id => document.getElementById(id).value = '');
+                  openModal('newPatientEntryModal');
+                });
+              };
+
+              window.selectPatientForSave = (patientData) => {
+                window.selectedPatient = patientData;
+                closeModal('patientModal');
+                window.continueSave();
+              };
+
+              window.openPatientModalForSave = () => {
+                window.openModal('patientModal');
+                window.renderPatients(allPatientsData);
+                document.getElementById('audioManager-input-patientSearch')?.focus();
+              };
+
+              window.continueSave = () => {
+                anvil.call(document.getElementById('stableAnchor'), 'save_report', window.selectedPatient);
+              };
+
+              window.attachEvents = function() {
+                logger.log("Attaching all event listeners.");
+                const reattach = (id, event, handler) => {
+                  const el = document.getElementById(id);
+                  if(el) {
+                    const newEl = el.cloneNode(true);
+                    el.parentNode.replaceChild(newEl, el);
+                    newEl.addEventListener(event, handler);
+                  }
+                };
+                const stableAnchor = document.getElementById('stableAnchor');
+                reattach('audioManager-div-recordToggle', 'click', () => window.toggleMode('record'));
+                reattach('audioManager-div-uploadToggle', 'click', () => window.toggleMode('upload'));
+                const dropZone = document.getElementById('dropZone');
+                if (dropZone) {
+                  const newZone = dropZone.cloneNode(true);
+                  dropZone.parentNode.replaceChild(newZone, dropZone);
+                  newZone.addEventListener('dragover', e => { e.preventDefault(); newZone.classList.add('dragover'); });
+                  newZone.addEventListener('dragleave', () => newZone.classList.remove('dragover'));
+                  newZone.addEventListener('drop', e => { e.preventDefault(); newZone.classList.remove('dragover'); window.handleFileSelect(e); });
+                  newZone.addEventListener('click', e => { if (!e.target.closest('label')) newZone.querySelector('#audioFileInput').click(); });
+                  newZone.querySelector('#audioFileInput').addEventListener('change', window.handleFileSelect);
+                }
+                reattach('audioManager-button-discard', 'click', () => anvil.call(stableAnchor, 'clear_recording_handler'));
+                reattach('audioManager-button-process', 'click', () => anvil.call(stableAnchor, 'process_recording'));
+                reattach('audioManager-button-modify', 'click', () => anvil.call(stableAnchor, 'process_modification'));
+                reattach('templateSelectBtn', 'click', () => openModal('templateModal'));
+                reattach('closeTemplateModalBtn', 'click', () => closeModal('templateModal'));
+                reattach('audioManager-input-templateSearch', 'input', e => anvil.call(stableAnchor, 'search_template_relay', e.target.value).then(window.renderTemplates));
+                reattach('closePatientModalBtn', 'click', () => closeModal('patientModal'));
+                reattach('audioManager-input-patientSearch', 'input', (e) => window.renderPatients(allPatientsData.filter(p => p.name.toLowerCase().includes(e.target.value.toLowerCase()))));
+                reattach('closeNewPatientModalBtn', 'click', () => { closeModal('newPatientEntryModal'); openModal('patientModal'); });
+                reattach('audioManager-button-newPatientCancel', 'click', () => { closeModal('newPatientEntryModal'); openModal('patientModal'); });
+                reattach('audioManager-button-newPatientSave', 'click', () => {
+                  const newDetails = { name: document.getElementById('new-patient-name').value.trim(), type: document.getElementById('new-patient-type').value.trim(), proprietaire: document.getElementById('new-patient-owner').value.trim() };
+                  if (!newDetails.name) return alert(localeTexts.patientNameRequired);
+                  closeModal('newPatientEntryModal');
+                  window.selectPatientForSave({ id: null, name: newDetails.name, details: newDetails });
+                });
+                window.setAudioWorkflowState('input');
+              };
             }
-            };
-
-            window.handleFileSelect = (event) => {
-            const file = event.dataTransfer ? event.dataTransfer.files[0] : event.target.files[0];
-            if (!file) return;
-            logger.log(`File selected/dropped: '${file.name}'.`);
-            if (!file.type.startsWith('audio/') && !/\\.(m4a|caf|mp3|aac|wav)$/i.test(file.name)) {
-            logger.warn(`Invalid file type: '${file.type}'.`);
-            return alert('Please select a valid audio file.');
-            }
-            anvil.call(document.getElementById('stableAnchor'), 'process_uploaded_audio', file);
-            };
-
-            window.openModal = (id) => { logger.debug(`Opening modal: #${id}`); document.getElementById(id).style.display = 'flex'; };
-            window.closeModal = (id) => { logger.debug(`Closing modal: #${id}`); document.getElementById(id).style.display = 'none'; };
-
-            window.renderTemplates = (templates) => {
-            const list = document.getElementById('templatesList');
-            if (!list) return;
-            list.innerHTML = '';
-            const langToFlag = { 'en': '🇬🇧', 'fr': '🇫🇷' };
-            templates.forEach(t => {
-            const btn = document.createElement('button');
-            btn.className = 'template-item';
-            const flag = langToFlag[t.language || 'en'] || '🏳️';
-            btn.innerHTML = `<span>${t.name} - ${flag}</span>`;
-            btn.addEventListener('click', () => window.selectTemplate(t));
-            list.appendChild(btn);
-            });
-            };
-
-            window.selectTemplate = (template, closeModalAfter = true) => {
-            logger.log(`Template selected: '${template.name}'.`);
-            const btn = document.getElementById('templateSelectBtn')?.querySelector('span:first-child');
-            if (btn) {
-            const flag = { 'en': '🇬🇧', 'fr': '🇫🇷' }[template.language || 'en'] || '🏳️';
-            btn.textContent = `${template.name} - ${flag}`;
-            }
-            window.setEditorContent(template.display ? template.html : '');
-            anvil.call(document.getElementById('stableAnchor'), 'set_active_template_language', template.language);
-            if (closeModalAfter) window.closeModal('templateModal');
-            };
-
-            window.renderPatients = (patients) => {
-            const list = document.getElementById('patientsList');
-            if (!list) return;
-            list.innerHTML = '';
-            patients.forEach(p => {
-            const btn = document.createElement('button');
-            btn.className = 'patient-item';
-            btn.textContent = p.name;
-            btn.onclick = () => window.selectPatientForSave(p);
-            list.appendChild(btn);
-            });
-            list.insertAdjacentHTML('beforeend', '<div class="divider"></div><button class="new-patient-btn" id="newPatientBtn">+ New patient</button>');
-            list.querySelector('#newPatientBtn').addEventListener('click', () => {
-            logger.debug("'New Patient' button clicked.");
-            window.closeModal('patientModal');
-            ['new-patient-name', 'new-patient-type', 'new-patient-owner'].forEach(id => document.getElementById(id).value = '');
-            window.openModal('newPatientEntryModal');
-            });
-            };
-
-            window.selectPatientForSave = (patientData) => {
-            logger.log(`Patient selected for saving: '${patientData.name}'.`);
-            window.selectedPatient = patientData;
-            window.closeModal('patientModal');
-            window.continueSave();
-            };
-
-            window.openPatientModalForSave = (content) => {
-            logger.log("Opening patient modal to save report.");
-            window._saveContentData = { content: content, images: [] };
-            window.openModal('patientModal');
-            window.renderPatients(window.allPatientsData);
-            document.getElementById('searchInput')?.focus();
-            };
-
-            window.continueSave = () => {
-            logger.log("Continuing with save operation.");
-            anvil.call(document.getElementById('stableAnchor'), 'save_report', JSON.stringify(window._saveContentData), [], window.selectedPatient);
-            };
-
-            window.attachEvents = function() {
-            logger.log("Attaching all event listeners.");
-            const reattach = (id, event, handler) => {
-            const el = document.getElementById(id);
-            if(el) {
-            const newEl = el.cloneNode(true);
-            el.parentNode.replaceChild(newEl, el);
-            newEl.addEventListener(event, handler);
-            } else {
-            logger.warn(`Element with ID '${id}' not found for event attachment.`);
-            }
-            };
-
-            const stableAnchor = document.getElementById('stableAnchor');
-            reattach('recordToggle', 'click', () => window.toggleMode('record'));
-            reattach('uploadToggle', 'click', () => window.toggleMode('upload'));
-            const dropZone = document.getElementById('dropZone');
-            if (dropZone) {
-            const newZone = dropZone.cloneNode(true);
-            dropZone.parentNode.replaceChild(newZone, dropZone);
-            newZone.addEventListener('dragover', e => { e.preventDefault(); newZone.classList.add('dragover'); });
-            newZone.addEventListener('dragleave', () => newZone.classList.remove('dragover'));
-            newZone.addEventListener('drop', e => { e.preventDefault(); newZone.classList.remove('dragover'); window.handleFileSelect(e); });
-            newZone.addEventListener('click', e => { if (!e.target.closest('label')) newZone.querySelector('#audioFileInput').click(); });
-            newZone.querySelector('#audioFileInput').addEventListener('change', window.handleFileSelect);
-            }
-
-            reattach('discardAudioBtn', 'click', () => anvil.call(stableAnchor, 'clear_recording_handler'));
-            reattach('processAudioBtn', 'click', () => anvil.call(stableAnchor, 'process_recording'));
-            reattach('processModificationBtn', 'click', () => anvil.call(stableAnchor, 'process_modification'));
-
-            reattach('templateSelectBtn', 'click', () => window.openModal('templateModal'));
-            reattach('closeTemplateModalBtn', 'click', () => window.closeModal('templateModal'));
-            reattach('templateSearchInput', 'input', e => anvil.call(stableAnchor, 'search_template_relay', e.target.value).then(window.renderTemplates));
-
-            reattach('closePatientModalBtn', 'click', () => window.closeModal('patientModal'));
-            reattach('searchInput', 'input', (e) => window.renderPatients(window.allPatientsData.filter(p => p.name.toLowerCase().includes(e.target.value.toLowerCase()))));
-            reattach('closeNewPatientModalBtn', 'click', () => { window.closeModal('newPatientEntryModal'); window.openModal('patientModal'); });
-            reattach('cancelNewPatientBtn', 'click', () => { window.closeModal('newPatientEntryModal'); window.openModal('patientModal'); });
-            reattach('saveNewPatientBtn', 'click', () => {
-            const newDetails = { name: document.getElementById('new-patient-name').value.trim(), type: document.getElementById('new-patient-type').value.trim(), proprietaire: document.getElementById('new-patient-owner').value.trim() };
-            if (!newDetails.name) return alert('Patient name is required.');
-            window.closeModal('newPatientEntryModal');
-            window.selectPatientForSave({ id: null, name: newDetails.name, details: newDetails });
-            });
-
-            window.setAudioWorkflowState('input');
-            };
-            }
-
-            // This function call remains outside the guard, so it runs every time the form is shown,
-            // ensuring that event listeners on buttons are always active.
-            window.attachEvents();
+            attachEvents();
           </script>
         </body>
       </html>

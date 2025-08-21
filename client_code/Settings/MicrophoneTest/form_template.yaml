@@ -41,19 +41,15 @@ container:
         </head>
         <body>
           <div class="responsive-container">
-            <!-- The HeaderReturn component will go here -->
             <div anvil-slot="default"></div>
 
             <div class="content">
               <div class="instructions">
-                <h1>Test Your Microphone</h1>
-                <p>Click the microphone to start recording, then click the checkmark to stop. You will be able to play back your recording.</p>
+                <h1 id="microphoneTest-h1-title">Test Your Microphone</h1>
+                <p id="microphoneTest-p-instructions">Click the microphone to start recording, then click the checkmark to stop. You will be able to play back your recording.</p>
               </div>
 
-              <!-- The RecordingWidget will go here -->
               <div anvil-slot="recorder_slot"></div>
-
-              <!-- The AudioPlayback component will go here -->
               <div anvil-slot="playback_slot"></div>
             </div>
           </div>

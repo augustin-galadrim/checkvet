@@ -5,7 +5,7 @@ import anvil.users
 from ...Cache import reports_cache_manager
 from ... import TranslationService as t
 from ...LoggingClient import ClientLogger
-import time
+from ...AppEvents import events
 
 
 def safe_value(data_dict, key, default_value):
@@ -20,6 +20,7 @@ class ArchivesForm(ArchivesFormTemplate):
     self.logger = ClientLogger(self.__class__.__name__)
     self.logger.info("Initializing...")
     self.init_components(**properties)
+    events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
 
     self.is_supervisor = False
@@ -30,19 +31,138 @@ class ArchivesForm(ArchivesFormTemplate):
     self.affiliated_vets = []
     self.status_options_keys = []
     self.my_patients = []
-
     self.current_search_query = ""
     self.selected_statuses = []
     self.selected_vets_emails = []
     self.selected_patient_ids = []
     self.logger.debug("Initialization complete.")
 
+  def update_ui_texts(self, **event_args):
+    """Sets all translatable text on the component."""
+    self.call_js(
+      "setElementText", "archivesForm-button-create", t.t("archivesForm_button_create")
+    )
+    self.call_js(
+      "setPlaceholder",
+      "archivesForm-input-search",
+      t.t("archivesForm_input_search_placeholder"),
+    )
+    self.call_js(
+      "setElementText", "archivesForm-tab-myReports", t.t("archivesForm_tab_myReports")
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-tab-structureReports",
+      t.t("archivesForm_tab_structureReports"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-h2-myReportsTitle",
+      t.t("archivesForm_h2_myReportsTitle"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-button-myReportsFilter",
+      t.t("archivesForm_button_filter"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-h2-structureTitle",
+      t.t("archivesForm_h2_structureTitle"),
+    )
+    self.call_js(
+      "setElementTitle",
+      "archivesForm-button-refresh",
+      t.t("archivesForm_button_refresh_tooltip"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-button-structureFilter",
+      t.t("archivesForm_button_filter"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-h3-myReportsFilterTitle",
+      t.t("archivesForm_h3_myReportsFilterTitle"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-h4-myReportsStatus",
+      t.t("archivesForm_h4_filterByStatus"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-h4-myReportsPatient",
+      t.t("archivesForm_h4_filterByPatient"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-button-myReportsReturn",
+      t.t("archivesForm_button_filterReturn"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-button-myReportsApply",
+      t.t("archivesForm_button_filterApply"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-h3-structureFilterTitle",
+      t.t("archivesForm_h3_structureFilterTitle"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-h4-structureStatus",
+      t.t("archivesForm_h4_filterByStatus"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-h4-structureVet",
+      t.t("archivesForm_h4_filterByVet"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-button-structureReturn",
+      t.t("archivesForm_button_filterReturn"),
+    )
+    self.call_js(
+      "setElementText",
+      "archivesForm-button-structureApply",
+      t.t("archivesForm_button_filterApply"),
+    )
+
+    # Pass dynamic and renderer texts to JavaScript
+    locale_texts = {
+      "monthNames": [
+        t.t("month_jan"),
+        t.t("month_feb"),
+        t.t("month_mar"),
+        t.t("month_apr"),
+        t.t("month_may"),
+        t.t("month_jun"),
+        t.t("month_jul"),
+        t.t("month_aug"),
+        t.t("month_sep"),
+        t.t("month_oct"),
+        t.t("month_nov"),
+        t.t("month_dec"),
+      ],
+      "notAvailable": t.t("renderer_notAvailable"),
+      "noPatient": t.t("renderer_noPatient"),
+      "unknownVet": t.t("renderer_unknownVet"),
+      "notSpecified": t.t("renderer_notSpecified"),
+      "noMyReports": t.t("renderer_noMyReports"),
+      "noStructureReports": t.t("renderer_noStructureReports"),
+    }
+    self.call_js("setLocaleTexts", locale_texts)
+
   def form_show(self, **event_args):
     self.logger.info("Form showing...")
+    self.header_nav_1.active_tab = "Archives"
+    self.update_ui_texts()
     self.call_js("resetActiveTabState")
     user = anvil.users.get_user()
     self.is_supervisor = user and user["supervisor"]
-    self.header_nav_1.active_tab = "Archives"
     self.logger.debug(f"User is supervisor: {self.is_supervisor}")
 
     try:
@@ -56,20 +176,29 @@ class ArchivesForm(ArchivesFormTemplate):
       self.status_options_keys = []
       self.my_patients = []
 
-    my_reports, structure_reports = reports_cache_manager.get()
+    (
+      my_reports,
+      structure_reports,
+      cached_has_structure,
+      cached_structure_name,
+      cached_affiliated_vets,
+    ) = reports_cache_manager.get()
 
     if my_reports is not None:
       self.logger.info("Cache hit. Loading reports from client-side cache.")
       self.my_reports = my_reports
       self.structure_reports = structure_reports or []
+      self.has_structure = cached_has_structure
+      self.structure_name = cached_structure_name
+      self.affiliated_vets = cached_affiliated_vets or []
     else:
       self.logger.warning(
         "Cache is invalid or expired. Fetching fresh reports from server."
       )
+      self.call_js("showArchivesSpinner")
       try:
         fresh_my_reports = anvil.server.call_s("read_reports") or []
         fresh_structure_reports = []
-
         if self.is_supervisor:
           self.structure_name = anvil.server.call_s("get_user_info", "structure")
           self.has_structure = bool(
@@ -87,24 +216,27 @@ class ArchivesForm(ArchivesFormTemplate):
             )
           else:
             self.affiliated_vets = []
-
         self.my_reports = fresh_my_reports
         self.structure_reports = fresh_structure_reports
         reports_cache_manager.set(
-          my_reports=self.my_reports, structure_reports=self.structure_reports
+          my_reports=self.my_reports,
+          structure_reports=self.structure_reports,
+          has_structure=self.has_structure,
+          structure_name=self.structure_name,
+          affiliated_vets=self.affiliated_vets,
         )
         self.logger.info("Successfully fetched and cached fresh reports.")
-
       except Exception as e:
         self.logger.error("An error occurred while loading reports from server.", e)
         alert(f"An error occurred while loading reports: {e}")
         self.my_reports = []
         self.structure_reports = []
+      finally:
+        self.call_js("hideArchivesSpinner")
 
     status_options_for_js = [
       {"key": key, "display": t.t(key)} for key in self.status_options_keys
     ]
-
     self.logger.debug("Setting up UI via JavaScript.")
     self.call_js(
       "setupUI",
@@ -124,7 +256,7 @@ class ArchivesForm(ArchivesFormTemplate):
       f"Refresh button clicked on tab: '{active_tab}'. Invalidating cache."
     )
     reports_cache_manager.invalidate()
-
+    self.call_js("showArchivesSpinner")
     try:
       self.my_reports = anvil.server.call_s("read_reports") or []
       if self.is_supervisor and self.has_structure:
@@ -140,9 +272,10 @@ class ArchivesForm(ArchivesFormTemplate):
       alert(f"An error occurred while refreshing reports: {e}")
       self.my_reports = []
       self.structure_reports = []
-
+    finally:
+      self.call_js("hideArchivesSpinner")
     self.apply_filters(active_tab)
-    alert("Reports have been refreshed.")
+    alert(t.t("archivesForm_alert_refreshed"))
 
   def apply_filters(self, report_type="my_reports"):
     self.logger.info(f"Applying filters for '{report_type}'.")
@@ -228,7 +361,7 @@ class ArchivesForm(ArchivesFormTemplate):
     self.apply_filters(active_tab)
 
   def delete_report(self, report_id, active_tab, **event_args):
-    if confirm("Are you sure you want to delete this report?"):
+    if confirm(t.t("archivesForm_confirm_delete")):
       self.logger.info(f"Attempting to delete report with ID: {report_id}")
       try:
         if anvil.server.call_s("delete_report", report_id):

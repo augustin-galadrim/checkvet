@@ -1,3 +1,10 @@
+// ============================================================================
+// ===                      GLOBAL HELPER FUNCTIONS                         ===
+// ============================================================================
+// This file contains globally accessible JavaScript utility functions for the
+// Anvil application. They can be called from any form's Python code using
+// anvil.js.call_js('functionName', ...args).
+
 /**
  * Creates a new logger instance with a specific context name.
  * This allows for standardized, filterable logging from any form.
@@ -32,13 +39,6 @@ window.createLogger = function(contextName) {
     }
   };
 };
-
-// ============================================================================
-// ===                      GLOBAL HELPER FUNCTIONS                         ===
-// ============================================================================
-// This file contains globally accessible JavaScript utility functions for the
-// Anvil application. They can be called from any form's Python code using
-// anvil.js.call_js('functionName', ...args).
 
 /**
  * Displays a non-blocking notification banner at the top of the page.
@@ -152,5 +152,46 @@ window.setButtonEnabled = function(buttonId, isEnabled) {
     button.classList.toggle('disabled', !isEnabled);
   } else {
     console.warn(`setButtonEnabled: Button with ID '${buttonId}' not found.`);
+  }
+};
+
+/**
+ * Gets the value of a form input element (like <input> or <textarea>) by its ID.
+ * @param {string} elementId The ID of the target input element.
+ * @returns {string|null} The value of the element, or null if not found.
+ */
+window.getValueById = function(elementId) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    return element.value;
+  }
+  // C'est une bonne pratique d'afficher un avertissement si l'élément n'est pas trouvé.
+  console.warn(`getValueById: Element with ID '${elementId}' not found.`);
+  return null;
+};
+
+/**
+ * Opens a modal dialog by its ID by adding an 'active' class.
+ * @param {string} modalId The ID of the modal element to show.
+ */
+window.openModal = function(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('active');
+  } else {
+    console.warn(`openModal: Element with ID '${modalId}' not found.`);
+  }
+};
+
+/**
+ * Closes a modal dialog by its ID by removing an 'active' class.
+ * @param {string} modalId The ID of the modal element to hide.
+ */
+window.closeModal = function(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('active');
+  } else {
+    console.warn(`closeModal: Element with ID '${modalId}' not found.`);
   }
 };

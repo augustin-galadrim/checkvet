@@ -1,21 +1,22 @@
 components: []
 container:
   properties:
-    html: |
+    html: |-
       <div id="audioBar" style="display: none; width: 100%; height: 50px; background-color: #f8f8f8; border-radius: 5px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 20px; border: 1px solid #ddd; position: relative;">
-        <button id="audioPlaybackControl" style="width: 30px; height: 30px; background-color: #4CAF50; border: none; border-radius: 50%; color: white; font-size: 16px; cursor: pointer; margin-right: 10px;">▶</button>
-        <div id="audioProgress" style="flex-grow: 1; height: 10px; background-color: #ddd; border-radius: 5px; overflow: hidden; cursor: pointer; margin-right: 10px; touch-action: none;">
-          <div id="audioProgressBar" style="width: 0; height: 100%; background-color: #4CAF50; transition: width 0.1s linear;"></div>
+        <button id="audioPlayback-button-control" style="width: 30px; height: 30px; background-color: #4CAF50; border: none; border-radius: 50%; color: white; font-size: 16px; cursor: pointer; margin-right: 10px;">▶</button>
+        <div id="audioPlayback-div-progress" style="flex-grow: 1; height: 10px; background-color: #ddd; border-radius: 5px; overflow: hidden; cursor: pointer; margin-right: 10px; touch-action: none;">
+          <div id="audioPlayback-div-progressBar" style="width: 0; height: 100%; background-color: #4CAF50; transition: width 0.1s linear;"></div>
         </div>
-        <span id="audioDuration" style="font-size: 14px;">0:00 / 0:00</span>
-        <button id="clearRecordingButton" title="Reset recording" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #666; margin-left: 10px;">🗑</button>
-        <audio id="audioPlayback" style="display: none;"></audio>
+        <span id="audioPlayback-span-duration" style="font-size: 14px;">0:00 / 0:00</span>
+        <button id="audioPlayback-button-clear" title="Reset recording" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #666; margin-left: 10px;">🗑</button>
+        <audio id="audioPlayback-audio-player" style="display: none;"></audio>
       </div>
-
 
       <script>
         if (!window.__audio_playback_globals) {
           window.__audio_playback_globals = true;
+
+          const logger = window.createLogger('AudioPlayback');
 
           window.formatTime = (seconds) => {
             if (isNaN(seconds) || !isFinite(seconds)) return "0:00";
@@ -26,9 +27,12 @@ container:
 
           window.setupAudioPlayback = function(audioBlob) {
             const audioBar = document.getElementById("audioBar");
-            const audioPlayer = document.getElementById("audioPlayback");
-            if (!audioBar || !audioPlayer || !audioBlob) return;
-
+            const audioPlayer = document.getElementById("audioPlayback-audio-player");
+            if (!audioBar || !audioPlayer || !audioBlob) {
+              logger.warn('setupAudioPlayback failed: one or more required elements/blobs are missing.');
+              return;
+            }
+            logger.log('Setting up audio for playback.');
             const audioURL = URL.createObjectURL(audioBlob);
             audioPlayer.src = audioURL;
             audioBar.style.display = 'flex';
@@ -36,11 +40,12 @@ container:
 
           window.resetAudioPlayback = function() {
             const audioBar = document.getElementById("audioBar");
-            const audioPlayer = document.getElementById("audioPlayback");
-            const progressBar = document.getElementById("audioProgressBar");
-            const durationSpan = document.getElementById('audioDuration');
-            const playbackBtn = document.getElementById('audioPlaybackControl');
+            const audioPlayer = document.getElementById("audioPlayback-audio-player");
+            const progressBar = document.getElementById("audioPlayback-div-progressBar");
+            const durationSpan = document.getElementById('audioPlayback-span-duration');
+            const playbackBtn = document.getElementById('audioPlayback-button-control');
 
+            logger.log('Resetting audio playback UI.');
             if(audioBar) audioBar.style.display = 'none';
             if(audioPlayer) audioPlayer.src = '';
             if(progressBar) progressBar.style.width = '0%';
@@ -48,18 +53,20 @@ container:
             if(playbackBtn) playbackBtn.textContent = '▶';
           };
 
-          // This function will now be called from Python
           window.initializeAudioPlayer = function() {
-            const audioEl = document.getElementById('audioPlayback');
-            const playbackBtn = document.getElementById('audioPlaybackControl');
-            const progressDiv = document.getElementById('audioProgress');
-            const progressBar = document.getElementById('audioProgressBar');
-            const durationSpan = document.getElementById('audioDuration');
-            const clearBtn = document.getElementById('clearRecordingButton');
+            logger.log('Initializing audio player event listeners.');
+            const audioEl = document.getElementById('audioPlayback-audio-player');
+            const playbackBtn = document.getElementById('audioPlayback-button-control');
+            const progressDiv = document.getElementById('audioPlayback-div-progress');
+            const progressBar = document.getElementById('audioPlayback-div-progressBar');
+            const durationSpan = document.getElementById('audioPlayback-span-duration');
+            const clearBtn = document.getElementById('audioPlayback-button-clear');
 
-            if (!audioEl || !playbackBtn || !progressDiv || !clearBtn) return;
+            if (!audioEl || !playbackBtn || !progressDiv || !clearBtn) {
+              logger.error('initializeAudioPlayer failed: one or more UI elements are missing.');
+              return;
+            }
 
-            // Use cloneNode to avoid duplicate event listeners
             const newPlaybackBtn = playbackBtn.cloneNode(true);
             playbackBtn.parentNode.replaceChild(newPlaybackBtn, playbackBtn);
             newPlaybackBtn.addEventListener('click', () => {
@@ -75,6 +82,7 @@ container:
             const newClearBtn = clearBtn.cloneNode(true);
             clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
             newClearBtn.addEventListener('click', (e) => {
+              logger.debug('Clear button clicked, calling python `clear_button_clicked`.');
               anvil.call(e.target, 'clear_button_clicked');
             });
 
@@ -99,6 +107,7 @@ container:
               const offsetX = e.clientX - rect.left;
               audioEl.currentTime = (offsetX / rect.width) * audioEl.duration;
             });
+            logger.log('Audio player listeners attached.');
           }
         }
       </script>

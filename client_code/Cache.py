@@ -9,6 +9,9 @@ class ReportCache:
     self.lifetime_seconds = lifetime_seconds
     self._my_reports = None
     self._structure_reports = None
+    self._has_structure = None
+    self._structure_name = None
+    self._affiliated_vets = None
     self._last_fetched = 0
 
   def is_valid(self):
@@ -19,18 +22,32 @@ class ReportCache:
 
   def get(self):
     if self.is_valid():
-      return self._my_reports, self._structure_reports
-    return None, None
+      return (
+        self._my_reports,
+        self._structure_reports,
+        self._has_structure,
+        self._structure_name,
+        self._affiliated_vets,
+      )
+    return (None, None, None, None, None)
 
-  def set(self, my_reports, structure_reports):
+  def set(
+    self, my_reports, structure_reports, has_structure, structure_name, affiliated_vets
+  ):
     self._my_reports = my_reports
     self._structure_reports = structure_reports
+    self._has_structure = has_structure
+    self._structure_name = structure_name
+    self._affiliated_vets = affiliated_vets
     self._last_fetched = time.time()
 
   def invalidate(self):
     print("Reports cache invalidated.")
     self._my_reports = None
     self._structure_reports = None
+    self._has_structure = None
+    self._structure_name = None
+    self._affiliated_vets = None
     self._last_fetched = 0
 
 

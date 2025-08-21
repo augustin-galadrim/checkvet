@@ -9,6 +9,8 @@ from . import client, RETRY_LIMIT
 import base64
 from pydub import AudioSegment
 import io
+from ...logging_server import get_logger
+logger = get_logger(__name__)
 
 MAX_SINGLE_CHUNK_MS = 60_000
 OVERLAP_MS = 10_000

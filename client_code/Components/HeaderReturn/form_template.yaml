@@ -39,32 +39,47 @@ container:
         </head>
         <body>
           <div class="modal-header-bar" id="headerBar">
-            <button class="return-button" id="returnButton">← Return</button>
-            <span class="header-title" id="headerTitle"></span>
+            <button class="return-button" id="headerReturn-button-return">← Return</button>
+            <span class="header-title" id="headerReturn-span-title"></span>
             <div class="placeholder"></div>
           </div>
           <script>
-            // Only define globals and helpers once
             if (!window.__modal_header_globals) {
               window.__modal_header_globals = true;
 
+              const logger = window.createLogger('HeaderReturn');
+
               window.setHeaderTitle = function(title) {
-                const titleElement = document.getElementById("headerTitle");
+                const titleElement = document.getElementById("headerReturn-span-title");
                 if (titleElement) {
                   titleElement.textContent = title;
+                } else {
+                  logger.warn('#headerReturn-span-title element not found.');
+                }
+              };
+
+              // This function will be called from Python to set the translated text
+              window.setReturnButtonText = function(text) {
+                const returnButton = document.getElementById("headerReturn-button-return");
+                if(returnButton) {
+                  returnButton.textContent = text;
+                } else {
+                  logger.warn('#headerReturn-button-return element not found.');
                 }
               };
 
               window.attachReturnButtonListener = function() {
-                const returnButton = document.getElementById("returnButton");
+                const returnButton = document.getElementById("headerReturn-button-return");
                 if(returnButton) {
-                  // Clone and replace to prevent duplicate listeners
                   const newButton = returnButton.cloneNode(true);
                   returnButton.parentNode.replaceChild(newButton, returnButton);
-
                   newButton.addEventListener('click', (event) => {
+                    logger.log('Return button clicked, calling python `return_button_click`.');
                     anvil.call(event.target, 'return_button_click');
                   });
+                  logger.log('Event listener attached to #headerReturn-button-return.');
+                } else {
+                  logger.warn('Could not attach listener to #headerReturn-button-return as it was not found.');
                 }
               };
             }

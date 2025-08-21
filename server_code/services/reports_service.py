@@ -6,6 +6,8 @@ from anvil.tables import app_tables
 import anvil.server
 import json
 import openai
+from ..logging_server import get_logger
+logger = get_logger(__name__)
 
 
 @anvil.server.callable

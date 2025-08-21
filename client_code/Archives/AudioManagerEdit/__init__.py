@@ -4,41 +4,72 @@ import anvil.server
 import anvil.users
 import anvil.js
 from ...Cache import reports_cache_manager
-import time  # <--- FIX: Added the required import for time.sleep()
+import time
+from ... import TranslationService as t
+from ...AppEvents import events
 
 
 class AudioManagerEdit(AudioManagerEditTemplate):
   def __init__(self, report=None, **properties):
     self.init_components(**properties)
-
-    # --- Setup Event Handlers for Components ---
     self.recording_widget_1.set_event_handler(
       "recording_complete", self.handle_new_recording
     )
     self.audio_playback_1.set_event_handler(
       "x-clear_recording", self.reset_ui_to_input_state
     )
+    events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
-
-    # --- Initialize State ---
     self.report = report if report is not None else {}
     self.selected_statut = self.report.get("statut")
 
+  def update_ui_texts(self, **event_args):
+    """Sets all translatable text on the form."""
+    self.call_js(
+      "setElementText",
+      "audioManagerEdit-button-discard",
+      t.t("audioManagerEdit_button_discard"),
+    )
+    self.call_js(
+      "setElementText",
+      "audioManagerEdit-button-process",
+      t.t("audioManagerEdit_button_process"),
+    )
+    self.call_js(
+      "setElementText",
+      "audioManagerEdit-p-instructions",
+      t.t("audioManagerEdit_p_instructions"),
+    )
+    self.call_js(
+      "setElementText",
+      "audioManagerEdit-strong-example",
+      t.t("audioManagerEdit_strong_example"),
+    )
+    self.call_js(
+      "setElementText",
+      "audioManagerEdit-em-exampleText",
+      t.t("audioManagerEdit_em_exampleText"),
+    )
+
   def form_show(self, **event_args):
     """Called when the form is shown. Sets up the initial state."""
+    self.update_ui_texts()
+
     if not self.report.get("id"):
       alert(
-        "Error: No report was provided to edit.", title="Navigation Error", large=True
+        t.t("audioManagerEdit_alert_noReportError"),
+        title=t.t("audioManagerEdit_alert_navErrorTitle"),
+        large=True,
       )
       open_form("Archives.ArchivesForm")
       return
 
-    self.header_return_1.title = self.report.get("file_name", "Edit Report")
+    self.header_return_1.title = self.report.get(
+      "file_name", t.t("audioManagerEdit_default_headerTitle")
+    )
     self.text_editor_1.html_content = self.report.get("report_rich", "")
     self.report_footer_1.update_status_display(self.selected_statut)
     self.reset_ui_to_input_state()
-
-  # --- UI WORKFLOW METHODS ---
 
   def handle_new_recording(self, audio_blob, **event_args):
     """Event handler from RecordingWidget. Moves UI to the 'decision' state."""
@@ -54,73 +85,58 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     """Orchestrates the modification process: transcribe, then edit."""
     audio_proxy = self.audio_playback_1.audio_blob
     if not audio_proxy:
-      alert("No audio command available to process.")
+      alert(t.t("audioManagerEdit_alert_noAudio"))
       return
 
-    # 1. Provide immediate user feedback
     self.call_js("setAudioWorkflowState", "processing")
-    self.user_feedback_1.show("Transcribing command...")
+    self.user_feedback_1.show(t.t("feedback_transcribing"))
 
-    # 2. Convert JS proxy to Anvil Media and get current content
     anvil_media_blob = anvil.js.to_media(audio_proxy)
     current_content = self.text_editor_1.get_content()
-    # Assuming user's language preference can be determined or is defaulted
     language = anvil.server.call_s("get_user_info", "favorite_language") or "en"
 
     try:
-      # 3. Transcribe the audio command
       task = anvil.server.call_s(
         "process_audio_whisper", anvil_media_blob, language=language
       )
-
-      # --- FIX: Replaced the direct get_return_value() with a waiting loop ---
       elapsed = 0
-      while not task.is_completed() and elapsed < 240:  # 4-minute timeout
+      while not task.is_completed() and elapsed < 240:
         time.sleep(1)
         elapsed += 1
 
       if not task.is_completed():
-        raise anvil.server.AppOfflineError(
-          "Transcription is taking too long. Please try again."
-        )
+        raise anvil.server.AppOfflineError(t.t("error_transcriptionTimeout"))
 
       transcription = task.get_return_value()
-      # --- END OF FIX ---
-
-      print("Transcription:", transcription)
 
       if isinstance(transcription, dict) and "error" in transcription:
-        raise Exception(f"Transcription failed: {transcription['error']}")
-
+        raise Exception(f"{t.t('error_transcriptionFailed')}: {transcription['error']}")
       if transcription is None:
-        raise Exception(
-          "Transcription returned an empty result. The audio may have been silent."
-        )
+        raise Exception(t.t("error_transcriptionEmpty"))
 
-      # 4. Apply the edit
-      self.user_feedback_1.set_status("Applying modification...")
+      self.user_feedback_1.set_status(t.t("feedback_applyingModification"))
       edited_report = anvil.server.call_s(
         "edit_report", transcription, current_content, language
       )
       self.text_editor_1.html_content = edited_report
 
     except Exception as e:
-      alert(f"An error occurred while processing the modification: {e}")
+      alert(f"{t.t('error_processingFailed')}: {e}")
     finally:
-      # 5. Always reset the UI
       self.user_feedback_1.hide()
       self.reset_ui_to_input_state()
-
-  # --- DATA PERSISTENCE METHODS ---
 
   def report_footer_1_status_clicked(self, status_key, **event_args):
     """Handles the status change from the footer component."""
     self.selected_statut = status_key
     self.report_footer_1.update_status_display(status_key)
+    status_display = (
+      t.t(status_key)
+      if status_key and status_key != "not_specified"
+      else t.t("reportFooter_button_status")
+    )
     self.call_js(
-      "displayBanner",
-      f"Status set to: {status_key.replace('_', ' ').title()}",
-      "success",
+      "displayBanner", f"{t.t('banner_statusSetTo')}: {status_display}", "success"
     )
 
   def report_footer_1_save_clicked(self, **event_args):
@@ -129,18 +145,14 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       report_id = self.report.get("id")
       new_html_content = self.text_editor_1.get_content()
       new_status = self.selected_statut
-
-      # Call the new, dedicated server function for updating
       success = anvil.server.call_s(
         "update_report", report_id, new_html_content, new_status
       )
-
       if success:
         reports_cache_manager.invalidate()
-        alert("Report updated successfully!", title="Success")
+        alert(t.t("banner_reportUpdateSuccess"), title=t.t("title_success"))
         open_form("Archives.ArchivesForm")
       else:
-        alert("Failed to update the report on the server.", title="Update Failed")
-
+        alert(t.t("error_reportUpdateFailed"), title=t.t("title_updateFailed"))
     except Exception as e:
-      alert(f"An error occurred while saving the report: {e}")
+      alert(f"{t.t('error_reportSaveFailed')}: {e}")

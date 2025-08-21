@@ -4,63 +4,72 @@ import anvil.server
 import anvil.users
 from .. import TranslationService as t
 from ..Cache import user_settings_cache
+from ..AppEvents import events
 
 
 class StartupForm(StartupFormTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
+    # The form's logic is now handled in the 'show' event
+    self.add_event_handler("show", self.form_show)
+
+  def update_ui_texts(self):
+    """Sets all translatable text on the form."""
+    # This provides feedback to the user if loading takes a moment
+    self.call_js(
+      "setElementText",
+      "startupForm-center-loadingMessage",
+      t.t("startupForm_loading_message"),
+    )
+
+  def form_show(self, **event_args):
+    """This method runs when the form is displayed and handles the app startup sequence."""
+
+    # Set default language to English before user is known, then update the UI text
+    t.load_language("en")
+    self.update_ui_texts()
 
     try:
-      # 1. AUTHENTICATION: Attempt to get a logged-in user or show the login form.
+      # 1. AUTHENTICATION
       user = anvil.users.get_user(allow_remembered=True)
       if not user:
         user = anvil.users.login_with_form()
 
       if user:
-        # --- User is now logged in ---
+        # --- User is logged in ---
         anvil.server.call_s("ensure_persistent_session")
 
-        # 2. REGISTRATION CHECK (Updated with Caching)
+        # 2. REGISTRATION CHECK (with Caching)
         additional_info_complete = user_settings_cache.get("additional_info")
         if additional_info_complete is None:
-          # If not in cache, fetch from the server
-          print("Startup cache miss: Fetching 'additional_info'.")
           additional_info_complete = anvil.server.call_s(
             "get_user_info", "additional_info"
           )
-          # Store the result in the cache for this session
           user_settings_cache["additional_info"] = additional_info_complete
 
         if not additional_info_complete:
-          # If registration is not complete, redirect to the registration flow.
-          print("User has not completed registration. Redirecting to RegistrationFlow.")
           open_form("RegistrationFlow")
-        else:
-          # 3. LOAD MAIN APP (Updated with Caching)
-          lang_code = user_settings_cache.get("language")
-          if lang_code is None:
-            # If not in cache, fetch the user's language from the server.
-            print("Startup cache miss: Fetching 'favorite_language'.")
-            lang_code = anvil.server.call_s("get_user_info", "favorite_language") or "en"
-            # Store the result in the cache. Note the key is 'language'.
-            user_settings_cache["language"] = lang_code
+          return
 
-          t.load_language(lang_code)
+        # 3. LOAD MAIN APP (with Caching)
+        lang_code = user_settings_cache.get("language")
+        if lang_code is None:
+          lang_code = anvil.server.call_s("get_user_info", "favorite_language") or "en"
+          user_settings_cache["language"] = lang_code
 
-          # Open the main production form for online users.
-          open_form("Production.AudioManagerForm")
+        # Load the user's preferred language now that we know it
+        t.load_language(lang_code)
+
+        open_form("Production.AudioManagerForm")
       else:
-        # User cancelled the login prompt. They can still use the app offline.
-        alert("Login cancelled. Proceeding with offline capabilities.")
+        # User cancelled login, proceed offline
+        alert(t.t("startupForm_alert_loginCancelled"))
         open_form("Production.OfflineAudioManagerForm")
 
     except anvil.server.AppOfflineError:
-      # Handle the case where the app starts in offline mode.
-      print("App is offline. Loading offline-first audio manager.")
+      alert(t.t("startupForm_alert_offline"))
       open_form("Production.OfflineAudioManagerForm")
-
     except Exception as e:
-      # Catch any other unexpected errors during the startup process.
       print(f"An unexpected error occurred during startup: {e}")
-      alert("An error occurred while starting the app. You can try the offline mode.")
+      alert(f"{t.t('startupForm_alert_unexpectedError')}: {e}")
       open_form("Production.OfflineAudioManagerForm")

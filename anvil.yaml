@@ -10,9 +10,6 @@ db_schema:
     - admin_ui: {order: -1, width: 200}
       name: name
       type: string
-    - admin_ui: {order: 2, width: 200}
-      name: unique_id
-      type: number
     - admin_ui: {order: 3, width: 200}
       name: vet
       target: users
@@ -68,8 +65,8 @@ db_schema:
     - admin_ui: {order: 9, width: 200}
       name: html
       type: string
-    - admin_ui: {order: -1, width: 404}
-      name: id
+    - admin_ui: {order: 4.5, width: 200}
+      name: language
       type: string
     server: full
     title: Custom_templates
@@ -146,6 +143,9 @@ db_schema:
       type: string
     - admin_ui: {order: 6, width: 200}
       name: transcript
+      type: string
+    - admin_ui: {order: 7, width: 200}
+      name: language
       type: string
     server: full
     title: Reports
@@ -611,7 +611,10 @@ exported_table_schema:
   server: full
 metadata: {logo_img: 'asset:Plan de travail 1 copie 5.png'}
 name: checkvet
-native_deps: {head_html: '<script src="https://cdnjs.cloudflare.com/ajax/libs/NoSleep.js/0.12.0/NoSleep.min.js"></script>'}
+native_deps:
+  head_html: |-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/NoSleep.js/0.12.0/NoSleep.min.js"></script>
+    <script src="_/theme/global-scripts.js"></script>
 package_name: checkvet
 runtime_options:
   client_version: '3'

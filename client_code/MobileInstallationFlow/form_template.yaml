@@ -56,9 +56,6 @@ container:
             display: none;
             pointer-events: auto; /* ensure the modal receives pointer events */
           }
-          .modal.active {
-            display: block;
-          }
           .modal h2 {
             margin-bottom: 15px;
           }
@@ -145,22 +142,6 @@ container:
         </div>
 
         <script>
-          // Functions to show/hide modals
-          window.showModal = function(modalId) {
-            console.log("Showing modal:", modalId);
-            // Activate the overlay and the requested modal
-            document.getElementById("modal-overlay").classList.add("active");
-            document.getElementById(modalId).classList.add("active");
-          };
-
-          window.hideModal = function(modalId) {
-            console.log("Hiding modal:", modalId);
-            document.getElementById(modalId).classList.remove("active");
-            // Remove overlay if no modal is active
-            if (!document.querySelector(".modal.active")) {
-              document.getElementById("modal-overlay").classList.remove("active");
-            }
-          };
 
           // Attach event listeners to buttons
           function attachInstallationEvents() {

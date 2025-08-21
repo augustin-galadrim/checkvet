@@ -6,7 +6,8 @@ from anvil.tables import app_tables
 import anvil.server
 import anvil.users
 import uuid
-
+from ..logging_server import get_logger
+logger = get_logger(__name__)
 
 @anvil.server.callable
 def assign_template_to_users(template_id, user_ids):

@@ -15,8 +15,8 @@ container:
           .spinner {
             width: 50px;
             height: 50px;
-            border: 5px solid #f3f3f3; /* Light grey base */
-            border-top: 5px solid #4CAF50; /* Checkvet Green */
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4CAF50;
             border-radius: 50%;
             animation: spin 1s linear infinite;
           }
@@ -31,19 +31,21 @@ container:
           }
         </style>
         <div class="spinner" id="feedback-spinner"></div>
-        <p class="status-text" id="feedback-status-text">Processing...</p>
+        <p class="status-text" id="userFeedback-p-status">Processing...</p>
       </div>
 
       <script>
-        // Use a guard to define functions once
         if (!window.__user_feedback_globals) {
           window.__user_feedback_globals = true;
 
-          // Function callable from Python to set the status message
+          const logger = window.createLogger('UserFeedback');
+
           window.uf_setStatus = function(newStatus) {
-            const statusEl = document.getElementById("feedback-status-text");
+            const statusEl = document.getElementById("userFeedback-p-status");
             if (statusEl) {
               statusEl.textContent = newStatus;
+            } else {
+              logger.warn('#userFeedback-p-status element not found.');
             }
           };
         }

@@ -3,103 +3,137 @@ container:
   properties:
     html: |-
       <style>
-        /* Styles for the footer button container */
         .bottom-buttons {
-          position: fixed;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 800px;
-          max-width: 100%;
-          background: #fff;
-          padding: 15px 20px;
-          display: flex;
-          justify-content: center;
-          gap: 20px;
-          border-top: 1px solid #ddd;
-          box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
-          z-index: 10;
+          position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+          width: 800px; max-width: 100%; background: #fff; padding: 15px 20px;
+          display: flex; justify-content: center; gap: 20px;
+          border-top: 1px solid #ddd; box-shadow: 0 -2px 4px rgba(0,0,0,0.1); z-index: 10;
         }
-
-        /* General style for all buttons in the footer */
         .bottom-button {
-          padding: 10px 30px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          background: #fff;
-          cursor: pointer;
-          font-size: 14px;
-          transition: all 0.2s ease;
+          padding: 10px 30px; border: 1px solid #ddd; border-radius: 4px;
+          background: #fff; cursor: pointer; font-size: 14px; transition: all 0.2s ease;
         }
-
-        /* Hover effect for all buttons */
-        .bottom-button:hover {
-          background: #f5f5f5;
-          border-color: #999;
+        .bottom-button:hover { background: #f5f5f5; border-color: #999; }
+        .primary-button { background-color: #4CAF50; color: white; border-color: #4CAF50; }
+        .primary-button:hover { background-color: #45a049; }
+        #reportFooter-button-share.disabled {
+          background-color: #cccccc; color: #666666; cursor: not-allowed;
+          pointer-events: none; border-color: #bbbbbb;
         }
-
-        /* Specific style for the primary action button (Archive/Save) */
-        .primary-button {
-          background-color: #4CAF50;
-          color: white;
-          border-color: #4CAF50;
+        #status-modal {
+          position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+          background-color: rgba(0,0,0,0.5); z-index: 10010;
+          display: none;
         }
-        .primary-button:hover {
-          background-color: #45a049;
+        .status-modal-content {
+          background-color: white; padding: 20px; width: 90%; max-width: 320px;
+          border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
-        #footer-share-btn.disabled {
-          background-color: #cccccc;
-          color: #666666;
-          cursor: not-allowed;
-          pointer-events: none;
-          border-color: #bbbbbb;
+        #status-modal-title {
+          font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333;
         }
-
-        #footer-share-btn.disabled:hover {
-          background-color: #cccccc;
-          border-color: #bbbbbb;
+        #status-options-list {
+          display: flex; flex-direction: column; gap: 8px;
+        }
+        .status-option-btn {
+          width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px;
+          background: #fff; cursor: pointer; text-align: left; font-size: 16px;
+          transition: background-color 0.2s, border-color 0.2s;
+        }
+        .status-option-btn:hover {
+          background-color: #f5f5f5; border-color: #4CAF50;
         }
       </style>
+
       <div class="bottom-buttons">
-        <button class="bottom-button" id="footer-status-btn">Status</button>
-        <button class="bottom-button" id="footer-archive-btn">Archive</button>
-        <button class="bottom-button disabled" id="footer-share-btn">Share</button>
+        <button class="bottom-button" id="reportFooter-button-status">Status</button>
+        <button class="bottom-button" id="reportFooter-button-archive">Archive</button>
+        <button class="bottom-button disabled" id="reportFooter-button-share">Share</button>
+      </div>
+
+      <div id="status-modal" class="modal">
+        <div class="status-modal-content">
+          <div id="status-modal-title">Choose status:</div>
+          <div id="status-options-list">
+          </div>
+        </div>
       </div>
 
       <script>
-        // Use a guard to prevent re-defining functions and attaching duplicate listeners
         if (!window.__report_footer_globals) {
           window.__report_footer_globals = true;
 
-          // Function to be called from Python to update the status button's text
+          const logger = window.createLogger('ReportFooter');
+
           window.setFooterStatusText = function(newStatusText) {
-            const statusBtn = document.getElementById('footer-status-btn');
+            const statusBtn = document.getElementById('reportFooter-button-status');
             if (statusBtn) {
               statusBtn.textContent = newStatusText || 'Status';
             }
           };
 
-          // Function to attach event listeners. This will be called from Python.
-          window.attachFooterEvents = function() {
-            const statusBtn = document.getElementById('footer-status-btn');
-            const archiveBtn = document.getElementById('footer-archive-btn');
-            const shareBtn = document.getElementById('footer-share-btn');
+          window.showStatusModal = function(title, options) {
+            const titleEl = document.getElementById('status-modal-title');
+            const listContainer = document.getElementById('status-options-list');
 
-            // Use the cloneNode trick to ensure listeners aren't duplicated
-            if (statusBtn) {
-              const newStatusBtn = statusBtn.cloneNode(true);
-              statusBtn.parentNode.replaceChild(newStatusBtn, statusBtn);
-              newStatusBtn.addEventListener('click', (e) => anvil.call(e.target, 'status_button_click'));
+            if (!titleEl || !listContainer) {
+              logger.error("Éléments de la modale de statut introuvables.");
+              return;
             }
-            if (archiveBtn) {
-              const newArchiveBtn = archiveBtn.cloneNode(true);
-              archiveBtn.parentNode.replaceChild(newArchiveBtn, archiveBtn);
-              newArchiveBtn.addEventListener('click', (e) => anvil.call(e.target, 'save_button_click'));
-            }
-            if (shareBtn) {
-              const newShareBtn = shareBtn.cloneNode(true);
-              shareBtn.parentNode.replaceChild(newShareBtn, shareBtn);
-              newShareBtn.addEventListener('click', (e) => anvil.call(e.target, 'share_button_click'));
+
+            titleEl.textContent = title;
+            listContainer.innerHTML = '';
+
+            options.forEach(opt => {
+              const button = document.createElement('button');
+              button.className = 'status-option-btn';
+              button.textContent = opt.display;
+              button.dataset.value = opt.value;
+
+              button.addEventListener('click', (e) => {
+                const selectedValue = e.currentTarget.dataset.value;
+                anvil.call(document.getElementById('reportFooter-button-status'), 'handle_status_selection', selectedValue);
+                window.closeModal('status-modal');
+              });
+
+              listContainer.appendChild(button);
+            });
+
+            window.openModal('status-modal');
+          };
+
+          window.attachFooterEvents = function() {
+            logger.log('Attaching footer event listeners.');
+            const reattach = (id, event, handler) => {
+              const element = document.getElementById(id);
+              if(element) {
+                const newElement = element.cloneNode(true);
+                element.parentNode.replaceChild(newElement, element);
+                newElement.addEventListener('click', handler);
+              } else {
+                logger.warn(`Element with ID '${id}' not found for event attachment.`);
+              }
+            };
+
+            reattach('reportFooter-button-status', 'click', (e) => {
+              anvil.call(e.target, 'status_button_click');
+            });
+
+            reattach('reportFooter-button-archive', 'click', (e) => {
+              anvil.call(e.target, 'save_button_click');
+            });
+
+            reattach('reportFooter-button-share', 'click', (e) => {
+              anvil.call(e.target, 'share_button_click');
+            });
+
+            const modal = document.getElementById('status-modal');
+            if (modal) {
+              modal.addEventListener('click', (e) => {
+                if (e.target.id === 'status-modal') {
+                  window.closeModal('status-modal');
+                }
+              });
             }
           };
         }

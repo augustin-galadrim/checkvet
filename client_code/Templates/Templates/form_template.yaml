@@ -5,7 +5,7 @@ components:
   type: form:Components.TimeDisplay
 - layout_properties: {slot: default}
   name: header_nav_1
-  properties: {active_tab: Templates/AI}
+  properties: {active_tab: Templates}
   type: form:Components.HeaderNav
 container:
   properties:
@@ -16,302 +16,240 @@ container:
           <meta charset="UTF-8" />
           <title>Gestion des Templates/IA</title>
           <style>
-            * {
-              box-sizing: border-box;
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 0;
-            }
-            body {
-              background-color: #f5f5f5;
-              height: 100vh;
-            }
-            .container {
-              display: flex;
-              flex-direction: column;
-              height: 100vh;
-              max-width: 800px;
-              margin: 0 auto;
-              background-color: white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-              position: relative;
-            }
-            .fixed-section {
-              background: white;
-              z-index: 10;
-            }
-            .actions-row {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              padding: 15px 20px;
-            }
-            .left-section {
-              display: flex;
-              align-items: center;
-              flex: 1;
-              justify-content: space-between;
-            }
-            .buttons-container {
-              display: flex;
-              gap: 10px;
-              align-items: center;
-            }
-            .create-button {
-              padding: 8px 16px;
-              background: #fff;
-              border: 1px solid #ddd;
-              border-radius: 4px;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              gap: 5px;
-            }
-            .create-button:hover {
-              background: #f5f5f5;
-            }
-            .personalize-button {
-              padding: 8px 16px;
-              background: #fff;
-              border: 1px solid #ddd;
-              border-radius: 4px;
-              cursor: pointer;
-            }
-            .personalize-button:hover {
-              background: #f5f5f5;
-            }
-            .time {
-              color: #666;
-              font-size: 14px;
-            }
-            .search-bar {
-              display: block;
-              width: calc(100% - 40px);
-              padding: 8px;
-              border: 1px solid #ddd;
-              border-radius: 4px;
-              margin: 0 20px 15px 20px;
-            }
-            .scrollable-content {
-              flex: 1;
-              overflow-y: auto;
-              padding: 20px;
-            }
-            .template-list {
-              list-style: none;
-              margin: 0;
-              padding: 0;
-            }
-            .template-item {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              padding: 12px;
-              border: 1px solid #ddd;
-              border-radius: 4px;
-              margin-bottom: 8px;
-              background: white;
-            }
-            .template-name {
-              flex-grow: 1;
-              margin-right: 10px;
-            }
-            .template-actions {
-              display: flex;
-              gap: 10px;
-              align-items: center;
-            }
-            .edit-button, .toggle-button, .set-default-button {
-              padding: 4px 8px;
-              background: #f0f0f0;
-              border: 1px solid #ddd;
-              border-radius: 4px;
-              cursor: pointer;
-            }
-            .default-indicator {
-              padding: 4px 8px;
-              background: #e0f2f1;
-              border: 1px solid #00796b;
-              color: #00796b;
-              font-weight: bold;
-              border-radius: 4px;
-            }
-            .delete-icon {
-              color: #666;
-              cursor: pointer;
-            }
-            .banner-message {
-              position: absolute;
-              top: 10px;
-              left: 50%;
-              transform: translateX(-50%);
-              background: #fffae6;
-              border: 1px solid #f0e68c;
-              padding: 10px 20px;
-              border-radius: 4px;
-              font-weight: bold;
-              color: #666;
-              z-index: 1000;
-              opacity: 0.95;
-            }
+            * { box-sizing: border-box; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+            body { background-color: #f5f5f5; height: 100vh; }
+            .fixed-section { background: white; z-index: 10; }
+            .actions-row { display: flex; align-items: center; padding: 15px 20px; }
+            .actions-row > [anvil-slot="time_display_slot"] { margin-left: auto; }
+            .create-button { padding: 8px 16px; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+            .search-bar { display: block; width: calc(100% - 40px); padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin: 0 20px 15px 20px; }
+            .scrollable-content { flex: 1; overflow-y: auto; padding: 20px; }
+            .templates-section { margin-bottom: 10px; background-color: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+            .templates-section.expanded { overflow: visible; }
+            .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; background-color: #f9f9f9; user-select: none; }
+            .section-header:hover { background-color: #f0f0f0; }
+            .section-title { font-size: 16px; font-weight: 600; color: #333; }
+            .section-arrow { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 5px solid #555; transition: transform 0.2s ease-in-out; }
+            .templates-section.expanded .section-arrow { transform: rotate(90deg); }
+            .section-content { max-height: 0; transition: max-height 0.3s ease-in-out; }
+            .templates-section.expanded .section-content { max-height: 2000px; }
+            .template-list { list-style: none; margin: 0; padding: 0 15px 15px 15px; }
+            .template-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; transition: background-color 0.2s; }
+            .template-item:hover { background-color: #f0f0f0; }
+            .template-item:last-child { border-bottom: none; }
+            .template-item .template-name { flex-grow: 1; margin-right: 10px; font-weight: 500; cursor: pointer; }
+            .item-actions { display: flex; align-items: center; gap: 5px; }
+            .kebab-menu-container { position: relative; }
+            .icon-button { color: #666; cursor: pointer; background: none; border: none; padding: 4px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 16px; }
+            .icon-button:hover { background-color: #e0e0e0; }
+            .kebab-button { font-size: 20px; font-weight: bold; line-height: 1; }
+            .actions-menu { display: none; position: absolute; right: 0; top: 100%; background-color: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); z-index: 10; min-width: 150px; }
+            .actions-menu.visible { display: block; }
+            .menu-item { padding: 10px; cursor: pointer; background: none; border: none; width: 100%; text-align: left; font-size: 14px; }
+            .menu-item:hover { background-color: #f5f5f5; }
+            .empty-list-message { text-align: center; color: #888; padding: 20px; }
           </style>
         </head>
         <body>
-          <div class="container">
-            <div id="bannerContainer"></div>
+          <div class="responsive-container">
             <div class="fixed-section">
               <div anvil-slot="default"></div>
               <div class="actions-row">
-                <div class="left-section">
-                  <div class="buttons-container">
-                    <button class="create-button" id="createBtn">+ Créer</button>
-                  </div>
-                  <div anvil-slot="time_display_slot"></div>
-                </div>
+                <button class="create-button" id="templates-button-create">New Template</button>
+                <div anvil-slot="time_display_slot"></div>
               </div>
-              <input type="text" class="search-bar" placeholder="Rechercher">
+              <input type="text" class="search-bar" id="templates-input-search" placeholder="Search all templates...">
             </div>
             <div class="scrollable-content">
-              <ul class="template-list" id="templateList"></ul>
+              <div id="templates-container"></div>
             </div>
           </div>
 
           <script>
-            function showBanner(message) {
-              const bannerContainer = document.getElementById("bannerContainer");
-              if (!bannerContainer) return;
-              const banner = document.createElement("div");
-              banner.className = "banner-message";
-              banner.textContent = message;
-              bannerContainer.appendChild(banner);
-              setTimeout(() => {
-                bannerContainer.removeChild(banner);
-              }, 3000);
-            }
-
             if (!window.__templates_globals) {
               window.__templates_globals = true;
 
-              window.populateTemplates = function(templates, defaultTemplateId, retryCount = 0) {
-                const list = document.getElementById("templateList");
+              const logger = window.createLogger('TemplatesForm');
+              let allTemplatesData = [];
+              let currentDefaultId = null;
 
-                if (list) {
-                  list.innerHTML = "";
-                  if (!templates || templates.length === 0) {
-                    list.innerHTML = "<div style='text-align: center; color: #888;'>Aucun template à afficher</div>";
-                    return;
+              // ** THE FIX **
+              // Initialize with empty strings. All text will now be supplied by Python.
+              let localeTexts = {
+                defaultTemplateTitle: "",
+                activeTemplatesTitle: "",
+                inactiveTemplatesTitle: "",
+                noDefaultTemplates: "",
+                noActiveTemplates: "",
+                noInactiveTemplates: "",
+                untitledTemplate: "",
+                setAsDefault: "",
+                hide: "",
+                show: "",
+                delete: ""
+              };
+
+              window.setLocaleTexts = function(texts) {
+                logger.log('Setting locale texts from Python.');
+                localeTexts = { ...localeTexts, ...texts };
+              };
+
+              document.addEventListener('click', (e) => {
+                if (!e.target.closest('.kebab-menu-container')) {
+                  document.querySelectorAll('.actions-menu.visible').forEach(menu => menu.classList.remove('visible'));
+                }
+              });
+
+              window.populateTemplates = function(templates, defaultTemplateId) {
+                logger.log(`Populating UI with ${templates.length} templates.`);
+                allTemplatesData = templates || [];
+                currentDefaultId = defaultTemplateId;
+                renderAllSections(allTemplatesData);
+              };
+
+              function renderAllSections(templatesToRender) {
+                const container = document.getElementById('templates-container');
+                if (!container) {
+                  logger.error("Impossible de trouver l'élément 'templates-container'. Le DOM n'est peut-être pas encore prêt.");
+                  return;
+                }
+                container.innerHTML = '';
+
+                const defaultTpl = templatesToRender.find(t => t.id === currentDefaultId);
+                const activeTpls = templatesToRender.filter(t => t.id !== currentDefaultId && t.display);
+                const inactiveTpls = templatesToRender.filter(t => t.id !== currentDefaultId && !t.display);
+
+                container.appendChild(createSection(localeTexts.defaultTemplateTitle, 'default', defaultTpl ? [defaultTpl] : [], true));
+                container.appendChild(createSection(`${localeTexts.activeTemplatesTitle} (${activeTpls.length})`, 'active', activeTpls, true));
+                container.appendChild(createSection(`${localeTexts.inactiveTemplatesTitle} (${inactiveTpls.length})`, 'inactive', inactiveTpls, false));
+              }
+
+              function createSection(title, key, templates, expandedDefault) {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = `templates-section ${expandedDefault ? 'expanded' : ''}`;
+
+                const header = document.createElement('div');
+                header.className = 'section-header';
+                header.innerHTML = `<span class="section-title">${title}</span><div class="section-arrow"></div>`;
+                header.addEventListener('click', () => sectionDiv.classList.toggle('expanded'));
+
+                const content = document.createElement('div');
+                content.className = 'section-content';
+                const list = document.createElement('ul');
+                list.className = 'template-list';
+
+                if (templates && templates.length > 0) {
+                  templates.forEach(t => list.appendChild(createTemplateElement(t, key === 'default')));
+                } else {
+                  let emptyMessage = localeTexts.noActiveTemplates;
+                  if (key === 'default') emptyMessage = localeTexts.noDefaultTemplates;
+                  if (key === 'inactive') emptyMessage = localeTexts.noInactiveTemplates;
+                  list.innerHTML = `<div class='empty-list-message'>${emptyMessage}</div>`;
+                }
+
+                content.appendChild(list);
+                sectionDiv.appendChild(header);
+                sectionDiv.appendChild(content);
+                return sectionDiv;
+              }
+
+              function createTemplateElement(tpl, isDefault = false) {
+                const li = document.createElement("li");
+                li.className = "template-item";
+
+                const spanName = document.createElement("span");
+                spanName.className = "template-name";
+                const langToFlag = { 'en': '🇬🇧', 'fr': '🇫🇷' };
+                const langCode = tpl.language || 'en';
+                const flag = langToFlag[langCode] || '🏳️';
+                const displayName = `${tpl.name || localeTexts.untitledTemplate} - ${flag}`;
+                spanName.textContent = displayName;
+                spanName.addEventListener("click", () => anvil.call(li, 'open_template_editor', tpl.id));
+
+                li.appendChild(spanName);
+
+                const actionsContainer = document.createElement('div');
+                actionsContainer.className = 'item-actions';
+
+                const kebabContainer = document.createElement("div");
+                kebabContainer.className = "kebab-menu-container";
+                kebabContainer.addEventListener('click', (e) => e.stopPropagation());
+
+                const kebabBtn = document.createElement("button");
+                kebabBtn.className = "icon-button kebab-button";
+                kebabBtn.innerHTML = '...';
+
+                const kebabMenu = document.createElement("div");
+                kebabMenu.className = "actions-menu";
+
+                kebabBtn.addEventListener('click', (e) => {
+                  document.querySelectorAll('.actions-menu.visible').forEach(m => { if (m !== kebabMenu) m.classList.remove('visible'); });
+                  kebabMenu.classList.toggle('visible');
+                });
+
+                if (!isDefault) {
+                  const setDefaultItem = document.createElement("button");
+                  setDefaultItem.className = "menu-item";
+                  setDefaultItem.textContent = localeTexts.setAsDefault;
+                  setDefaultItem.addEventListener("click", (e) => anvil.call(setDefaultItem, 'set_default_template', tpl.id));
+                  kebabMenu.appendChild(setDefaultItem);
+                }
+
+                const toggleItem = document.createElement("button");
+                toggleItem.className = "menu-item";
+                toggleItem.textContent = tpl.display ? localeTexts.hide : localeTexts.show;
+                toggleItem.addEventListener("click", (e) => {
+                  const optimisticDisplay = !tpl.display;
+                  const originalTpl = allTemplatesData.find(t => t.id === tpl.id);
+                  if (originalTpl) originalTpl.display = optimisticDisplay;
+                  renderAllSections(allTemplatesData);
+                  anvil.call(toggleItem, 'toggle_template_display', tpl.id, optimisticDisplay);
+                });
+                kebabMenu.appendChild(toggleItem);
+
+                kebabContainer.appendChild(kebabBtn);
+                kebabContainer.appendChild(kebabMenu);
+                actionsContainer.appendChild(kebabContainer);
+
+                const deleteBtn = document.createElement("button");
+                deleteBtn.className = "icon-button";
+                deleteBtn.title = localeTexts.delete;
+                deleteBtn.innerHTML = '🗑️';
+                deleteBtn.addEventListener("click", (e) => { e.stopPropagation(); anvil.call(deleteBtn, 'delete_template', tpl.id); });
+                actionsContainer.appendChild(deleteBtn);
+
+                li.appendChild(actionsContainer);
+
+                return li;
+              }
+
+              window.attachTemplatesEvents = function() {
+                logger.log('Attaching templates event listeners.');
+                const reattachListener = (selector, event, handler) => {
+                  const element = document.querySelector(selector);
+                  if(element) {
+                    const newElement = element.cloneNode(true);
+                    element.parentNode.replaceChild(newElement, element);
+                    newElement.addEventListener(event, handler);
                   }
-                  templates.forEach(tpl => {
-                    const li = document.createElement("li");
-                    li.className = "template-item";
-                    li.dataset.id = tpl.id;
+                };
 
-                    const spanName = document.createElement("span");
-                    spanName.className = "template-name";
-                    spanName.textContent = tpl.name || "Untitled Template";
-
-                    const actionsDiv = document.createElement("div");
-                    actionsDiv.className = "template-actions";
-
-                    // Default button/indicator logic
-                    if (tpl.id === defaultTemplateId) {
-                      const defaultIndicator = document.createElement("span");
-                      defaultIndicator.className = "default-indicator";
-                      defaultIndicator.textContent = "⭐ Default";
-                      actionsDiv.appendChild(defaultIndicator);
-                    } else {
-                      const setDefaultBtn = document.createElement("button");
-                      setDefaultBtn.className = "set-default-button";
-                      setDefaultBtn.textContent = "Set as Default";
-                      setDefaultBtn.addEventListener("click", (event) => {
-                        anvil.call(event.target, 'set_default_template', tpl.id);
-                      });
-                      actionsDiv.appendChild(setDefaultBtn);
-                    }
-
-                    const toggleBtn = document.createElement("button");
-                    toggleBtn.className = "toggle-button";
-                    toggleBtn.textContent = tpl.display ? "Hide" : "Show";
-                    toggleBtn.addEventListener("click", (event) => {
-                      const newDisplayState = !tpl.display;
-                      anvil.call(event.target, 'toggle_template_display', tpl.id, newDisplayState);
-                    });
-
-                    const editBtn = document.createElement("button");
-                    editBtn.className = "edit-button";
-                    editBtn.textContent = "Modifier";
-                    editBtn.addEventListener("click", (event) => {
-                      anvil.call(event.target, 'open_template_editor', tpl.id);
-                    });
-
-                    const delIcon = document.createElement("span");
-                    delIcon.className = "delete-icon";
-                    delIcon.textContent = "🗑️";
-                    delIcon.addEventListener("click", (event) => {
-                      event.stopPropagation();
-                      anvil.call(event.target, 'delete_template', tpl.id);
-                    });
-
-                    actionsDiv.appendChild(toggleBtn);
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(delIcon);
-
-                    li.appendChild(spanName);
-                    li.appendChild(actionsDiv);
-                    list.appendChild(li);
-                  });
-                  return;
-                }
-
-                if (retryCount >= 10) {
-                  console.error("populateTemplates: #templateList element could not be found after multiple retries.");
-                  return;
-                }
-
-                console.warn(`populateTemplates: #templateList not found. Retrying... (Attempt ${retryCount + 1})`);
-                setTimeout(() => {
-                  window.populateTemplates(templates, defaultTemplateId, retryCount + 1);
-                }, 50);
+                reattachListener('#templates-button-create', 'click', (e) => anvil.call(e.target, 'open_template_editor'));
+                reattachListener('#templates-input-search', 'input', (e) => {
+                  const query = e.target.value.toLowerCase();
+                  const filtered = query ? allTemplatesData.filter(t => (t.name || "").toLowerCase().includes(query)) : allTemplatesData;
+                  renderAllSections(filtered);
+                });
               };
             }
 
-            (function attachTemplatesEvents() {
-              const createBtn = document.getElementById('createBtn');
-              if (createBtn) {
-                createBtn.replaceWith(createBtn.cloneNode(true));
-                document.getElementById('createBtn').addEventListener('click', (event) => {
-                  anvil.call(event.target, 'open_template_editor');
-                });
-              }
-
-              const personalizeBtn = document.getElementById('personalizeBtn');
-              if (personalizeBtn) {
-                personalizeBtn.replaceWith(personalizeBtn.cloneNode(true));
-                document.getElementById('personalizeBtn').addEventListener('click', (event) => {
-                  showBanner("fonctionalité en cours de développement par les équipes Checkvet");
-                });
-              }
-
-              const searchInput = document.querySelector('.search-bar');
-              if (searchInput) {
-                searchInput.addEventListener('input', function(event) {
-                  const query = event.target.value;
-                  anvil.call(event.target, 'search_templates_client', query);
-                });
-              }
-            })();
+            window.attachTemplatesEvents();
 
             if (!window.__session_handlers_initialized) {
               window.__session_handlers_initialized = true;
               window.setupSessionHandlers = function() {
-                document.addEventListener('visibilitychange', function() {
-                  if (document.visibilityState === 'visible') {
-                    anvil.call(document.body, 'refresh_session_relay');
-                  }
-                });
-                window.addEventListener('online', function() {
-                  anvil.call(document.body, 'refresh_session_relay');
-                });
+                document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') anvil.call(document.body, 'refresh_session_relay'); });
+                window.addEventListener('online', () => anvil.call(document.body, 'refresh_session_relay'));
               };
               setupSessionHandlers();
             }

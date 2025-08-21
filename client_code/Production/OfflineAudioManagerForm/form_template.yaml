@@ -21,66 +21,31 @@ container:
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Offline Audio Recorder</title>
           <style>
-            /* Base styles */
             * { box-sizing: border-box; font-family: Arial, sans-serif; margin: 0; padding: 0; }
             body { background-color: #f5f5f5; height: 100vh; overflow: hidden; }
-            .container { display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 800px; margin: 0 auto; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-
-            /* Header and Actions */
             .fixed-section { background: white; z-index: 10; }
             .actions-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
-            .time { color: #666; font-size: 14px; }
-
-            /* Scrollable content */
             .scrollable-content { flex: 1; padding: 20px; text-align: center; overflow-y: auto; }
             .instructions { margin: 20px 0; color: #555; }
-
-            /* Decision container and buttons */
-            #audioDecisionContainer {
-              display: none;
-              padding: 10px 0;
-              justify-content: center;
-              gap: 15px;
-              margin-top: 15px;
-              align-items: center;
-              flex-direction: column;
-            }
-            .decision-buttons {
-              display: flex;
-              gap: 15px;
-              margin-top: 15px;
-            }
-            .decision-button {
-              padding: 10px 20px;
-              border-radius: 4px;
-              border: 1px solid #ddd;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: bold;
-            }
+            #audioDecisionContainer { display: none; padding: 10px 0; justify-content: center; gap: 15px; margin-top: 15px; align-items: center; flex-direction: column; }
+            .decision-buttons { display: flex; gap: 15px; margin-top: 15px; }
+            .decision-button { padding: 10px 20px; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; font-size: 14px; font-weight: bold; }
             .btn-discard { background-color: #f44336; color: white; border-color: #f44336; }
             .btn-queue { background-color: #4CAF50; color: white; border-color: #4CAF50; }
-
-            /* Banner for notifications */
-            #bannerContainer { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; }
-            .banner { margin-bottom: 10px; padding: 10px 20px; border-radius: 4px; color: #fff; text-align: center; }
-            .banner-success { background-color: #4caf50; }
-            .banner-error { background-color: #f44336; }
           </style>
         </head>
         <body>
-          <div class="container" id="offline-form-stable-anchor">
+          <div class="responsive-container" id="offline-form-stable-anchor">
             <div class="fixed-section">
               <div class="actions-row">
-                <!-- The QueueManager component will be placed here by Anvil -->
                 <div anvil-slot="queue_slot"></div>
                 <div anvil-slot="time_display_slot"></div>
               </div>
             </div>
 
             <div class="scrollable-content">
-              <h2>Offline Recorder</h2>
-              <p class="instructions">Record your audio. It will be saved to your device's queue.</p>
+              <h2 id="offlineAudioManager-h2-title">Offline Recorder</h2>
+              <p class="instructions" id="offlineAudioManager-p-instructions">Record your audio. It will be saved to your device's queue.</p>
 
               <div id="audioInputContainer">
                 <div anvil-slot="recorder_slot"></div>
@@ -89,32 +54,21 @@ container:
               <div id="audioDecisionContainer">
                 <div anvil-slot="playback_slot"></div>
                 <div class="decision-buttons">
-                  <button id="discard-audio-btn" class="decision-button btn-discard">Discard</button>
-                  <button id="queue-audio-btn" class="decision-button btn-queue">Put in Queue</button>
+                  <button id="offlineAudioManager-button-discard" class="decision-button btn-discard">Discard</button>
+                  <button id="offlineAudioManager-button-queue" class="decision-button btn-queue">Put in Queue</button>
                 </div>
               </div>
-
             </div>
           </div>
-
-          <!-- Banner container for notifications -->
-          <div id="bannerContainer"></div>
 
           <script>
             if (!window.__offline_form_globals) {
               window.__offline_form_globals = true;
 
-              window.displayBanner = function(message, type) {
-                const container = document.getElementById('bannerContainer');
-                if (!container) return;
-                const banner = document.createElement('div');
-                banner.className = `banner banner-${type}`;
-                banner.textContent = message;
-                container.appendChild(banner);
-                setTimeout(() => banner.remove(), 3000);
-              };
+              const logger = window.createLogger('OfflineAudioManagerForm');
 
               window.setAudioWorkflowState = (state) => {
+                logger.log(`Setting audio workflow state to: ${state}`);
                 const inputContainer = document.getElementById('audioInputContainer');
                 const decisionContainer = document.getElementById('audioDecisionContainer');
 
@@ -127,23 +81,34 @@ container:
                 }
               };
 
-              function attachOfflineEvents() {
+              window.attachOfflineEvents = function() {
+                logger.log('Attaching offline form event listeners.');
                 const stableAnchor = document.getElementById('offline-form-stable-anchor');
+
                 const reattach = (id, event, handler) => {
                   const el = document.getElementById(id);
                   if (el) {
                     const newEl = el.cloneNode(true);
                     el.parentNode.replaceChild(newEl, el);
                     newEl.addEventListener(event, handler);
+                  } else {
+                    logger.warn(`Element with ID '${id}' not found for event attachment.`);
                   }
                 };
 
-                // The discard button correctly calls the python method to reset the UI
-                reattach('discard-audio-btn', 'click', () => anvil.call(stableAnchor, 'reset_ui_to_recording'));
-                reattach('queue-audio-btn', 'click', () => anvil.call(stableAnchor, 'queue_button_click'));
-              }
-              attachOfflineEvents();
+                reattach('offlineAudioManager-button-discard', 'click', () => {
+                  logger.debug('Discard button clicked, calling python `reset_ui_to_recording`.');
+                  anvil.call(stableAnchor, 'reset_ui_to_recording');
+                });
+
+                reattach('offlineAudioManager-button-queue', 'click', () => {
+                  logger.debug('Queue button clicked, calling python `queue_button_click`.');
+                  anvil.call(stableAnchor, 'queue_button_click');
+                });
+              };
             }
+            // Re-attach events every time the form loads to ensure responsiveness
+            attachOfflineEvents();
           </script>
         </body>
       </html>

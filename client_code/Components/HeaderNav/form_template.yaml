@@ -10,133 +10,96 @@ container:
             .fixed-section {
               background: white;
               z-index: 10;
-              padding: 10px 20px; /* Ajoute un peu d'espace autour de la barre */
+              padding: 10px 20px;
               border-bottom: 1px solid #ddd;
             }
             .nav-tabs {
               display: flex;
               width: 100%;
-              border: 1px solid #ddd; /* Bordure unifiée autour du groupe */
-              border-radius: 4px;   /* Coins arrondis */
-              overflow: hidden;     /* Pour que les coins arrondis s'appliquent correctement */
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              overflow: hidden;
             }
             .nav-tab {
-              flex: 1;              /* Permet aux boutons de remplir l'espace disponible */
-              padding: 10px 16px;   /* Augmente légèrement le padding vertical pour un meilleur confort visuel */
+              flex-grow: 1;
+              flex-shrink: 1;
+              flex-basis: 0;
+              padding: 10px 16px;
               cursor: pointer;
-              background: #f8f8f8;  /* Fond gris clair par défaut */
+              background: #f8f8f8;
               font-size: 14px;
               text-align: center;
-              border: none;         /* Supprime les bordures individuelles */
-              border-right: 1px solid #ddd; /* Ajoute un séparateur vertical */
+              border: none;
+              border-right: 1px solid #ddd;
               transition: background-color 0.2s;
               color: #333;
             }
             .nav-tab:last-child {
-              border-right: none;   /* Supprime le dernier séparateur */
+              border-right: none;
             }
             .nav-tab:hover {
               background-color: #f0f0f0;
             }
             .nav-tab.active {
-              background: #fff;              /* Fond blanc pour l'onglet actif */
-              color: #1a73e8;                 /* Couleur du texte pour l'onglet actif */
-              font-weight: bold;               /* Texte en gras pour l'onglet actif */
-              box-shadow: inset 0 -2px 0 #1a73e8; /* Ligne de surbrillance en bas */
+              background: #fff;
+              color: #1a73e8;
+              font-weight: bold;
+              box-shadow: inset 0 -2px 0 #1a73e8;
             }
-            .actions-row {
-              display: flex;
-              justify-content: flex-end; /* Aligns the time to the right */
-              align-items: center;
-              padding: 15px 20px;
-            }
-            .time {
-              color: #666;
-              font-size: 14px;
-            }
-
-            /* --- AMÉLIORATIONS POUR L'AFFICHAGE SUR MOBILE --- */
             @media (max-width: 800px) {
-              .fixed-section {
-                padding: 8px; /* Réduit légèrement l'espacement autour de la barre */
-              }
-              .nav-tab {
-                padding: 14px 6px;  /* AUGMENTE LA HAUTEUR des boutons (14px) et ajuste l'horizontal (6px) */
-                font-size: 13px;    /* Taille de police optimisée pour les petits écrans */
-                white-space: nowrap;/* Empêche le texte de passer à la ligne de manière non désirée */
-              }
+              .fixed-section { padding: 8px; }
+              .nav-tab { padding: 14px 6px; font-size: 13px; white-space: nowrap; }
             }
           </style>
         </head>
         <body>
           <div class="fixed-section">
             <div class="nav-tabs">
-              <button class="nav-tab" data-tab="Production" id="nav_production">Production</button>
-              <button class="nav-tab" data-tab="Templates/AI" id="nav_templates">Templates/AI</button>
-              <button class="nav-tab" data-tab="Archives" id="nav_archives">Archives</button>
-              <button class="nav-tab" data-tab="Settings" id="nav_settings">Settings</button>
+              <button class="nav-tab" data-tab="Production" id="headerNav-button-production">Production</button>
+              <button class="nav-tab" data-tab="Templates" id="headerNav-button-templates">Templates</button>
+              <button class="nav-tab" data-tab="Archives" id="headerNav-button-archives">Archives</button>
+              <button class="nav-tab" data-tab="Settings" id="headerNav-button-settings">Settings</button>
             </div>
           </div>
-
           <script>
-            // --- ADDED THIS BLOCK TO MAKE THE COMPONENT SELF-CONTAINED ---
             if (!window.__header_nav_globals) {
               window.__header_nav_globals = true;
 
-              // This function is now defined inside the component that uses it.
-              window.setElementText = function(elementId, newText) {
-                const element = document.getElementById(elementId);
-                if (element) {
-                  element.textContent = newText;
-                }
-              };
+              const logger = window.createLogger('HeaderNav');
 
-              // This function was also missing and is now included.
-              window.updateTime = function() {
-                const timeElem = document.querySelector('.time');
-                if (timeElem) {
-                  const now = new Date();
-                  timeElem.textContent = `${now.getHours().toString().padStart(2, '0')}h${now.getMinutes().toString().padStart(2, '0')}`;
-                }
-              };
-            }
-            // --- END OF ADDED BLOCK ---
+              // This function is now exposed on the window object to be callable from Python.
+              window.js_attachHeaderEvents = function() {
+                logger.log('Attaching event listeners to navigation tabs.');
+                document.querySelectorAll('.nav-tab').forEach(tab => {
+                  const newTab = tab.cloneNode(true);
+                  tab.parentNode.replaceChild(newTab, tab);
 
-            // This function attaches event listeners to the navigation buttons.
-            function attachHeaderEvents() {
-              document.querySelectorAll('.nav-tab').forEach(tab => {
-                const newTab = tab.cloneNode(true);
-                tab.parentNode.replaceChild(newTab, tab);
+                  newTab.addEventListener('click', (event) => {
+                    const tabValue = newTab.getAttribute("data-tab");
+                    logger.debug(`Tab clicked: ${tabValue}`);
+                    if (tabValue === 'Production') {
+                      anvil.call(event.target, 'open_production_form');
+                    } else if (tabValue === 'Templates') {
+                      anvil.call(event.target, 'open_templates_form');
+                    } else if (tabValue === 'Archives') {
+                      anvil.call(event.target, 'open_archives_form');
+                    } else if (tabValue === 'Settings') {
+                      anvil.call(event.target, 'open_settings_form');
+                    }
+                  });
+                });
+              }
 
-                newTab.addEventListener('click', (event) => {
-                  const tabValue = newTab.getAttribute("data-tab");
-                  if (tabValue === 'Production') {
-                    anvil.call(event.target, 'open_production_form');
-                  } else if (tabValue === 'Templates/AI') {
-                    anvil.call(event.target, 'open_templates_form');
-                  } else if (tabValue === 'Archives') {
-                    anvil.call(event.target, 'open_archives_form');
-                  } else if (tabValue === 'Settings') {
-                    anvil.call(event.target, 'open_settings_form');
+              window.setActiveTab = function(tabName) {
+                logger.log(`Setting active tab to: ${tabName}`);
+                document.querySelectorAll('.nav-tab').forEach(btn => {
+                  btn.classList.remove('active');
+                  if (btn.getAttribute('data-tab') === tabName) {
+                    btn.classList.add('active');
                   }
                 });
-              });
+              };
             }
-
-            // This function is called from Python to set the active tab
-            window.setActiveTab = function(tabName) {
-              document.querySelectorAll('.nav-tab').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.getAttribute('data-tab') === tabName) {
-                  btn.classList.add('active');
-                }
-              });
-            };
-
-            // Run the functions to attach events and set the initial time.
-            attachHeaderEvents();
-            updateTime();
-            setInterval(updateTime, 60000); // Update every minute
           </script>
         </body>
       </html>

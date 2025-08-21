@@ -5,7 +5,8 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 import uuid
-
+from ..logging_server import get_logger
+logger = get_logger(__name__)
 
 @anvil.server.callable
 def assign_language_specific_base_templates(user, language_code):
@@ -91,11 +92,11 @@ def _create_custom_template_from_base(base_template, user):
 
     # Create the new row in the custom_templates table.
     app_tables.custom_templates.add_row(
-      id=str(uuid.uuid4()),  # Generate a new unique ID
       name=template_name,
       html=template_html,
       owner=user,
-      display=True,  # Default to being displayable
+      display=True,
+      language=base_template["language"],
     )
 
     print(

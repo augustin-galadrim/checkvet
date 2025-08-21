@@ -5,7 +5,8 @@ from anvil.tables import app_tables
 import anvil.server
 import random
 import string
-
+from ..logging_server import get_logger
+logger = get_logger(__name__)
 
 def _generate_unique_join_code(length=6):
   """

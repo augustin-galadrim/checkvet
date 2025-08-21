@@ -8,7 +8,8 @@ from ..data import (
   structures,
   base_templates,
 )
-
+from ..logging_server import get_logger
+logger = get_logger(__name__)
 
 # Define a constant for the non-display key for an independent user.
 # This avoids "magic strings" and ensures consistency across the application.

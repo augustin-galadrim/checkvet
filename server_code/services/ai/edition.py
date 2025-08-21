@@ -12,7 +12,8 @@ from . import (
   DEFAULT_MAX_TOKENS,
 )
 from ..prompts_service import get_prompt
-
+from ...logging_server import get_logger
+logger = get_logger(__name__)
 
 @anvil.server.callable
 def edit_report(transcription, report, language):

@@ -1,7 +1,8 @@
 # In server_code/services/ai/prompts_service.py
 import anvil.server
 from anvil.tables import app_tables
-
+from ..logging_server import get_logger
+logger = get_logger(__name__)
 
 @anvil.server.callable
 def get_prompt(task, language):

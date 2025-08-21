@@ -21,8 +21,8 @@ class MobileInstallationFlow(MobileInstallationFlowTemplate):
     Transitions to step 2.
     """
     try:
-      self.call_js("hideModal", "modal-step1")
-      self.call_js("showModal", "modal-step2")
+      self.call_js("closeModal", "modal-step1")
+      self.call_js("openModal", "modal-step2")
     except Exception as e:
       print(f"DEBUG: Error in next_click_1: {str(e)}")
       alert(f"An error occurred while proceeding to the next step: {str(e)}")
@@ -33,8 +33,8 @@ class MobileInstallationFlow(MobileInstallationFlowTemplate):
     Transitions to step 3.
     """
     try:
-      self.call_js("hideModal", "modal-step2")
-      self.call_js("showModal", "modal-step3")
+      self.call_js("closeModal", "modal-step2")
+      self.call_js("openModal", "modal-step3")
     except Exception as e:
       print(f"DEBUG: Error in next_click_2: {str(e)}")
       alert(f"An error occurred while proceeding to the next step: {str(e)}")
@@ -52,7 +52,7 @@ class MobileInstallationFlow(MobileInstallationFlowTemplate):
         user_settings_cache["mobile_installation"] = None
 
         alert("Installation recorded successfully!")
-        self.call_js("hideModal", "modal-step3")
+        self.call_js("closeModal", "modal-step3")
         open_form("Production.AudioManagerForm")
       else:
         alert("Failed to record installation. Please try again.")

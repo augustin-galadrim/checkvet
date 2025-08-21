@@ -278,7 +278,7 @@ container:
                   const flag = { 'en': '🇬🇧', 'fr': '🇫🇷' }[template.language || 'en'] || '🏳️';
                   btn.textContent = `${template.name} - ${flag}`;
                 }
-                anvil.call(document.getElementById('stableAnchor'), 'set_editor_content', template.html);
+                anvil.call(document.getElementById('stableAnchor'), 'load_template_content', template.html);
                 anvil.call(document.getElementById('stableAnchor'), 'set_active_template_language', template.language);
                 anvil.call(document.getElementById('stableAnchor'), 'set_selected_template', template);
                 if (closeModalAfter) closeModal('templateModal');

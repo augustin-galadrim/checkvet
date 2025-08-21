@@ -206,9 +206,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.selected_template = template_data
     self.logger.info(f"Template '{template_data.get('name')}' sélectionné.")
 
-  def set_editor_content(self, html_content, **event_args):
-    """Callback from JS to set editor content."""
-    self.text_editor_1.html_content = html_content
+  def load_template_content(self, html_content, **event_args):
+    """Callback de JS pour charger le contenu d'un template dans l'éditeur."""
+    self.text_editor_1.reset_content_and_history(html_content)
 
   def search_template_relay(self, search_term, **event_args):
     searchable_templates = [t for t in self.all_templates if t.get("display")]

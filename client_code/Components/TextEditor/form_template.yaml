@@ -99,6 +99,11 @@ container:
 
           window.initializeEditor = function(retryCount = 0) {
             logger.log("Initializing editor and attaching listeners.");
+            try {
+              document.execCommand('defaultParagraphSeparator', false, 'p');
+            } catch (e) {
+              logger.warn("La commande 'defaultParagraphSeparator' n'est pas supportée par ce navigateur.");
+            }
             const editorDiv = document.getElementById('editor');
             if (!editorDiv) {
               if (retryCount < 20) {

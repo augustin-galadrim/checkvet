@@ -41,13 +41,21 @@ class HeaderNav(HeaderNavTemplate):
     )
 
   def open_production_form(self, **event_args):
+    if self.active_tab == "Production":
+      return
     open_form("Production.AudioManagerForm")
 
   def open_templates_form(self, **event_args):
+    if self.active_tab == "Templates":
+      return
     open_form("Templates.Templates")
 
   def open_archives_form(self, **event_args):
+    if self.active_tab == "Archives":
+      return
     open_form("Archives.ArchivesForm")
 
   def open_settings_form(self, **event_args):
+    if self.active_tab == "Settings":
+      return
     open_form("Settings.Settings")

@@ -140,3 +140,16 @@ class TextEditor(TextEditorTemplate):
   def on_blur_handler(self, **event_args):
     """Handles the blur event from JS to save a version from manual typing."""
     self.record_version()
+
+  def reset_content_and_history(self, new_html_content=""):
+    """
+    Définit un nouveau contenu pour l'éditeur et réinitialise complètement 
+    l'historique d'annulation/rétablissement.
+    Idéal pour charger un nouveau document ou un template.
+    """
+    self._html_content = new_html_content or ""
+    self.undo_stack = [self._html_content]
+    self.redo_stack = []
+    if getattr(self, "parent", None):
+      self.call_js("setEditorContent", self._html_content)
+      self._update_undo_redo_buttons()

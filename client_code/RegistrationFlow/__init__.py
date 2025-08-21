@@ -22,7 +22,7 @@ class RegistrationFlow(RegistrationFlowTemplate):
 
     self.update_ui_texts()
     self.call_js("attachRegistrationEvents")
-    self.call_js("showModal", "modal-step1")
+    self.call_js("openModal", "modal-step1")
 
   def update_ui_texts(self):
     """Sets all translatable text on the form based on the currently loaded language."""
@@ -116,16 +116,16 @@ class RegistrationFlow(RegistrationFlowTemplate):
           alert(t.t("regFlow_alert_infoRequired"))
           return
 
-    self.call_js("hideModal", f"modal-step{current_step}")
-    self.call_js("showModal", f"modal-step{target_step}")
+    self.call_js("closeModal", f"modal-step{current_step}")
+    self.call_js("openModal", f"modal-step{target_step}")
 
   def submit_registration(self, **event_args):
     choice = self.call_js("getRadioValueByName", "structure-choice")
     self.registration_data["structure_choice"] = choice
 
     if choice == "create":
-      self.call_js("hideModal", "modal-step3")
-      self.call_js("showModal", "modal-step4")
+      self.call_js("closeModal", "modal-step3")
+      self.call_js("openModal", "modal-step4")
     elif choice == "join":
       join_code = self.call_js("getValueById", "join-code-input")
       if not join_code:

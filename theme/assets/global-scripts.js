@@ -1,3 +1,38 @@
+/**
+ * Creates a new logger instance with a specific context name.
+ * This allows for standardized, filterable logging from any form.
+ * @param {string} contextName - The name of the form or component (e.g., 'AudioManagerForm').
+ * @returns {object} A logger object with log, debug, warn, and error methods.
+ */
+window.createLogger = function(contextName) {
+  // Helper function to format the current time as HH:MM:SS
+  const getTimestamp = () => {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  };
+
+  const prefix = `[JS:${contextName}]`;
+
+  return {
+    log: function(...args) {
+      console.log(`[${getTimestamp()}]`, prefix, ...args);
+    },
+    debug: function(...args) {
+      // Use debug for verbose, development-only messages.
+      console.debug(`[${getTimestamp()}]`, prefix, ...args);
+    },
+    warn: function(...args) {
+      console.warn(`[${getTimestamp()}]`, prefix, ...args);
+    },
+    error: function(...args) {
+      console.error(`[${getTimestamp()}]`, prefix, ...args);
+    }
+  };
+};
+
 // ============================================================================
 // ===                      GLOBAL HELPER FUNCTIONS                         ===
 // ============================================================================

@@ -51,6 +51,10 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.all_patients = []
     self.selected_template_language = "en"
 
+    # NEW: Add mode for state management
+    self.mode = "initial_generation"  # Can be 'initial_generation' or 'modification'
+    self.logger.info(f"Form initialized in '{self.mode}' mode.")
+
     self.raw_transcription = None
     self.recording_state = "idle"
     self.selected_statut = None
@@ -97,6 +101,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def form_show(self, **event_args):
     self.logger.info("Form showing...")
+    # NEW: Set the initial UI mode in JS
+    self.call_js("setFormMode", self.mode)
     self.update_ui_texts()
 
     additional_info = user_settings_cache.get("additional_info")
@@ -106,7 +112,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
       user_settings_cache["additional_info"] = additional_info
 
     if not additional_info:
-      self.logger.info("User has not completed registration. Redirecting to RegistrationFlow.")
+      self.logger.info(
+        "User has not completed registration. Redirecting to RegistrationFlow."
+      )
       open_form("RegistrationFlow")
       return
 
@@ -119,7 +127,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
     if not mobile_installation:
       is_ios_device = self.call_js("isIOS")
       if is_ios_device:
-        self.logger.info("iOS device detected without mobile install record. Redirecting to MobileInstallationFlow.")
+        self.logger.info(
+          "iOS device detected without mobile install record. Redirecting to MobileInstallationFlow."
+        )
         open_form("MobileInstallationFlow")
         return
 
@@ -147,7 +157,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     default_template_id = template_data.get("default_template_id")
 
     try:
-      self.all_patients = anvil.server.call_s('get_my_patients_for_filtering')
+      self.all_patients = anvil.server.call_s("get_my_patients_for_filtering")
       self.call_js("populatePatientModal", self.all_patients)
     except Exception as e:
       self.logger.error("Could not load patients.", e)
@@ -163,7 +173,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
       if default_template:
         self.call_js("selectTemplate", default_template, False)
         self.selected_template_language = default_template.get("language", "en")
-        self.logger.info(f"Default template '{default_template.get('name')}' set. Language is now: {self.selected_template_language}")
+        self.logger.info(
+          f"Default template '{default_template.get('name')}' set. Language is now: {self.selected_template_language}"
+        )
 
     if self.initial_content:
       self.logger.info("Setting TextEditor content from 'initial_content' parameter.")
@@ -195,7 +207,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
       content, error = anvil.server.call_s("load_report_content", self.clicked_value)
       if error:
         alert(error)
-        self.logger.error(f"Server returned error while loading report content: {error}")
+        self.logger.error(
+          f"Server returned error while loading report content: {error}"
+        )
       elif content:
         self.logger.info("Setting TextEditor content from loaded report.")
         self.text_editor_1.html_content = content
@@ -208,13 +222,16 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def set_active_template_language(self, language, **event_args):
     self.selected_template_language = language or "en"
-    self.logger.info(f"User selected a new template. Language is now: {self.selected_template_language}")
+    self.logger.info(
+      f"User selected a new template. Language is now: {self.selected_template_language}"
+    )
 
   def process_uploaded_audio(self, audio_blob, **event_args):
     self.logger.info("Processing an uploaded audio file.")
     self.audio_playback_1.audio_blob = audio_blob
     self.recording_widget.visible = False
     self.audio_playback_1.visible = True
+    # The workflow is always 'decision', JS will show the correct buttons based on mode
     anvil.js.call_js("setAudioWorkflowState", "decision")
     return "OK"
 
@@ -231,29 +248,25 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.recording_widget.visible = False
     self.audio_playback_1.audio_blob = audio_blob
     self.audio_playback_1.visible = True
+    # The workflow state is now always 'decision'. JS will show the correct buttons.
     anvil.js.call_js("setAudioWorkflowState", "decision")
 
   def clear_recording_handler(self, **event_args):
-    self.logger.info("Clearing current recording and resetting UI.")
-    self.audio_playback_1.visible = False
-    self.audio_playback_1.call_js("resetAudioPlayback")
-    self.recording_widget.visible = True
-    anvil.js.call_js("setAudioWorkflowState", "input")
+    self.logger.info("Clearing current recording and resetting audio UI.")
+    self.reset_audio_workflow()
 
   def process_recording(self, **event_args):
-    self.logger.info("Process recording initiated.")
+    self.logger.info("Process recording (initial generation) initiated.")
     js_blob_proxy = self.audio_playback_1.audio_blob
     if not js_blob_proxy:
       alert("No audio available to process.")
       self.logger.error("process_recording called with no available audio.")
-      self.call_js("setAudioWorkflowState", "decision")
       return "ERROR"
 
     template = self.text_editor_1.get_content()
     if not template or not template.strip():
       alert("Cannot process without a template. Please select a template first.")
       self.logger.error("process_recording called with no template selected.")
-      self.call_js("setAudioWorkflowState", "decision")
       return "ERROR"
 
     self.call_js("setAudioWorkflowState", "processing")
@@ -270,6 +283,13 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
       self.logger.info("Setting final generated content into TextEditor.")
       self.text_editor_1.html_content = final_html
+
+      self.logger.info(
+        "Initial generation successful. Switching to 'modification' mode."
+      )
+      self.mode = "modification"
+      self.call_js("setFormMode", self.mode)  # Update the UI to reflect the new mode
+
       self.logger.info("process_recording completed successfully.")
       return "OK"
 
@@ -289,14 +309,58 @@ class AudioManagerForm(AudioManagerFormTemplate):
         return "ERROR"
     finally:
       self.user_feedback_1.hide()
-      self.reset_ui_to_input_state()
+      self.reset_audio_workflow()
 
-  def reset_ui_to_input_state(self):
-    self.logger.debug("Resetting UI to initial input state.")
+  def reset_audio_workflow(self, **event_args):
+    self.logger.debug("Resetting audio UI to initial input state.")
     self.audio_playback_1.visible = False
     self.audio_playback_1.audio_blob = None
     self.recording_widget.visible = True
     self.call_js("setAudioWorkflowState", "input")
+
+  def process_modification(self, **event_args):
+    self.logger.info("Process modification initiated.")
+    js_blob_proxy = self.audio_playback_1.audio_blob
+    if not js_blob_proxy:
+      alert("No audio command available to process.")
+      self.logger.error("process_modification called with no available audio.")
+      return "ERROR"
+
+    self.call_js("setAudioWorkflowState", "processing")
+    self.user_feedback_1.show("Transcribing command...")
+    anvil_media_blob = anvil.js.to_media(js_blob_proxy)
+    current_content = self.text_editor_1.get_content()
+    lang = self.selected_template_language
+
+    try:
+      transcription = self._transcribe_audio(anvil_media_blob, lang)
+      self.user_feedback_1.set_status("Applying modification...")
+      edited_report = anvil.server.call_s(
+        "edit_report", transcription, current_content, lang
+      )
+      self.text_editor_1.html_content = edited_report
+      self.logger.info("Modification applied successfully.")
+      return "OK"
+
+    except anvil.server.AppOfflineError:
+      self.logger.warning(
+        "AppOfflineError caught during modification. Triggering offline save."
+      )
+      alert("Connection lost. Your recording has been saved to the offline queue.")
+      self.queue_manager_1.open_title_modal(js_blob_proxy)
+      return "OFFLINE_SAVE"
+
+    except Exception as e:
+      self.logger.error("An exception occurred in process_modification.", e)
+      anvil.js.call_js("displayBanner", f"Error: {e}", "error")
+      if confirm("An unexpected error occurred. Save to offline queue?"):
+        self.queue_manager_1.open_title_modal(js_blob_proxy)
+        return "OFFLINE_SAVE"
+      else:
+        return "ERROR"
+    finally:
+      self.user_feedback_1.hide()
+      self.reset_audio_workflow()
 
   def _transcribe_audio(self, audio_blob, lang):
     self.logger.info("Starting transcription...")
@@ -322,7 +386,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def _format_report(self, report_content, template, lang):
     self.logger.info("Starting final report formatting...")
-    formatted_report = anvil.server.call_s("format_report", report_content, template, lang)
+    formatted_report = anvil.server.call_s(
+      "format_report", report_content, template, lang
+    )
     self.logger.info("Report formatting successful.")
     return formatted_report
 
@@ -347,7 +413,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
     try:
       if not isinstance(selected_patient, dict):
         alert("Invalid patient data provided.")
-        self.logger.error("Invalid patient data provided to save_report.", selected_patient)
+        self.logger.error(
+          "Invalid patient data provided to save_report.", selected_patient
+        )
         return False
 
       animal_name = selected_patient.get("name")
@@ -376,7 +444,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
         statut=statut,
         animal_id=animal_id,
         transcript=self.raw_transcription,
-        language=self.selected_template_language
+        language=self.selected_template_language,
       )
 
       if result:

@@ -8,7 +8,7 @@ container:
       </button>
 
       <!-- Modal for viewing the queue -->
-      <div class="modal" id="qm-queueModal" style="display: none;">
+      <div class="modal" id="qm-queueModal">
         <div class="modal-content">
           <div class="modal-header" id="queueManager-header-queueTitle">Offline Recordings Queue</div>
           <div class="modal-body">
@@ -23,7 +23,7 @@ container:
       </div>
 
       <!-- Modal for naming a new recording before queueing -->
-      <div class="modal" id="qm-titleModal" style="display: none;">
+      <div class="modal" id="qm-titleModal">
         <div class="modal-content">
           <div class="modal-header" id="queueManager-header-nameRecordingTitle">Name Your Recording</div>
           <div class="modal-body">
@@ -42,7 +42,7 @@ container:
         .queue-button { padding: 8px 12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; }
         .queue-button:hover { background: #e0e0e0; }
         .queue-badge { background-color: #f44336; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold; min-width: 18px; text-align: center; display: none; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10010; align-items: center; justify-content: center; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10010; }
         .modal-content { position: relative; background-color: white; padding: 20px; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
         .modal-body p { margin-bottom: 15px; }
@@ -76,7 +76,7 @@ container:
           window.qm_openTitleModal = function() {
             const titleInput = document.getElementById('queueManager-input-recordingTitle');
             if (titleInput) titleInput.value = '';
-            document.getElementById('qm-titleModal').style.display = 'flex';
+            window.openModal('qm-titleModal');
           };
 
           window.qm_addToQueue = async function(jsBlobProxy, title) {
@@ -160,7 +160,7 @@ container:
           async function renderQueue() {
             const queue = await getQueuedRecordings();
             const container = document.getElementById('qm-queueListContainer');
-            const t = anvil.call(document.getElementById('queueManager-button-viewQueue'), 'get_translations_for_renderer');
+            const t = await anvil.call(document.getElementById('queueManager-button-viewQueue'), 'get_translations_for_renderer');
 
             container.innerHTML = queue.length === 0 ? `<p>${t.no_recordings}</p>` : '';
             queue.forEach(item => {
@@ -200,7 +200,7 @@ container:
             });
 
             reattach('#queueManager-button-closeQueue', 'click', () => {
-              document.getElementById('qm-queueModal').style.display = 'none';
+              window.closeModal('qm-queueModal');
             });
 
             reattach('#qm-queueListContainer', 'click', async (e) => {
@@ -217,10 +217,10 @@ container:
                 if (item) {
                   const blob = new Blob([item.audioData], { type: item.mimeType });
                   anvil.call(anvilContext, 'handle_import_click', item.id, blob);
-                  document.getElementById('qm-queueModal').style.display = 'none';
+                  window.closeModal('qm-queueModal');
                 }
               } else if (target.classList.contains('delete-btn')) {
-                const t = anvil.call(anvilContext, 'get_translations_for_renderer');
+                const t = await anvil.call(anvilContext, 'get_translations_for_renderer');
                 if (confirm(t.delete_confirm)) {
                   await deleteFromQueue(id);
                   await renderQueue();
@@ -231,16 +231,16 @@ container:
             });
 
             reattach('#queueManager-button-cancelTitle', 'click', () => {
-              document.getElementById('qm-titleModal').style.display = 'none';
+              window.closeModal('qm-titleModal');
             });
 
-            reattach('#queueManager-button-confirmTitle', 'click', () => {
+            reattach('#queueManager-button-confirmTitle', 'click', async () => {
               const anvilContext = document.getElementById('queueManager-button-viewQueue');
               if (!anvilContext) return;
-              const t = anvil.call(anvilContext, 'get_translations_for_renderer');
+              const t = await anvil.call(anvilContext, 'get_translations_for_renderer');
               const title = document.getElementById('queueManager-input-recordingTitle').value.trim() || `${t.default_title_prefix} ${new Date().toLocaleString()}`;
               anvil.call(anvilContext, 'handle_confirm_save', title);
-              document.getElementById('qm-titleModal').style.display = 'none';
+              window.closeModal('qm-titleModal');
             });
           }
 

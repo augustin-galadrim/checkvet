@@ -7,6 +7,7 @@ from ... import TranslationService as t
 from ...Cache import template_cache_manager, user_settings_cache, reports_cache_manager
 from ...LoggingClient import ClientLogger
 from ...AppEvents import events
+from ...AuthHelpers import setup_auth_handlers
 
 
 def safe_value(item, key, default_value):
@@ -21,6 +22,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.logger = ClientLogger(self.__class__.__name__)
     self.logger.info("Initializing...")
     self.init_components(**properties)
+    setup_auth_handlers(self)
     self.recording_widget.set_event_handler(
       "recording_complete", self.handle_new_recording
     )

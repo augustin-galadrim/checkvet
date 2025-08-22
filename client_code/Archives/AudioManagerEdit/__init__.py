@@ -7,11 +7,13 @@ from ...Cache import reports_cache_manager
 import time
 from ... import TranslationService as t
 from ...AppEvents import events
+from ...AuthHelpers import setup_auth_handlers
 
 
 class AudioManagerEdit(AudioManagerEditTemplate):
   def __init__(self, report=None, **properties):
     self.init_components(**properties)
+    setup_auth_handlers(self)
     self.recording_widget_1.set_event_handler(
       "recording_complete", self.handle_new_recording
     )

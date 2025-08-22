@@ -6,12 +6,15 @@ from ...Cache import template_cache_manager
 from ...LoggingClient import ClientLogger
 from ... import TranslationService as t
 from ...AppEvents import events
+from ...AuthHelpers import setup_auth_handlers
+
 
 class Templates(TemplatesTemplate):
   def __init__(self, **properties):
     self.logger = ClientLogger(self.__class__.__name__)
     self.logger.info("Initializing...")
     self.init_components(**properties)
+    setup_auth_handlers(self)
     events.subscribe("language_changed", self.update_ui_texts)
     self.all_templates = []
     self.default_template_id = None
@@ -19,8 +22,14 @@ class Templates(TemplatesTemplate):
 
   def update_ui_texts(self, **event_args):
     """Sets all translatable text on the component."""
-    self.call_js("setElementText", "templates-button-create", t.t("templates_button_create"))
-    self.call_js("setPlaceholder", "templates-input-search", t.t("templates_input_search_placeholder"))
+    self.call_js(
+      "setElementText", "templates-button-create", t.t("templates_button_create")
+    )
+    self.call_js(
+      "setPlaceholder",
+      "templates-input-search",
+      t.t("templates_input_search_placeholder"),
+    )
 
     locale_texts = {
       "defaultTemplateTitle": t.t("templates_title_default"),
@@ -33,7 +42,7 @@ class Templates(TemplatesTemplate):
       "setAsDefault": t.t("templates_renderer_setAsDefault"),
       "hide": t.t("templates_renderer_hide"),
       "show": t.t("templates_renderer_show"),
-      "delete": t.t("templates_renderer_delete_tooltip")
+      "delete": t.t("templates_renderer_delete_tooltip"),
     }
     self.call_js("setLocaleTexts", locale_texts)
 
@@ -57,20 +66,14 @@ class Templates(TemplatesTemplate):
     )
     self.call_js("populateTemplates", self.all_templates, self.default_template_id)
 
-  def refresh_session_relay(self, **event_args):
-    """Relay method for refreshing the session when called from JS"""
-    try:
-      return anvil.server.call_s("check_and_refresh_session")
-    except Exception as e:
-      self.logger.error("Error in refresh_session_relay.", e)
-      return False
-
   def open_template_editor(self, template_id=None, **event_args):
     """Opens the editor for a new or existing template."""
     self.logger.info("Opening template editor. Invalidating cache as a precaution.")
     template_cache_manager.invalidate()
     if template_id:
-      found_template = next((t for t in self.all_templates if t.get("id") == template_id), None)
+      found_template = next(
+        (t for t in self.all_templates if t.get("id") == template_id), None
+      )
       if not found_template:
         alert(f"Template with ID {template_id} not found.")
         self.logger.error(f"Template with ID {template_id} not found in local list.")
@@ -91,13 +94,17 @@ class Templates(TemplatesTemplate):
         else:
           alert("Could not delete the template.")
       except Exception as e:
-        self.logger.error(f"An error occurred while deleting template ID: {template_id}", e)
+        self.logger.error(
+          f"An error occurred while deleting template ID: {template_id}", e
+        )
         alert(f"An error occurred: {e}")
 
   def toggle_template_display(self, template_id, new_display_state, **event_args):
     """Updates the 'display' property of the specified template."""
     try:
-      success = anvil.server.call_s("write_template", template_id=template_id, display=new_display_state)
+      success = anvil.server.call_s(
+        "write_template", template_id=template_id, display=new_display_state
+      )
       if success:
         template_cache_manager.invalidate()
         self.form_show()

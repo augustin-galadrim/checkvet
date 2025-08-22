@@ -5,8 +5,27 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 import uuid
+from ..auth import admin_required
 from ..logging_server import get_logger
+
 logger = get_logger(__name__)
+
+
+@admin_required
+@anvil.server.callable
+def admin_get_all_base_templates():
+  """Admin function to retrieve all templates from the base_templates table."""
+  logger.info("Admin request to get all base templates.")
+  all_base_templates = app_tables.base_templates.search()
+
+  result = [
+    {"id": t.get_id(), "name": t["name"], "html": t["html"], "language": t["language"]}
+    for t in all_base_templates
+  ]
+
+  logger.info(f"Returning {len(result)} base templates.")
+  return result
+
 
 @anvil.server.callable
 def assign_language_specific_base_templates(user, language_code):

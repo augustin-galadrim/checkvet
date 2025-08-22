@@ -1,189 +1,161 @@
 components: []
 container:
   properties:
-    html: |
+    html: |-
       <!DOCTYPE html>
       <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Mobile Installation</title>
-        <style>
-          /* Global styling */
-          body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-          }
-          .container {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          /* Modal overlay updated to not block pointer events */
-          .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            display: none;
-            z-index: 100;  /* lower than modals */
-            pointer-events: none; /* allow interactions to pass through */
-          }
-          .modal-overlay.active {
-            display: block;
-          }
-          /* Modal styling */
-          .modal {
-            position: fixed;
-            top: 5%; /* Adjust top position to allow some space at the top */
-            left: 50%;
-            transform: translate(-50%, 0);
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 800px;
-            height: 90vh; /* Increase height to almost full screen */
-            overflow-y: auto; /* Add scrollbar if content overflows */
-            z-index: 1000; /* make sure modals are above the overlay */
-            display: none;
-            pointer-events: auto; /* ensure the modal receives pointer events */
-          }
-          .modal h2 {
-            margin-bottom: 15px;
-          }
-          .modal p {
-            margin-bottom: 15px;
-          }
-          .modal img {
-            max-width: 66.67%; /* Downsize images by 1/3 */
-            height: auto;
-            margin-bottom: 15px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-          }
-          .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            justify-content: flex-end;
-          }
-          /* Force buttons to appear on top */
-          .custom-button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-            position: relative;
-            z-index: 1001;
-          }
-          .btn-primary {
-            background-color: #4CAF50;
-            color: white;
-          }
-          .btn-primary:hover {
-            background-color: #45a049;
-          }
-          .btn-secondary {
-            background-color: #f44336;
-            color: white;
-          }
-          .btn-secondary:hover {
-            background-color: #d32f2f;
-          }
-          .btn-default {
-            background-color: #ccc;
-            color: #333;
-          }
-        </style>
-      </head>
-      <body>
-        <!-- The modal overlay (transparent and nonâ€‘blocking) -->
-        <div class="modal-overlay" id="modal-overlay"></div>
-        <div class="container">
-          <!-- Modal Step 1: Introduction -->
-          <div class="modal" id="modal-step1">
-            <h2>Install Your App</h2>
-            <p>We'll show you how to install your app in just 30 seconds.</p>
-            <div class="button-group">
-              <div id="next-btn-1" class="custom-button btn-primary">Next</div>
+        <head>
+          <meta charset="utf-8">
+          <title>Mobile Installation</title>
+          <style>
+            /* Global styling */
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              background-color: #f5f5f5;
+            }
+            .container {
+              position: relative;
+              width: 100%;
+              height: 100vh;
+            }
+            /* Modal styling */
+            .modal {
+              position: fixed;
+              top: 5%;
+              left: 50%;
+              transform: translate(-50%, 0);
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              width: 90%;
+              max-width: 800px;
+              height: 90vh;
+              overflow-y: auto;
+              z-index: 1000;
+              display: none; /* Hidden by default */
+              flex-direction: column; /* Ensure content inside the modal is vertical */
+            }
+            .modal.active {
+              display: flex;
+            }
+            .modal h2 {
+              margin-bottom: 15px;
+            }
+            .modal p {
+              margin-bottom: 15px;
+            }
+            .modal img {
+              max-width: 66.67%; /* Default for first image */
+              height: auto;
+              margin-bottom: 15px;
+              display: block;
+              margin-left: auto;
+              margin-right: auto;
+            }
+            /* CORRECTED STYLE: Added max-height to prevent the image from being too tall */
+            #last-install-image {
+              width: 70%;
+              max-width: 100%;
+              max-height: 60vh; /* Prevents the image from being excessively tall on portrait screens */
+              object-fit: contain; /* Ensures the image scales properly without distortion */
+            }
+            .button-group {
+              display: flex;
+              gap: 10px;
+              margin-top: auto;
+              padding-top: 20px;
+              justify-content: flex-end;
+            }
+            .custom-button {
+              padding: 10px 20px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+              transition: background-color 0.3s;
+            }
+            .btn-primary {
+              background-color: #4CAF50;
+              color: white;
+            }
+            .btn-primary:hover {
+              background-color: #45a049;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <!-- Modal Step 1: Introduction -->
+            <div class="modal" id="modal-step1">
+              <h2>Install Your App</h2>
+              <p>We'll show you how to install your app in just 30 seconds.</p>
+              <div class="button-group">
+                <div id="next-btn-1" class="custom-button btn-primary">Next</div>
+              </div>
+            </div>
+
+            <!-- Modal Step 2: First Instruction -->
+            <div class="modal" id="modal-step2">
+              <h2>Grab Your Phone</h2>
+              <p>Go to the address below and click on the circled button:</p>
+              <img src="_/theme/first_click.jpg" alt="First Click Instruction">
+              <div class="button-group">
+                <div id="next-btn-2" class="custom-button btn-primary">Next</div>
+              </div>
+            </div>
+
+            <!-- Modal Step 3: Second Instruction -->
+            <div class="modal" id="modal-step3">
+              <h2>Final Step</h2>
+              <p>Now, click on the button shown below:</p>
+              <img id="last-install-image" src="_/theme/second_click.jpg" alt="Second Click Instruction">
+              <div class="button-group">
+                <div id="install-btn" class="custom-button btn-primary">I installed the app on my phone</div>
+              </div>
             </div>
           </div>
 
-          <!-- Modal Step 2: First Instruction -->
-          <div class="modal" id="modal-step2">
-            <h2>Grab Your Phone</h2>
-            <p>Go to the address below and click on the circled button:</p>
-            <img src="_/theme/first_click.jpg" alt="First Click Instruction">
-            <div class="button-group">
-              <div id="next-btn-2" class="custom-button btn-primary">Next</div>
-            </div>
-          </div>
+          <script>
+            // Attach event listeners to buttons
+            function attachInstallationEvents() {
+              const nextBtn1 = document.getElementById("next-btn-1");
+              const nextBtn2 = document.getElementById("next-btn-2");
+              const installBtn = document.getElementById("install-btn");
 
-          <!-- Modal Step 3: Second Instruction -->
-          <div class="modal" id="modal-step3">
-            <h2>Final Step</h2>
-            <p>Now, click on the button shown below:</p>
-            <img src="_/theme/second_click.jpg" alt="Second Click Instruction">
-            <div class="button-group">
-              <div id="install-btn" class="custom-button btn-primary">I installed the app on my phone</div>
-            </div>
-          </div>
-        </div>
+              nextBtn1.addEventListener("click", (event) => {
+                anvil.call(event.currentTarget, "next_click_1");
+              });
 
-        <script>
+              nextBtn2.addEventListener("click", (event) => {
+                anvil.call(event.currentTarget, "next_click_2");
+              });
 
-          // Attach event listeners to buttons
-          function attachInstallationEvents() {
-            const nextBtn1 = document.getElementById("next-btn-1");
-            const nextBtn2 = document.getElementById("next-btn-2");
-            const installBtn = document.getElementById("install-btn");
+              installBtn.addEventListener("click", (event) => {
+                anvil.call(event.currentTarget, "install_click");
+              });
+            }
 
-            console.log("nextBtn1 found:", nextBtn1);
-            console.log("nextBtn2 found:", nextBtn2);
-            console.log("installBtn found:", installBtn);
+            // Initialize the installation flow once the DOM is ready
+            function initInstallation() {
+              attachInstallationEvents();
+              // Use the global modal function
+              if (window.openModal) {
+                window.openModal("modal-step1");
+              } else {
+                console.error("Global 'openModal' function not found.");
+              }
+            }
 
-            nextBtn1.addEventListener("click", (event) => {
-              console.log("Next button 1 clicked");
-              anvil.call(event.target, "next_click_1");
-            });
-
-            nextBtn2.addEventListener("click", (event) => {
-              console.log("Next button 2 clicked");
-              anvil.call(event.target, "next_click_2");
-            });
-
-            installBtn.addEventListener("click", (event) => {
-              console.log("Install button clicked");
-              anvil.call(event.target, "install_click");
-            });
-
-            console.log("Installation events attached.");
-          }
-
-          // Initialize the installation flow once the DOM is ready
-          function initInstallation() {
-            attachInstallationEvents();
-            showModal("modal-step1");
-          }
-
-          if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", initInstallation);
-          } else {
-            initInstallation();
-          }
-        </script>
-      </body>
+            if (document.readyState === "loading") {
+              document.addEventListener("DOMContentLoaded", initInstallation);
+            } else {
+              initInstallation();
+            }
+          </script>
+        </body>
       </html>
   type: HtmlTemplate
 is_package: true

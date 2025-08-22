@@ -247,11 +247,7 @@ container:
 
             if (!window.__session_handlers_initialized) {
               window.__session_handlers_initialized = true;
-              window.setupSessionHandlers = function() {
-                document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') anvil.call(document.body, 'refresh_session_relay'); });
-                window.addEventListener('online', () => anvil.call(document.body, 'refresh_session_relay'));
-              };
-              setupSessionHandlers();
+              window.setupSessionHandlers();
             }
           </script>
         </body>

@@ -6,6 +6,7 @@ from ...Cache import reports_cache_manager
 from ... import TranslationService as t
 from ...LoggingClient import ClientLogger
 from ...AppEvents import events
+from ...AuthHelpers import setup_auth_handlers
 
 
 def safe_value(data_dict, key, default_value):
@@ -20,6 +21,7 @@ class ArchivesForm(ArchivesFormTemplate):
     self.logger = ClientLogger(self.__class__.__name__)
     self.logger.info("Initializing...")
     self.init_components(**properties)
+    setup_auth_handlers(self)
     events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
 

@@ -6,11 +6,13 @@ import anvil.js
 from ... import TranslationService as t
 from ...Cache import user_settings_cache, reports_cache_manager, template_cache_manager
 from ...AppEvents import events
+from ...AuthHelpers import setup_auth_handlers
 
 
 class Settings(SettingsTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
+    setup_auth_handlers(self)
     events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.on_form_show)
 
@@ -95,13 +97,6 @@ class Settings(SettingsTemplate):
       "settings-h3-favLangModalTitle",
       t.t("settings_h3_favLangModalTitle"),
     )
-
-  def refresh_session_relay(self, **event_args):
-    """Relay method for refreshing the session when called from JS."""
-    try:
-      return anvil.server.call_s("check_and_refresh_session")
-    except Exception:
-      return False
 
   def load_vet_data(self):
     """Retrieves the current user's data from the server and updates the UI."""

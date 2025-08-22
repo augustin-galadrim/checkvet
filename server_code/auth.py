@@ -112,14 +112,31 @@ def ensure_persistent_session():
 
 
 @anvil.server.callable
-def check_and_refresh_session():
+def check_session():
   """
-  Check if the current session is active and refresh it if needed.
+  Checks the user's session status and refreshes it if needed.
+  This is called by the global session handler.
+
+  Returns:
+    dict: A dictionary with the status ('active', 'refreshed', or 'expired').
   """
-  try:
-    current_user = anvil.users.get_user(allow_remembered=True)
-    if current_user:
-      return ensure_persistent_session()
-    return False
-  except:
-    return False
+  # Check for a fully active session (not just a 'remember me' cookie)
+  if anvil.users.get_user(allow_remembered=False):
+    logger.debug("Session is active.")
+    return {"status": "active"}
+
+  # If no active session, check if a remembered user exists
+  user = anvil.users.get_user(allow_remembered=True)
+  if user:
+    # Promote the 'remembered' session to a full, active one
+    anvil.users.force_login(user, remember=True)
+    logger.info(
+      f"Session for '{user['email']}' was restored from 'remember me' cookie."
+    )
+    return {"status": "refreshed"}
+
+  # If no user is found, the session has expired
+  logger.warning(
+    "Session check failed: No active or remembered user found. Session expired."
+  )
+  return {"status": "expired"}

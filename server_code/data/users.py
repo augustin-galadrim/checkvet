@@ -5,8 +5,8 @@ import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
 from ..data import (
-  structures,
-  base_templates,
+structures,
+base_templates,
 )
 from ..logging_server import get_logger
 from ..auth import admin_required
@@ -40,7 +40,7 @@ def admin_get_all_users():
 
 @admin_required
 @anvil.server.callable
-def admin_create_user(email, name):
+def admin_create_user(email, name, password=None):
   """Admin function to create a new user."""
   logger.info(f"Admin request to create user: Email='{email}'")
   if not email or not name:
@@ -51,14 +51,20 @@ def admin_create_user(email, name):
     raise ValueError(f"A user with the email '{email}' already exists.")
 
   logger.info(f"Creating new user: {email}")
-  new_user = app_tables.users.add_row(
-    email=email,
-    name=name,
-    enabled=True,
-    confirmed_email=True,
-    supervisor=False,
-    additional_info=True,
-  )
+
+  user_data = {
+    "email": email,
+    "name": name,
+    "enabled": True,
+    "confirmed_email": True,
+    "supervisor": False,
+    "additional_info": True,
+  }
+
+  if password:
+    user_data['password_hash'] = anvil.secrets.hash_password(password)
+
+  new_user = app_tables.users.add_row(**user_data)
   return new_user.get_id()
 
 
@@ -94,6 +100,74 @@ def admin_update_user(user_id, **kwargs):
 
   logger.info(f"Successfully updated user ID '{user_id}'.")
   return True
+
+
+@admin_required
+@anvil.server.callable
+def admin_add_vet_to_structure(structure_name, vet_email):
+  """Admin function to add an existing user to a structure."""
+  logger.info(
+    f"Admin request to add user '{vet_email}' to structure '{structure_name}'."
+  )
+
+  if not structure_name or not vet_email:
+    logger.error(
+      "admin_add_vet_to_structure failed: Missing structure name or vet email."
+    )
+    return False
+
+  structure_row = app_tables.structures.get(name=structure_name)
+  if not structure_row:
+    logger.error(
+      f"admin_add_vet_to_structure failed: Structure '{structure_name}' not found."
+    )
+    return False
+
+  user_to_add = app_tables.users.get(email=vet_email)
+  if not user_to_add:
+    logger.error(
+      f"admin_add_vet_to_structure failed: User with email '{vet_email}' not found."
+    )
+    return False
+
+  try:
+    user_to_add["structure"] = structure_row
+    logger.info(
+      f"Successfully added user '{vet_email}' to structure '{structure_name}'."
+    )
+    return True
+  except Exception as e:
+    logger.error(
+      f"Exception while adding user '{vet_email}' to structure '{structure_name}': {e}",
+      exc_info=True,
+    )
+    return False
+
+
+@admin_required
+@anvil.server.callable
+def admin_remove_vet_from_structure(user_id):
+  """Admin function to remove a user from their current structure."""
+  logger.info(f"Admin request to remove user ID '{user_id}' from their structure.")
+
+  user_to_update = app_tables.users.get_by_id(user_id)
+  if not user_to_update:
+    logger.error(
+      f"admin_remove_vet_from_structure failed: User with ID '{user_id}' not found."
+    )
+    return False
+
+  try:
+    user_to_update["structure"] = None
+    logger.info(
+      f"Successfully removed user '{user_to_update['email']}' from their structure."
+    )
+    return True
+  except Exception as e:
+    logger.error(
+      f"Exception while removing user ID '{user_id}' from structure: {e}", exc_info=True
+    )
+    return False
 
 
 @anvil.server.callable(require_user=True)
@@ -195,7 +269,7 @@ def get_vets_in_structure(structure_name):
   if not structure_row:
     return []
   vets = app_tables.users.search(structure=structure_row)
-  return [{"name": v["name"], "email": v["email"]} for v in vets if v]
+  return [{"id": v.get_id(), "name": v["name"], "email": v["email"]} for v in vets if v]
 
 
 @anvil.server.callable(require_user=True)

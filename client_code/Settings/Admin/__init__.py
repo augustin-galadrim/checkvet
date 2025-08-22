@@ -2,9 +2,6 @@ from ._anvil_designer import AdminTemplate
 from anvil import *
 import anvil.server
 import anvil.users
-import anvil.tables as tables
-import anvil.tables.query as q
-from anvil.tables import app_tables
 
 
 class Admin(AdminTemplate):
@@ -13,36 +10,34 @@ class Admin(AdminTemplate):
     self.current_structure_name = None
     self.current_user_id = None
     self.current_template_id = None
-    self.all_structures = []
-    self.all_users = []
-    self.all_templates = []
     self.add_event_handler("show", self.on_form_show)
 
   def on_form_show(self, **event_args):
-    self.load_structures()
-    self.load_users()
-    self.load_templates()
+    # Load all data and pass it to Javascript for client-side searching and rendering
+    try:
+      all_structures = anvil.server.call_s("read_structures")
+      self.call_js("initializeData", 'structures', all_structures)
+
+      all_users = anvil.server.call_s("admin_get_all_users")
+      self.call_js("initializeData", 'users', all_users)
+
+      all_base_templates = anvil.server.call_s("admin_get_all_base_templates")
+      self.call_js("initializeData", 'templates', all_base_templates)
+    except Exception as e:
+      alert(f"An error occurred while loading initial data: {e}")
+
 
   # ----- Structure Management -----
-  def load_structures(self):
-    try:
-      self.all_structures = anvil.server.call_s("read_structures")
-      self.call_js("populateStructures", self.all_structures)
-    except Exception as e:
-      alert(f"An error occurred while loading structures: {e}")
-
   def get_structure_details(self, structure_name, **event_args):
-    structure = next(
-      (s for s in self.all_structures if s["structure"] == structure_name), None
-    )
+    self.current_structure_name = structure_name
+    # Data is already on the client, just find it
+    structure = self.call_js("findDataById", 'structures', structure_name)
+
     if structure:
-      self.current_structure_name = structure_name
       self.call_js("displayStructureDetails", structure)
-      # Also load and display affiliated vets
+      # Fetch and display affiliated vets
       vets = anvil.server.call_s("get_vets_in_structure", structure_name)
-      # This part needs a new JS function `displayAffiliatedVets`
-      # For now, we will just log it, assuming it will be a new feature.
-      print(f"Vets for {structure_name}: {vets}")
+      self.call_js("displayAffiliatedVets", vets)
     else:
       alert(f"Structure '{structure_name}' not found.")
 
@@ -59,33 +54,46 @@ class Admin(AdminTemplate):
         return False
       anvil.server.call_s("admin_write_structure", **structure_data)
       alert("Structure saved successfully!")
-      self.load_structures()
+      # Reload all data after save
+      self.on_form_show()
       self.call_js("showStructureForm", False)
       return True
     except Exception as e:
       alert(f"Error saving structure: {e}")
       return False
 
-  # ----- User Management -----
-  def load_users(self):
+  def remove_vet_from_structure(self, user_id, **event_args):
+    """Called from JS to remove a vet from the current structure."""
+    if not user_id:
+      alert("User ID is missing.")
+      return
     try:
-      self.all_users = anvil.server.call_s("admin_get_all_users")
-      self.call_js("populateUsers", self.all_users)
+      success = anvil.server.call_s("admin_remove_vet_from_structure", user_id)
+      if success:
+        alert("Vet removed from structure successfully.")
+        # Refresh the details view
+        self.get_structure_details(self.current_structure_name)
+      else:
+        alert("Failed to remove vet from structure.")
     except Exception as e:
-      alert(f"An error occurred while loading users: {e}")
+      alert(f"An error occurred while removing the vet: {e}")
 
+  # ----- User Management -----
   def get_user_details(self, user_id, **event_args):
-    user = next((u for u in self.all_users if u["id"] == user_id), None)
+    user = self.call_js("findDataById", 'users', user_id)
     if user:
       self.current_user_id = user_id
-      structure_names = ["Indépendant"] + [s["structure"] for s in self.all_structures]
-      self.call_js("displayUserDetails", user, structure_names)
+      all_structures = self.call_js("getAllData", 'structures')
+      structure_names = ["Indépendant"] + [s["structure"] for s in all_structures]
+      user_templates = anvil.server.call_s("admin_get_templates_for_user", user_id)
+      self.call_js("displayUserDetails", user, structure_names, user_templates)
     else:
       alert(f"User with ID '{user_id}' not found.")
 
   def new_user(self, **event_args):
     self.current_user_id = None
-    structure_names = ["Indépendant"] + [s["structure"] for s in self.all_structures]
+    all_structures = self.call_js("getAllData", 'structures')
+    structure_names = ["Indépendant"] + [s["structure"] for s in all_structures]
     self.call_js("clearUserForm")
     self.call_js("showUserForm", True, structure_names)
 
@@ -98,88 +106,116 @@ class Admin(AdminTemplate):
         return False
 
       if not self.current_user_id:  # It's a new user
+        password = user_data.pop("password", None)
+        if not password:
+          alert("Password is required for new users.")
+          return False
+
         self.current_user_id = anvil.server.call_s(
-          "admin_create_user", email=email, name=name
+          "admin_create_user", email=email, name=name, password=password
         )
         if not self.current_user_id:
           alert("Failed to create the user. They may already exist.")
-          self.current_user_id = None  # Reset
+          self.current_user_id = None
           return False
 
-      # Now update the user with all data
+      update_data = {k: v for k, v in user_data.items() if k != "email"}
       anvil.server.call_s(
-        "admin_update_user", user_id=self.current_user_id, **user_data
+        "admin_update_user", user_id=self.current_user_id, **update_data
       )
       alert("User saved successfully!")
-      self.load_users()
+      self.on_form_show() # Reload data
       self.call_js("showUserForm", False)
       return True
     except Exception as e:
       alert(f"Error saving user: {e}")
-      self.current_user_id = None  # Reset on failure
+      self.current_user_id = None
       return False
 
   # ----- Template Management -----
-  def load_templates(self):
-    try:
-      self.all_templates = anvil.server.call_s("admin_get_all_templates")
-      self.call_js("populateTemplates", self.all_templates)
-    except Exception as e:
-      alert(f"An error occurred while loading templates: {e}")
-
   def get_template_details(self, template_id, **event_args):
-    template = next((t for t in self.all_templates if t["id"] == template_id), None)
+    template = self.call_js("findDataById", 'templates', template_id)
     if template:
       self.current_template_id = template_id
-      # For assignment, we need all users
-      self.call_js("displayTemplateDetails", template, self.all_users)
+      all_users = self.call_js("getAllData", 'users')
+      self.call_js("displayTemplateDetails", template, all_users, 'base')
     else:
-      alert(f"Template '{template_id}' not found.")
+      alert(f"Base Template '{template_id}' not found.")
+
+  def edit_user_template(self, template_id, **event_args):
+    """Gets a custom user template and displays it in the editor within the User Tab."""
+    try:
+      template_data = anvil.server.call_s("admin_get_custom_template", template_id)
+      if template_data:
+        self.current_template_id = template_id
+        # New JS function to populate the editor in the user tab
+        self.call_js("displayUserTemplateEditor", template_data)
+      else:
+        alert("Could not load the selected template.")
+    except Exception as e:
+      alert(f"Error loading template: {e}")
 
   def new_template(self, **event_args):
     self.current_template_id = None
     self.call_js("clearTemplateForm")
-    # We need all users to be available for assignment
-    self.call_js("showTemplateForm", True, self.all_users)
+    # The last argument 'False' tells JS to hide the assignment section for new templates
+    self.call_js("showTemplateForm", True, [], False)
 
-  def save_template(self, template_data, selected_user_ids, **event_args):
+  def save_base_template(self, template_data, **event_args):
     try:
       if not template_data.get("name"):
         alert("Template name is required.")
         return False
-
-        # Add the current template ID for updates
-      template_data["template_id"] = self.current_template_id
-
-      # If it's a new template, we must assign an owner.
-      # This UI doesn't support selecting an owner, so we will assign it to the admin.
-      if not self.current_template_id:
-        admin_user = anvil.users.get_user()
-        admin_user_row = app_tables.users.get(email=admin_user["email"])
-        template_data["owner_id"] = admin_user_row.get_id()
-
-        # Save the template details
-      anvil.server.call_s("admin_write_template", **template_data)
-
-      # Handle assignment if there are selected users
-      if selected_user_ids:
-        # We need the ID of the template we just saved
-        # For simplicity, we reload templates to get the latest state
-        self.load_templates()
-        saved_template = next(
-          (t for t in self.all_templates if t["name"] == template_data["name"]), None
-        )
-        if saved_template:
-          anvil.server.call_s(
-            "assign_template_to_users", saved_template["id"], selected_user_ids
-          )
-
-      alert("Template saved successfully!")
-      self.load_templates()
+      template_data["template_id"] = self.current_template_id if self.call_js("getCurrentEditingMode") == 'base' else None
+      anvil.server.call_s("admin_write_base_template", **template_data)
+      alert("Base template saved successfully!")
+      self.on_form_show()
       self.call_js("showTemplateForm", False)
       return True
     except Exception as e:
-      alert(f"Error saving template: {e}")
+      alert(f"Error saving base template: {e}")
+      return False
+
+  def save_custom_template(self, template_data, **event_args):
+    """Saves changes to a custom (user-owned) template."""
+    try:
+      if not template_data.get("name") or not self.current_template_id:
+        alert("Template name and ID are required.")
+        return False
+
+      anvil.server.call_s(
+        "admin_write_template",
+        template_id=self.current_template_id,
+        name=template_data.get("name"),
+        html=template_data.get("html"),
+        language=template_data.get("language")
+      )
+      alert("User template saved successfully!")
+      self.call_js("showTemplateForm", False)
+      # Hide user template editor and refresh the user details to see the updated template list
+      self.call_js("hideUserTemplateEditor")
+      self.get_user_details(self.current_user_id)
+      return True
+    except Exception as e:
+      alert(f"Error saving user template: {e}")
+      return False
+
+  def assign_template_to_users(self, template_id, user_ids, **event_args):
+    try:
+      if not template_id or not user_ids:
+        alert("Template and at least one user must be selected for assignment.")
+        return False
+      success = anvil.server.call_s(
+        "admin_assign_base_template_to_users", template_id, user_ids
+      )
+      if success:
+        alert(f"Template successfully assigned to {len(user_ids)} user(s).")
+        return True
+      else:
+        alert("An error occurred during template assignment.")
+        return False
+    except Exception as e:
+      alert(f"Error assigning template: {e}")
       return False
 
   def back_to_home(self, **event_args):

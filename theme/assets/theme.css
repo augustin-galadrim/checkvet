@@ -84,8 +84,49 @@
   background-color: #2196F3; /* Blue */
 }
 
-.modal.active {
-  display: flex !important;
+#global-modal-root {
+  display: none; /* Hidden by default */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 10000;
+
+  /* These three lines are the key to centering */
   align-items: center;
   justify-content: center;
+
+  padding: 20px; /* Adds spacing on small screens */
+}
+
+/* The actual modal window that appears in the center */
+.modal {
+  display: none; /* Hide when not active */
+  width: 100%; /* Take up the available width within the padded root */
+  max-width: 500px; /* A sensible maximum width for most dialogs */
+  max-height: 90vh; /* Prevent modal from being too tall on any screen */
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+
+  /* Make the modal's content scrollable if it's too tall */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal.active {
+  display: flex; /* A modal becomes a flex column when active */
+}
+
+/* These styles are now applied inside the modals to make their content scrollable */
+.modal-content {
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.modal-header, .modal-footer {
+  flex-shrink: 0; /* Prevent header/footer from shrinking */
 }

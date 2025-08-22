@@ -6,6 +6,30 @@
 // anvil.js.call_js('functionName', ...args).
 
 /**
+ * Ensures the global modal root container exists in the DOM.
+ * This should be called once when the application starts.
+ */
+window.initializeModalRoot = function() {
+  if (!document.getElementById('global-modal-root')) {
+    const modalRoot = document.createElement('div');
+    modalRoot.id = 'global-modal-root';
+    document.body.appendChild(modalRoot);
+    // When clicking the dark overlay, find the currently active modal and close it.
+    modalRoot.addEventListener('click', (e) => {
+      if (e.target.id === 'global-modal-root') {
+        const activeModal = modalRoot.querySelector('.modal.active');
+        if (activeModal) {
+          window.closeModal(activeModal.id);
+        }
+      }
+    });
+  }
+};
+
+// Call the initialization function immediately.
+document.addEventListener('DOMContentLoaded', window.initializeModalRoot);
+
+/**
  * Creates a new logger instance with a specific context name.
  * This allows for standardized, filterable logging from any form.
  * @param {string} contextName - The name of the form or component (e.g., 'AudioManagerForm').
@@ -176,10 +200,20 @@ window.getValueById = function(elementId) {
  */
 window.openModal = function(modalId) {
   const modal = document.getElementById(modalId);
-  if (modal) {
+  const modalRoot = document.getElementById('global-modal-root');
+
+  if (modal && modalRoot) {
+    // Store the original parent to return the modal later
+    modal.dataset.originalParentId = modal.parentElement.id || `anvil-component-${Date.now()}`;
+    if (!modal.parentElement.id) {
+      modal.parentElement.id = modal.dataset.originalParentId;
+    }
+
+    modalRoot.appendChild(modal); // Move modal to the portal
+    modalRoot.style.display = 'flex'; // Show the portal overlay
     modal.classList.add('active');
   } else {
-    console.warn(`openModal: Element with ID '${modalId}' not found.`);
+    console.warn(`openModal: Element with ID '${modalId}' or '#global-modal-root' not found.`);
   }
 };
 
@@ -189,9 +223,18 @@ window.openModal = function(modalId) {
  */
 window.closeModal = function(modalId) {
   const modal = document.getElementById(modalId);
-  if (modal) {
+  const modalRoot = document.getElementById('global-modal-root');
+  const originalParent = document.getElementById(modal.dataset.originalParentId);
+
+  if (modal && modalRoot) {
     modal.classList.remove('active');
+    modalRoot.style.display = 'none'; // Hide the portal overlay
+
+    // Return the modal to its original parent so Anvil doesn't lose track of it
+    if (originalParent) {
+      originalParent.appendChild(modal);
+    }
   } else {
-    console.warn(`closeModal: Element with ID '${modalId}' not found.`);
+    console.warn(`closeModal: Element with ID '${modalId}' or '#global-modal-root' not found.`);
   }
 };

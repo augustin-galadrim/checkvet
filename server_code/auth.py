@@ -5,46 +5,72 @@ import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
 from datetime import datetime
+from functools import wraps
 from .logging_server import get_logger
+
+# Instantiate the logger for this module
 logger = get_logger(__name__)
+
+# List of authorized admin email addresses
+ADMIN_EMAILS = ["augustincramer.galadrim@gmail.com"]
+
+
+# Decorator to protect admin-only functions
+def admin_required(func):
+  """
+  A decorator to ensure that the calling user is an administrator.
+  Raises a PermissionDenied exception if the user is not an admin.
+  """
+
+  @wraps(func)
+  def wrapper(*args, **kwargs):
+    user = anvil.users.get_user(allow_remembered=True)
+    if user and user["email"].lower() in [email.lower() for email in ADMIN_EMAILS]:
+      logger.debug(
+        f"Admin access granted for user '{user['email']}' to function '{func.__name__}'."
+      )
+      return func(*args, **kwargs)
+    else:
+      user_email = user["email"] if user else "Not logged in"
+      logger.warning(
+        f"Unauthorized access attempt by user '{user_email}' to admin function '{func.__name__}'."
+      )
+      raise anvil.server.PermissionDenied(
+        "You must be an administrator to perform this action."
+      )
+
+  return wrapper
+
 
 # Single session management function - the core of our simplified approach
 @anvil.server.callable
 def ensure_auth(remember=True):
   """
   Core auth function that ensures a user is authenticated.
-  It will:
-  1. Return active user if session is valid
-  2. Restore remembered user if available
-  3. Extend session lifetime
-
-  Returns:
-      dict: User data including auth status
   """
+  logger.info("ensure_auth called.")
   try:
-    # Try to get active user first (no remembered user)
     user = anvil.users.get_user(allow_remembered=False)
     status = "active"
-
     if not user:
-      # No active session, try remembered user
       user = anvil.users.get_user(allow_remembered=True)
       status = "restored" if user else "none"
 
-    # If we have a user (either active or restored), make session persistent
-    if user and remember:
-      # Extend session lifetime
-      anvil.server.session.set_expiry(3600 * 24 * 30)  # 30 days
+    logger.info(f"Auth status: {status}. User: {user['email'] if user else 'None'}.")
 
-      # Remember this user for future visits
+    if user and remember:
+      anvil.server.session.set_expiry(3600 * 24 * 30)  # 30 days
       anvil.users.set_remembered_user(user)
+      logger.debug(f"Session extended and user '{user['email']}' remembered.")
 
     return {"user": user, "status": status}
   except Exception as e:
-    print(f"[ERROR] Auth error: {str(e)}")
+    logger.error(f"Exception in ensure_auth: {e}", exc_info=True)
     return {"user": None, "status": "error", "error": str(e)}
 
 
+# The rest of the functions in this file remain unchanged from the previous step.
+# They are standard authentication flows and do not require extensive custom logging.
 @anvil.server.callable
 def login_user(remember=True):
   """Simple function that shows login form and remembers user"""
@@ -73,18 +99,13 @@ def logout_user():
 def ensure_persistent_session():
   """
   Ensures the current user's session is set to be remembered.
-  Call this when you want to make sure the user stays logged in.
   """
   current_user = anvil.users.get_user()
   if current_user:
-    # Get the user row to update remembered_logins
     user_row = app_tables.users.get(email=current_user["email"])
     if user_row:
-      # If remembered_logins is None or empty, initialize it
       if not user_row["remembered_logins"]:
         user_row["remembered_logins"] = {}
-
-      # Force a login to refresh the session cookie
       anvil.users.force_login(user_row, remember=True)
       return True
   return False
@@ -94,12 +115,10 @@ def ensure_persistent_session():
 def check_and_refresh_session():
   """
   Check if the current session is active and refresh it if needed.
-  Returns True if session is valid, False otherwise.
   """
   try:
     current_user = anvil.users.get_user(allow_remembered=True)
     if current_user:
-      # Session is valid, ensure it's persistent
       return ensure_persistent_session()
     return False
   except:

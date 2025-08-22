@@ -199,11 +199,7 @@ container:
                 toggleItem.className = "menu-item";
                 toggleItem.textContent = tpl.display ? localeTexts.hide : localeTexts.show;
                 toggleItem.addEventListener("click", (e) => {
-                  const optimisticDisplay = !tpl.display;
-                  const originalTpl = allTemplatesData.find(t => t.id === tpl.id);
-                  if (originalTpl) originalTpl.display = optimisticDisplay;
-                  renderAllSections(allTemplatesData);
-                  anvil.call(toggleItem, 'toggle_template_display', tpl.id, optimisticDisplay);
+                  anvil.call(toggleItem, 'toggle_template_display', tpl.id, !tpl.display);
                 });
                 kebabMenu.appendChild(toggleItem);
 

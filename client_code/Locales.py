@@ -46,7 +46,7 @@ fr = {
   "recordingWidget_button_toggle_tooltip": "Démarrer l'enregistrement",
   # --- ReportFooter Component ---
   "reportFooter_button_status": "Statut",
-  "reportFooter_button_archive": "Archiver",
+  "reportFooter_button_archive": "Sauvegarder",
   "reportFooter_button_share": "Partager",
   "reportFooter_status_dialog_title": "Choisir le statut :",
   # --- TextEditor Component ---
@@ -302,7 +302,7 @@ en = {
   "recordingWidget_button_toggle_tooltip": "Start Recording",
   # --- ReportFooter Component ---
   "reportFooter_button_status": "Status",
-  "reportFooter_button_archive": "Archive",
+  "reportFooter_button_archive": "Save",
   "reportFooter_button_share": "Share",
   "reportFooter_status_dialog_title": "Choose status:",
   # --- TextEditor Component ---

@@ -263,9 +263,16 @@ class ArchivesForm(ArchivesFormTemplate):
         self.structure_reports = (
           anvil.server.call_s("get_reports_by_structure", self.structure_name) or []
         )
+
+      # FIX: Pass all required arguments to the cache manager
       reports_cache_manager.set(
-        my_reports=self.my_reports, structure_reports=self.structure_reports
+        my_reports=self.my_reports,
+        structure_reports=self.structure_reports,
+        has_structure=self.has_structure,  # Add this
+        structure_name=self.structure_name,  # Add this
+        affiliated_vets=self.affiliated_vets,  # Add this
       )
+
       self.logger.info("Successfully refreshed and cached report data.")
     except Exception as e:
       self.logger.error("An error occurred while refreshing reports.", e)

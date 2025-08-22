@@ -12,7 +12,7 @@ from .logging_server import get_logger
 logger = get_logger(__name__)
 
 # List of authorized admin email addresses
-ADMIN_EMAILS = ["augustincramer.galadrim@gmail.com"]
+ADMIN_EMAILS = ["augustincramer.galadrim@gmail.com", "biffy071077@gmail.com"]
 
 
 # Decorator to protect admin-only functions

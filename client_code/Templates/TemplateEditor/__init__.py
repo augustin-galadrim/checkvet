@@ -5,6 +5,7 @@ import anvil.js
 from ...Cache import template_cache_manager
 from ... import TranslationService as t
 from ...AppEvents import events
+from ...AuthHelpers import setup_auth_handlers
 
 
 def safe_value(template, key, default_value):
@@ -17,6 +18,7 @@ def safe_value(template, key, default_value):
 class TemplateEditor(TemplateEditorTemplate):
   def __init__(self, template=None, **properties):
     self.init_components(**properties)
+    setup_auth_handlers(self)
     events.subscribe("language_changed", self.update_ui_texts)
 
     if template is None:

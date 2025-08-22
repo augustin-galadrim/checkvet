@@ -6,6 +6,7 @@ from ...Cache import reports_cache_manager
 from ... import TranslationService as t
 from ...LoggingClient import ClientLogger
 from ...AppEvents import events
+from ...AuthHelpers import setup_auth_handlers
 
 
 def safe_value(data_dict, key, default_value):
@@ -20,6 +21,7 @@ class ArchivesForm(ArchivesFormTemplate):
     self.logger = ClientLogger(self.__class__.__name__)
     self.logger.info("Initializing...")
     self.init_components(**properties)
+    setup_auth_handlers(self)
     events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
 
@@ -263,9 +265,16 @@ class ArchivesForm(ArchivesFormTemplate):
         self.structure_reports = (
           anvil.server.call_s("get_reports_by_structure", self.structure_name) or []
         )
+
+      # FIX: Pass all required arguments to the cache manager
       reports_cache_manager.set(
-        my_reports=self.my_reports, structure_reports=self.structure_reports
+        my_reports=self.my_reports,
+        structure_reports=self.structure_reports,
+        has_structure=self.has_structure,  # Add this
+        structure_name=self.structure_name,  # Add this
+        affiliated_vets=self.affiliated_vets,  # Add this
       )
+
       self.logger.info("Successfully refreshed and cached report data.")
     except Exception as e:
       self.logger.error("An error occurred while refreshing reports.", e)

@@ -34,6 +34,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.mode = "initial_generation"
     self.raw_transcription = None
     self.selected_template = None
+    self.selected_status = None
     events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
     self.audio_playback_1.visible = False
@@ -331,7 +332,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def report_footer_1_status_clicked(self, status_key, **event_args):
     if status_key:
-      self.selected_statut = status_key
+      self.selected_status = status_key
       self.report_footer_1.update_status_display(status_key)
       status_display = (
         t.t(status_key)
@@ -361,7 +362,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
         )
 
       html_content = self.text_editor_1.get_content()
-      statut = self.selected_statut or "not_specified"
+      statut = self.selected_status or "not_specified"
 
       result = anvil.server.call_s(
         "write_report_first_time",

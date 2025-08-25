@@ -3,22 +3,30 @@
  * returns to the app. It calls the 'refresh_session_relay' method on the
  * Anvil form that called it.
  */
-window.setupSessionHandlers = function() {
+window.setupSessionHandlers = function(formId) {
   const logger = window.createLogger('SessionManager');
-  const formProxy = this; // 'this' is the Anvil form proxy that calls this function
 
-  // Check and refresh the session when the browser tab becomes visible again.
+  // Find the form's main DOM element using the ID passed from Python
+  const formElement = document.querySelector(`[anvil-id="${formId}"]`);
+
+  if (!formElement) {
+    logger.error(`Could not find a form element with anvil-id="${formId}". Session handling will not be active.`);
+    return;
+  }
+
+  // The rest of your logic now uses 'formElement' for anvil.call
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       logger.log('App became visible, checking session.');
-      anvil.call(formProxy, 'refresh_session_relay');
+      // Use the DOM element as the first argument
+      anvil.call(formElement, 'refresh_session_relay');
     }
   });
 
-  // Check and refresh the session when the browser comes back online.
   window.addEventListener('online', () => {
     logger.log('Browser came online, checking session.');
-    anvil.call(formProxy, 'refresh_session_relay');
+    // Use the DOM element as the first argument
+    anvil.call(formElement, 'refresh_session_relay');
   });
 };
 

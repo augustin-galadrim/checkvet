@@ -5,8 +5,8 @@ import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
 from ..data import (
-structures,
-base_templates,
+  structures,
+  base_templates,
 )
 from ..logging_server import get_logger
 from ..auth import admin_required
@@ -62,9 +62,13 @@ def admin_create_user(email, name, password=None):
   }
 
   if password:
-    user_data['password_hash'] = anvil.secrets.hash_password(password)
+    user_data["password_hash"] = anvil.secrets.hash_password(password)
 
   new_user = app_tables.users.add_row(**user_data)
+
+  # Assign all base templates to the new user
+  base_templates.assign_all_base_templates(new_user)
+
   return new_user.get_id()
 
 
@@ -298,9 +302,9 @@ def register_user_and_setup(reg_data):
       if not result.get("success"):
         return result
 
-    base_templates.assign_language_specific_base_templates(
-      user, reg_data.get("favorite_language")
-    )
+    # Assign all base templates to the user, regardless of language
+    base_templates.assign_all_base_templates(user)
+
     return {"success": True, "message": "Registration complete!"}
   except Exception as e:
     logger.error(

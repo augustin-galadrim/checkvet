@@ -6,153 +6,173 @@ container:
       <html>
         <head>
           <meta charset="utf-8">
-          <title>Mobile Installation</title>
+          <title>Mobile Installation Guide</title>
           <style>
-            /* Global styling */
-            body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 0;
-              background-color: #f5f5f5;
-            }
-            .container {
-              position: relative;
-              width: 100%;
-              height: 100vh;
-            }
-            /* Modal styling */
+            body { font-family: Arial, sans-serif; margin: 0; background-color: #f5f5f5; }
+            .container { position: relative; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; }
+
             .modal {
               position: fixed;
-              top: 5%;
+              top: 50%;
               left: 50%;
-              transform: translate(-50%, 0);
+              transform: translate(-50%, -50%);
               background: white;
               padding: 20px;
               border-radius: 8px;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              box-shadow: 0 4px 10px rgba(0,0,0,0.2);
               width: 90%;
-              max-width: 800px;
-              height: 90vh;
-              overflow-y: auto;
+              max-width: 500px;
+              max-height: 90vh;
               z-index: 1000;
-              display: none; /* Hidden by default */
-              flex-direction: column; /* Ensure content inside the modal is vertical */
+              display: none;
+              flex-direction: column;
             }
-            .modal.active {
-              display: flex;
+            .modal.active { display: flex; }
+
+            .modal-content {
+              overflow-y: auto;
+              padding-right: 15px; /* for scrollbar */
             }
-            .modal h2 {
-              margin-bottom: 15px;
-            }
-            .modal p {
-              margin-bottom: 15px;
-            }
+
+            .modal h2 { margin-top: 0; margin-bottom: 10px; font-size: 22px; }
+            .modal p { margin-bottom: 15px; color: #666; font-size: 16px; line-height: 1.5; }
             .modal img {
-              max-width: 66.67%; /* Default for first image */
+              max-width: 100%;
               height: auto;
+              border-radius: 5px;
+              border: 1px solid #eee;
               margin-bottom: 15px;
               display: block;
-              margin-left: auto;
-              margin-right: auto;
             }
-            /* CORRECTED STYLE: Added max-height to prevent the image from being too tall */
-            #last-install-image {
-              width: 70%;
-              max-width: 100%;
-              max-height: 60vh; /* Prevents the image from being excessively tall on portrait screens */
-              object-fit: contain; /* Ensures the image scales properly without distortion */
-            }
+
             .button-group {
               display: flex;
               gap: 10px;
-              margin-top: auto;
+              margin-top: auto; /* Pushes buttons to the bottom */
               padding-top: 20px;
-              justify-content: flex-end;
+              border-top: 1px solid #eee;
             }
             .custom-button {
               padding: 10px 20px;
-              border: none;
+              border: 1px solid #ddd;
               border-radius: 4px;
               cursor: pointer;
               font-size: 14px;
+              font-weight: 500;
               transition: background-color 0.3s;
             }
             .btn-primary {
               background-color: #4CAF50;
               color: white;
+              border-color: #4CAF50;
+              margin-left: auto; /* Pushes primary button to the right */
             }
-            .btn-primary:hover {
-              background-color: #45a049;
-            }
+            .btn-primary:hover { background-color: #45a049; }
+            .btn-secondary { background-color: #f0f0f0; color: #333; }
           </style>
         </head>
         <body>
           <div class="container">
-            <!-- Modal Step 1: Introduction -->
-            <div class="modal" id="modal-step1">
-              <h2>Install Your App</h2>
-              <p>We'll show you how to install your app in just 30 seconds.</p>
-              <div class="button-group">
-                <div id="next-btn-1" class="custom-button btn-primary">Next</div>
+            <div class="modal" id="guide-modal">
+              <div class="modal-content">
+                <h2 id="guide-title"></h2>
+                <p id="guide-text"></p>
+                <img id="guide-image" src="" alt="Installation step instruction">
               </div>
-            </div>
-
-            <!-- Modal Step 2: First Instruction -->
-            <div class="modal" id="modal-step2">
-              <h2>Grab Your Phone</h2>
-              <p>Go to the address below and click on the circled button:</p>
-              <img src="_/theme/first_click.jpg" alt="First Click Instruction">
               <div class="button-group">
-                <div id="next-btn-2" class="custom-button btn-primary">Next</div>
-              </div>
-            </div>
-
-            <!-- Modal Step 3: Second Instruction -->
-            <div class="modal" id="modal-step3">
-              <h2>Final Step</h2>
-              <p>Now, click on the button shown below:</p>
-              <img id="last-install-image" src="_/theme/second_click.jpg" alt="Second Click Instruction">
-              <div class="button-group">
-                <div id="install-btn" class="custom-button btn-primary">I installed the app on my phone</div>
+                <button id="guide-back-btn" class="custom-button btn-secondary">Back</button>
+                <button id="guide-next-btn" class="custom-button btn-primary">Next</button>
+                <button id="guide-finish-btn" class="custom-button btn-primary">I've Installed It</button>
               </div>
             </div>
           </div>
 
           <script>
-            // Attach event listeners to buttons
-            function attachInstallationEvents() {
-              const nextBtn1 = document.getElementById("next-btn-1");
-              const nextBtn2 = document.getElementById("next-btn-2");
-              const installBtn = document.getElementById("install-btn");
+            if (!window.__installation_flow_globals) {
+              window.__installation_flow_globals = true;
 
-              nextBtn1.addEventListener("click", (event) => {
-                anvil.call(event.currentTarget, "next_click_1");
-              });
+              const logger = window.createLogger('InstallationFlow');
+              let guideSteps = [];
+              let currentStepIndex = 0;
 
-              nextBtn2.addEventListener("click", (event) => {
-                anvil.call(event.currentTarget, "next_click_2");
-              });
+              window.detect_environment = function() {
+                const ua = navigator.userAgent;
+                const platform = navigator.platform;
+                let os = 'android'; // Default fallback
+                let browser = 'chrome'; // Default fallback
 
-              installBtn.addEventListener("click", (event) => {
-                anvil.call(event.currentTarget, "install_click");
-              });
-            }
+                if (/iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+                  os = 'ios';
+                  browser = /CriOS/.test(ua) ? 'chrome' : 'safari'; // Check for Chrome on iOS
+                } else if (/Android/.test(ua)) {
+                  os = 'android';
+                  browser = 'chrome'; // Assume Chrome for Android for simplicity
+                }
 
-            // Initialize the installation flow once the DOM is ready
-            function initInstallation() {
-              attachInstallationEvents();
-              // Use the global modal function
-              if (window.openModal) {
-                window.openModal("modal-step1");
-              } else {
-                console.error("Global 'openModal' function not found.");
+                logger.log(`Detected Environment: OS=${os}, Browser=${browser}`);
+                return { os, browser };
+              };
+
+              window.render_guide = function(steps, buttonTexts) {
+                if (!steps || steps.length === 0) {
+                  logger.error("Render guide called with no steps. Aborting render.");
+                  return;
+                }
+                logger.log(`Received ${steps.length} steps to render.`, { buttons: buttonTexts });
+                guideSteps = steps;
+                currentStepIndex = 0;
+
+                document.getElementById('guide-back-btn').textContent = buttonTexts.back;
+                document.getElementById('guide-next-btn').textContent = buttonTexts.next;
+                document.getElementById('guide-finish-btn').textContent = buttonTexts.finish;
+
+                display_current_step();
+                window.openModal('guide-modal');
+              };
+
+              function display_current_step() {
+                const step = guideSteps[currentStepIndex];
+                if (!step) return;
+
+                logger.debug(`Displaying step ${currentStepIndex + 1}/${guideSteps.length}: "${step.title}"`);
+
+                document.getElementById('guide-title').textContent = step.title;
+                document.getElementById('guide-text').textContent = step.text;
+                document.getElementById('guide-image').src = step.image;
+                document.getElementById('guide-image').alt = step.title;
+
+                document.getElementById('guide-back-btn').style.display = currentStepIndex > 0 ? 'block' : 'none';
+                document.getElementById('guide-next-btn').style.display = currentStepIndex < guideSteps.length - 1 ? 'block' : 'none';
+                document.getElementById('guide-finish-btn').style.display = currentStepIndex === guideSteps.length - 1 ? 'block' : 'none';
               }
-            }
 
-            if (document.readyState === "loading") {
-              document.addEventListener("DOMContentLoaded", initInstallation);
-            } else {
-              initInstallation();
+              function attachGuideEvents() {
+                const container = document.querySelector('.container');
+
+                document.getElementById('guide-back-btn').addEventListener('click', () => {
+                  logger.debug("Back button clicked.");
+                  if (currentStepIndex > 0) {
+                    currentStepIndex--;
+                    display_current_step();
+                  }
+                });
+
+                document.getElementById('guide-next-btn').addEventListener('click', () => {
+                  logger.debug("Next button clicked.");
+                  if (currentStepIndex < guideSteps.length - 1) {
+                    currentStepIndex++;
+                    display_current_step();
+                  }
+                });
+
+                document.getElementById('guide-finish-btn').addEventListener('click', () => {
+                  logger.log("Finish button clicked, calling python `installation_complete_click`.");
+                  anvil.call(container, 'installation_complete_click');
+                });
+                logger.log("Installation guide event listeners attached.");
+              }
+
+              attachGuideEvents();
             }
           </script>
         </body>

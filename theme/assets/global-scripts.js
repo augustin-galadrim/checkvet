@@ -1,30 +1,32 @@
-// ============================================================================
-// ===                      GLOBAL HELPER FUNCTIONS                         ===
-// ============================================================================
-// This file contains globally accessible JavaScript utility functions for the
-// Anvil application. They can be called from any form's Python code using
-// anvil.js.call_js('functionName', ...args).
 /**
  * Sets up listeners to automatically refresh the server session when the user
  * returns to the app. It calls the 'refresh_session_relay' method on the
  * Anvil form that called it.
  */
-window.setupSessionHandlers = function() {
+window.setupSessionHandlers = function(formId) {
   const logger = window.createLogger('SessionManager');
-  const formProxy = this; // 'this' is the Anvil form proxy that calls this function
 
-  // Check and refresh the session when the browser tab becomes visible again.
+  // Find the form's main DOM element using the ID passed from Python
+  const formElement = document.querySelector(`[anvil-id="${formId}"]`);
+
+  if (!formElement) {
+    logger.error(`Could not find a form element with anvil-id="${formId}". Session handling will not be active.`);
+    return;
+  }
+
+  // The rest of your logic now uses 'formElement' for anvil.call
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       logger.log('App became visible, checking session.');
-      anvil.call(formProxy, 'refresh_session_relay');
+      // Use the DOM element as the first argument
+      anvil.call(formElement, 'refresh_session_relay');
     }
   });
 
-  // Check and refresh the session when the browser comes back online.
   window.addEventListener('online', () => {
     logger.log('Browser came online, checking session.');
-    anvil.call(formProxy, 'refresh_session_relay');
+    // Use the DOM element as the first argument
+    anvil.call(formElement, 'refresh_session_relay');
   });
 };
 
@@ -62,6 +64,8 @@ window.createLogger = function(contextName) {
     }
   };
 };
+const globalLogger = window.createLogger('GlobalScripts');
+
 
 /**
  * Displays a non-blocking notification banner at the top of the page.
@@ -188,7 +192,6 @@ window.getValueById = function(elementId) {
   if (element) {
     return element.value;
   }
-  // C'est une bonne pratique d'afficher un avertissement si l'élément n'est pas trouvé.
   console.warn(`getValueById: Element with ID '${elementId}' not found.`);
   return null;
 };
@@ -198,11 +201,14 @@ window.getValueById = function(elementId) {
  * @param {string} modalId The ID of the modal element to show.
  */
 window.openModal = function(modalId) {
+  // --- LOGS ADDED ---
+  globalLogger.log(`openModal: Received request to open modal with ID: '${modalId}'.`);
   const modal = document.getElementById(modalId);
   if (modal) {
+    globalLogger.log(`openModal: Found modal element. Adding 'active' class.`);
     modal.classList.add('active');
   } else {
-    console.warn(`openModal: Element with ID '${modalId}' not found.`);
+    globalLogger.error(`openModal: FAILED to find modal element with ID: '${modalId}'.`);
   }
 };
 

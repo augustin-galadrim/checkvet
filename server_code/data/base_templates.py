@@ -28,42 +28,33 @@ def admin_get_all_base_templates():
 
 
 @anvil.server.callable
-def assign_language_specific_base_templates(user, language_code):
+def assign_all_base_templates(user):
   """
-  Finds all base templates matching a specific language and assigns them to a new user.
-
-  This is the primary function called at the end of the new user registration process.
+  Finds all base templates and assigns them to a new user.
 
   Args:
     user (Row): The user row from the 'users' table.
-    language_code (str): The two-letter language code (e.g., "fr", "en") chosen by the user.
 
   Returns:
     int: The number of templates that were successfully assigned to the user.
   """
-  if not user or not language_code:
-    print(
-      "[ERROR] assign_language_specific_base_templates: Called with invalid user or language_code."
-    )
+  if not user:
+    logger.error("assign_all_base_templates: Called with an invalid user.")
     return 0
 
-  print(
-    f"[INFO] Starting template assignment for user '{user['email']}' with language '{language_code}'."
-  )
+  logger.info(f"Starting template assignment for user '{user['email']}'.")
 
   try:
-    # Find all base templates that match the user's chosen language.
-    language_templates = app_tables.base_templates.search(language=language_code)
+    # Find all base templates.
+    all_base_templates = app_tables.base_templates.search()
 
-    templates_to_assign = list(language_templates)
+    templates_to_assign = list(all_base_templates)
 
     if not templates_to_assign:
-      print(f"[WARN] No base templates found for language code: '{language_code}'.")
+      logger.warning("No base templates found in the database.")
       return 0
 
-    print(
-      f"[INFO] Found {len(templates_to_assign)} templates to assign for language '{language_code}'."
-    )
+    logger.info(f"Found {len(templates_to_assign)} total base templates to assign.")
 
     assigned_count = 0
     for base_template in templates_to_assign:
@@ -72,13 +63,16 @@ def assign_language_specific_base_templates(user, language_code):
       if success:
         assigned_count += 1
 
-    print(
-      f"[INFO] Successfully assigned {assigned_count} templates to user '{user['email']}'."
+    logger.info(
+      f"Successfully assigned {assigned_count} templates to user '{user['email']}'."
     )
     return assigned_count
 
   except Exception as e:
-    print(f"[ERROR] An unexpected error occurred during template assignment: {str(e)}")
+    logger.error(
+      f"An unexpected error occurred during template assignment for user '{user['email']}': {e}",
+      exc_info=True,
+    )
     return 0
 
 

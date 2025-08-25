@@ -38,7 +38,6 @@ container:
           <style>
             :root {
               --footer-height: 75px; /* Hauteur approx. du pied de page principal */
-              --action-bar-height: 180px; /* Hauteur de la nouvelle barre d'action */
             }
             * { box-sizing: border-box; font-family: Arial, sans-serif; margin: 0; padding: 0; }
             body { background-color: #f5f5f5; height: 100vh; overflow: hidden; }
@@ -47,24 +46,21 @@ container:
               flex: 1;
               overflow-y: auto;
               padding: 20px;
-              /* Espace en bas pour ne pas être masqué par les barres fixes */
-              padding-bottom: calc(var(--footer-height) + var(--action-bar-height));
+              /* Espace en bas pour ne pas être masqué par le footer */
+              padding-bottom: calc(var(--footer-height) + 20px);
             }
 
-            .edit-action-bar {
-              position: fixed;
-              bottom: var(--footer-height); /* Positionné juste au-dessus du pied de page principal */
-              left: 50%;
-              transform: translateX(-50%);
-              width: 800px;
-              max-width: 100%;
+            /* NEW: Styles for the audio section now inside the main content */
+            .edit-audio-section {
               background: #f8f8f8;
-              border-top: 1px solid #ddd;
+              border: 1px solid #ddd;
               padding: 15px;
-              box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
-              z-index: 9;
+              margin-bottom: 20px;
+              border-radius: 8px;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.05);
               text-align: center;
             }
+
             .edit-instructions {
               font-size: 14px; color: #555; margin-bottom: 10px;
             }
@@ -92,34 +88,38 @@ container:
             <div anvil-slot="default"></div>
 
             <div class="scrollable-content">
+
+              <!-- MOVED audio section here -->
+              <div class="edit-audio-section">
+                <div id="audioInputContainer">
+                  <div class="edit-instructions">
+                    <p id="audioManagerEdit-p-instructions"></p>
+                    <p>
+                      <strong id="audioManagerEdit-strong-example"></strong>
+                      <em id="audioManagerEdit-em-exampleText"></em>
+                    </p>
+                  </div>
+                  <div anvil-slot="recorder_slot"></div>
+                </div>
+
+                <div id="audioDecisionContainer">
+                  <div anvil-slot="playback_slot"></div>
+                  <div class="decision-buttons">
+                    <button id="audioManagerEdit-button-discard" class="decision-button discard"></button>
+                    <button id="audioManagerEdit-button-process" class="decision-button process"></button>
+                  </div>
+                </div>
+
+                <div id="audioProcessingContainer">
+                  <div anvil-slot="feedback_slot"></div>
+                </div>
+              </div>
+
+              <!-- Text editor remains here -->
               <div anvil-slot="editor_slot"></div>
             </div>
 
-            <div class="edit-action-bar">
-              <div id="audioInputContainer">
-                <div class="edit-instructions">
-                  <p id="audioManagerEdit-p-instructions"></p>
-                  <p>
-                    <strong id="audioManagerEdit-strong-example"></strong>
-                    <em id="audioManagerEdit-em-exampleText"></em>
-                  </p>
-                </div>
-                <div anvil-slot="recorder_slot"></div>
-              </div>
-
-              <div id="audioDecisionContainer">
-                <div anvil-slot="playback_slot"></div>
-                <div class="decision-buttons">
-                  <button id="audioManagerEdit-button-discard" class="decision-button discard"></button>
-                  <button id="audioManagerEdit-button-process" class="decision-button process"></button>
-                </div>
-              </div>
-
-              <div id="audioProcessingContainer">
-                <div anvil-slot="feedback_slot"></div>
-              </div>
-            </div>
-
+            <!-- Report footer remains at the bottom -->
             <div anvil-slot="bottom_buttons_slot"></div>
           </div>
 

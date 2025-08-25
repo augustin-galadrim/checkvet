@@ -13,7 +13,9 @@ from . import (
 )
 from ..prompts_service import get_prompt
 from ...logging_server import get_logger
+
 logger = get_logger(__name__)
+
 
 @anvil.server.callable
 def edit_report(transcription, report, language):
@@ -27,7 +29,17 @@ def edit_report(transcription, report, language):
   Returns:
       str: The edited report content
   """
+  logger.info("Starting report editing process.")
+  logger.debug(f"Language for edition: {language}")
+  logger.debug(f"Edition command (transcription): {transcription}")
+  logger.debug(f"Original report content (first 100 chars): {report[:100]}")
+
   edition_prompt = get_prompt("edition", language)
+  if not edition_prompt:
+    logger.error(f"Could not find the 'edition' prompt for language '{language}'.")
+    raise Exception("Could not find the 'edition' prompt in the database.")
+
+  logger.debug("Edition prompt loaded successfully.")
 
   try:
     system_prompt = edition_prompt
@@ -38,6 +50,7 @@ def edit_report(transcription, report, language):
       {"role": "user", "content": user_prompt},
     ]
 
+    logger.debug("Making API call to edit report...")
     response = client.chat.completions.create(
       model=DEFAULT_MODEL,
       messages=messages,
@@ -45,8 +58,11 @@ def edit_report(transcription, report, language):
       max_tokens=DEFAULT_MAX_TOKENS,
     )
 
-    print("Edited report generated successfully")
-    return response.choices[0].message.content
+    result = response.choices[0].message.content
+    logger.info("Report edited successfully.")
+    logger.debug(f"Edited report (first 100 chars): {result[:100]}")
+    return result
+
   except Exception as e:
-    print(f"GPT-4 API error: {str(e)}")
+    logger.error(f"GPT-4 API error during editing: {str(e)}", exc_info=True)
     raise Exception(f"Error editing report: {str(e)}")

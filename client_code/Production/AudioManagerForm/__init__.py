@@ -34,6 +34,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.mode = "initial_generation"
     self.raw_transcription = None
     self.selected_template = None
+    self.selected_status = None
     events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
     self.audio_playback_1.visible = False
@@ -238,13 +239,18 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.reset_audio_workflow()
 
   def process_recording(self, **event_args):
+    self.logger.info("Starting initial report generation process.")
     js_blob_proxy = self.audio_playback_1.audio_blob
     if not js_blob_proxy:
+      self.logger.warning("process_recording halted: No audio blob available.")
       return alert(t.t("audioManager_alert_noAudio"))
 
     editor_content = self.text_editor_1.get_content()
     if self.selected_template is None:
+      self.logger.warning("process_recording halted: No template selected.")
       return alert(t.t("audioManager_alert_noTemplate"))
+
+    self.logger.debug(f"Using template '{self.selected_template.get('name')}' with language '{self.selected_template_language}'.")
 
     self.call_js("setAudioWorkflowState", "processing")
     self.user_feedback_1.show(t.t("feedback_transcribing"))
@@ -252,37 +258,53 @@ class AudioManagerForm(AudioManagerFormTemplate):
     lang = self.selected_template_language
 
     try:
+      self.logger.info("Step 1: Transcribing audio...")
       self.raw_transcription = self._transcribe_audio(anvil_media_blob, lang)
+      self.logger.info("Transcription successful.")
+      self.logger.debug(f"Raw transcription (first 100 chars): {self.raw_transcription[:100]}")
+
       self.user_feedback_1.set_status(t.t("feedback_generating"))
+      self.logger.info("Step 2: Generating report from transcription...")
       report_content = self._generate_report_from_transcription(
         self.raw_transcription, lang
       )
+      self.logger.info("Report generation successful.")
+
       self.user_feedback_1.set_status(t.t("feedback_formatting"))
+      self.logger.info("Step 3: Formatting final report...")
       final_html = self._format_report(report_content, editor_content, lang)
+      self.logger.info("Formatting successful. Displaying final report.")
+
       self.text_editor_1.html_content = final_html
       self.mode = "modification"
       self.call_js("setFormMode", self.mode)
+
     except anvil.server.AppOfflineError:
+      self.logger.warning("Connection lost during AI processing. Saving audio to offline queue.")
       alert(t.t("alert_offlineSave"))
       self.queue_manager_1.open_title_modal(js_blob_proxy)
     except Exception as e:
       self.logger.error("An exception occurred in process_recording.", e)
       self.call_js("displayBanner", f"{t.t('error_processingFailed')}: {e}", "error")
       if confirm(t.t("confirm_offlineSaveOnError")):
+        self.logger.warning("User confirmed saving to offline queue after error.")
         self.queue_manager_1.open_title_modal(js_blob_proxy)
     finally:
       self.user_feedback_1.hide()
       self.reset_audio_workflow()
 
   def reset_audio_workflow(self, **event_args):
+    self.logger.debug("Resetting audio workflow to initial input state.")
     self.audio_playback_1.visible = False
     self.audio_playback_1.audio_blob = None
     self.recording_widget.visible = True
     self.call_js("setAudioWorkflowState", "input")
 
   def process_modification(self, **event_args):
+    self.logger.info("Starting report modification process.")
     js_blob_proxy = self.audio_playback_1.audio_blob
     if not js_blob_proxy:
+      self.logger.warning("process_modification halted: No audio command blob available.")
       return alert(t.t("audioManager_alert_noAudioCommand"))
 
     self.call_js("setAudioWorkflowState", "processing")
@@ -290,78 +312,104 @@ class AudioManagerForm(AudioManagerFormTemplate):
     anvil_media_blob = anvil.js.to_media(js_blob_proxy)
     current_content = self.text_editor_1.get_content()
     lang = self.selected_template_language
+    self.logger.debug(f"Modification language set to '{lang}'.")
 
     try:
+      self.logger.info("Step 1: Transcribing modification command...")
       transcription = self._transcribe_audio(anvil_media_blob, lang)
+      self.logger.info("Modification command transcribed successfully.")
+      self.logger.debug(f"Modification command: '{transcription}'")
+
       self.user_feedback_1.set_status(t.t("feedback_applyingModification"))
+      self.logger.info("Step 2: Applying modification to report...")
       edited_report = anvil.server.call_s(
         "edit_report", transcription, current_content, lang
       )
+      self.logger.info("Modification applied successfully. Displaying updated report.")
       self.text_editor_1.html_content = edited_report
+
     except anvil.server.AppOfflineError:
+      self.logger.warning("Connection lost during modification. Saving command to offline queue.")
       alert(t.t("alert_offlineSave"))
       self.queue_manager_1.open_title_modal(js_blob_proxy)
     except Exception as e:
       self.logger.error("An exception occurred in process_modification.", e)
       self.call_js("displayBanner", f"{t.t('error_processingFailed')}: {e}", "error")
       if confirm(t.t("confirm_offlineSaveOnError")):
+        self.logger.warning("User confirmed saving modification command to offline queue after error.")
         self.queue_manager_1.open_title_modal(js_blob_proxy)
     finally:
       self.user_feedback_1.hide()
       self.reset_audio_workflow()
 
   def _transcribe_audio(self, audio_blob, lang):
+    self.logger.info("Launching background task for transcription.")
     task = anvil.server.call_s("process_audio_whisper", audio_blob, language=lang)
     elapsed = 0
     while not task.is_completed() and elapsed < 240:
       time.sleep(1)
       elapsed += 1
     if not task.is_completed():
+      self.logger.error("Transcription background task timed out after 240 seconds.")
       raise anvil.server.AppOfflineError(t.t("error_transcriptionTimeout"))
+
+    self.logger.info("Transcription background task completed.")
     transcription = task.get_return_value()
     if isinstance(transcription, dict) and "error" in transcription:
+      self.logger.error(f"Transcription task returned an error: {transcription['error']}")
       raise Exception(f"{t.t('error_transcriptionFailed')}: {transcription['error']}")
     return transcription
 
   def _generate_report_from_transcription(self, transcription, lang):
+    self.logger.info("Calling server to generate report...")
     return anvil.server.call_s("generate_report", transcription, lang)
 
   def _format_report(self, report_content, template, lang):
+    self.logger.info("Calling server to format report...")
     return anvil.server.call_s("format_report", report_content, template, lang)
 
   def report_footer_1_status_clicked(self, status_key, **event_args):
     if status_key:
-      self.selected_statut = status_key
+      self.selected_status = status_key
       self.report_footer_1.update_status_display(status_key)
       status_display = (
         t.t(status_key)
         if status_key and status_key != "not_specified"
         else t.t("reportFooter_button_status")
       )
+      self.logger.info(f"Report status changed to '{status_key}'.")
       self.call_js(
         "displayBanner", f"{t.t('banner_statusSetTo')}: {status_display}", "success"
       )
 
   def report_footer_1_save_clicked(self, **event_args):
+    self.logger.info("'Save' button clicked, opening patient selection modal.")
     self.call_js("openPatientModalForSave")
 
   def save_report(self, selected_patient, **event_args):
+    self.logger.info("Attempting to save the report.")
     try:
       if not isinstance(selected_patient, dict):
+        self.logger.error(f"Save failed: Invalid patient data provided. Data: {selected_patient}")
         return alert(t.t("audioManager_alert_invalidPatient"))
+
       animal_name = selected_patient.get("name")
       animal_id = selected_patient.get("id")
+      self.logger.debug(f"Saving report for patient: '{animal_name}' (ID: {animal_id})")
+
       if animal_id is None:
         details = selected_patient.get("details", {})
+        self.logger.info(f"Patient '{animal_name}' is new. Creating new animal record.")
         animal_id = anvil.server.call_s(
           "write_animal_first_time",
           animal_name,
           type=details.get("type"),
           proprietaire=details.get("proprietaire"),
         )
+        self.logger.info(f"New animal record created with ID: {animal_id}")
 
       html_content = self.text_editor_1.get_content()
-      statut = self.selected_statut or "not_specified"
+      statut = self.selected_status or "not_specified"
 
       result = anvil.server.call_s(
         "write_report_first_time",
@@ -374,10 +422,12 @@ class AudioManagerForm(AudioManagerFormTemplate):
       )
 
       if result:
+        self.logger.info("Report saved successfully on the server.")
         reports_cache_manager.invalidate()
         self.call_js("displayBanner", t.t("audioManager_banner_saveSuccess"), "success")
         return True
       else:
+        self.logger.error("Server returned failure while saving the report.")
         alert(t.t("audioManager_alert_saveFailed"))
         return False
     except Exception as e:
@@ -385,6 +435,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       raise
 
   def queue_manager_1_x_import_item(self, item_id, audio_blob, **event_args):
+    self.logger.info(f"Importing item '{item_id}' from offline queue.")
     self.audio_playback_1.audio_blob = audio_blob
     self.audio_playback_1.visible = True
     self.recording_widget.visible = False

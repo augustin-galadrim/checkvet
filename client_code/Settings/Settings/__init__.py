@@ -201,7 +201,7 @@ class Settings(SettingsTemplate):
     user = anvil.users.get_user()
     if not user:
       return False
-    admin_emails = ["augustincramer.galadrim@gmail.com", "biffy071077@gmail.com"]
+    admin_emails = ["augustincramer.galadrim@gmail.com", "biffy071077@gmail.com", "navetl@yahoo.fr"]
     return user["email"].lower() in admin_emails
 
   def openAdmin(self, **event_args):

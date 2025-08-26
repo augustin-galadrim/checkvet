@@ -11,6 +11,7 @@ from pydub import AudioSegment
 import io
 from ...logging_server import get_logger
 
+
 logger = get_logger(__name__)
 
 MAX_SINGLE_CHUNK_MS = 60_000
@@ -26,165 +27,95 @@ def process_audio_whisper(audio_blob, language):
 
 
 @anvil.server.background_task
-def bg_process_audio_whisper(audio_blob, language):
-  logger.info("Starting background task for audio transcription.")
-  logger.debug(f"Language for transcription: {language}")
-
-  def whisper_call(seg):
-    buf = io.BytesIO()
-    seg.export(buf, format="wav")
-    buf.seek(0)
-    buf.name = "audio.wav"
-
-    for n in range(RETRY_LIMIT):
-      try:
-        logger.debug(f"Whisper API call attempt {n + 1}/{RETRY_LIMIT}.")
-        transcript = client.audio.transcriptions.create(
-          model="whisper-1", file=buf, language=language
-        )
-        logger.debug(f"Whisper API call successful.")
-        return transcript.text
-      except Exception as e:
-        wait_time = 2**n
-        logger.warning(
-          f"Whisper API attempt {n + 1} failed: {e}. Retrying in {wait_time}s..."
-        )
-        if n < RETRY_LIMIT - 1:
-          time.sleep(wait_time)
-        else:
-          logger.error(
-            f"Whisper transcription failed after {RETRY_LIMIT} attempts.", exc_info=True
-          )
-          return {"error": "Whisper transcription failed after multiple retries."}
-
-  # --- 0. Convert to raw bytes ---
-  logger.debug(f"Received audio blob of type: {type(audio_blob)}")
-  if isinstance(audio_blob, str):
-    try:
-      audio_bytes = base64.b64decode(audio_blob, validate=True)
-    except Exception as e:
-      logger.error("Invalid Base-64 audio string received.", exc_info=True)
-      return {"error": "Invalid Base-64 audio string."}
-  elif hasattr(audio_blob, "get_bytes"):
-    audio_bytes = audio_blob.get_bytes()
-  elif isinstance(audio_blob, (bytes, bytearray)):
-    audio_bytes = bytes(audio_blob)
-  else:
-    logger.error(f"Unsupported audio blob type: {type(audio_blob)}")
-    return {"error": "Unsupported audio blob type."}
-  logger.debug(f"Successfully converted audio blob to {len(audio_bytes)} bytes.")
-
-  # --- 1. Load with pydub ---
-  def try_load(fmt=None):
-    try:
-      return AudioSegment.from_file(io.BytesIO(audio_bytes), format=fmt)
-    except Exception:
-      return None
-
-  audio = None
-  header = audio_bytes[:16]
-  detected_format = "unknown"
-  if header.startswith(WEBM_MAGIC):
-    audio = try_load("webm")
-    detected_format = "webm"
-  elif header.startswith(b"OggS"):
-    audio = try_load("ogg")
-    detected_format = "ogg"
-  elif header.startswith(b"fLaC"):
-    audio = try_load("flac")
-    detected_format = "flac"
-  elif header.startswith(b"RIFF"):
-    audio = try_load("wav")
-    detected_format = "wav"
-  elif header[:3] in (b"\xff\xf1", b"\xff\xf9") or header.startswith(b"ID3"):
-    audio = try_load("mp3")
-    detected_format = "mp3"
-  elif header[4:8] in (b"M4A ", b"MP4 ", b"isom", b"iso2", b"mp42"):
-    audio = try_load("mp4")
-    detected_format = "mp4/m4a"
-  elif header.startswith(b"caff"):
-    audio = try_load("caf")
-    detected_format = "caf"
-
-  if audio is None:
-    logger.warning("Could not detect audio format from header, attempting brute force.")
-    for fmt in ["webm", "ogg", "flac", "wav", "mp3", "m4a", "caf", "mp4", "aac"]:
-      audio = try_load(fmt)
-      if audio:
-        detected_format = f"brute-force {fmt}"
-        break
-
-  logger.info(f"Detected audio format: {detected_format}")
-
-  if audio is None:
-    logger.error("Unsupported audio format. Could not read the file.")
-    return {"error": "Unsupported audio format. The file could not be read."}
-
-  # --- 2. Sanity checks and Normalization ---
-  logger.debug(f"Audio length: {len(audio)}ms, dBFS: {audio.dBFS:.2f}")
-  if len(audio) < 150:
-    pad = AudioSegment.silent(duration=300)
-    audio = pad + audio + pad
-    logger.debug(f"Padded short audio to {len(audio)}ms.")
-
-  if audio.dBFS == float("-inf") or audio.dBFS < -80:
-    logger.warning("Audio appears to be silent.")
-    return {"error": "The audio is silent. Please record again."}
-
-  audio = audio.set_channels(1).set_frame_rate(16000)
-  logger.debug("Normalized audio to mono channel, 16000Hz frame rate.")
-
-  # --- 3. Transcription (with chunking) ---
-  if len(audio) <= MAX_SINGLE_CHUNK_MS:
-    logger.info("Audio is short enough, transcribing in a single chunk.")
-    transcription = whisper_call(audio)
-  else:
-    logger.info(f"Audio is too long ({len(audio)}ms). Splitting into chunks.")
-    parts, p = [], 0
-    chunk_count = 0
-    while p < len(audio):
-      chunk_count += 1
-      q = min(p + MAX_SINGLE_CHUNK_MS + OVERLAP_MS, len(audio))
-      logger.debug(f"Transcribing chunk {chunk_count}: {p}ms to {q}ms.")
-      parts.append(whisper_call(audio[p:q]).strip())
-      p += MAX_SINGLE_CHUNK_MS
-    transcription = " ".join(parts)
-    logger.info(f"Finished transcribing {chunk_count} chunks.")
-
-  logger.info(f"Transcription complete. Result length: {len(transcription)} chars.")
-  logger.debug(f"Final Transcription (first 100 chars): {transcription[:100]}")
-  return transcription
-
-
-@anvil.server.callable
-def bg_process_audio_whisper(audio_blob, language, mime_type):
+def bg_process_audio_whisper(audio_blob, language, mime_type=None):
   """
-  Attempts to transcribe an audio blob by sending it directly to Whisper
-  without any conversion. This is for diagnostic purposes.
+  Processes an audio blob by first sanitizing its file structure and then transcribing it.
+  This robustly handles files from sources like iPhones that place metadata at the end.
   """
-  print(f"--- DIRECT TRANSCRIPTION ATTEMPT ---")
+  print(
+    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} --- BG_TASK_START --- Tâche de fond démarrée."
+  )
+  print(
+    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} --- BG_TASK_INFO --- Langue: {language}, Type MIME: {mime_type}"
+  )
+
   try:
+    # STEP 1: Get bytes and save to a temporary file. This is crucial for FFmpeg to seek properly.
     audio_bytes = audio_blob.get_bytes()
-    print(f"Received {len(audio_bytes)} bytes to send directly.")
-
-    # We must create an in-memory file-like object for the OpenAI library
-    in_memory_file = io.BytesIO(audio_bytes)
-
-    # The library needs a filename to guess the type, this is crucial
-    filename = f"audio.{mime_type.split('/')[1]}"  # e.g., 'audio.mp4'
-    in_memory_file.name = filename
-    print(f"Sending to Whisper as '{filename}'...")
-
-    transcript = client.audio.transcriptions.create(
-      model="whisper-1", file=in_memory_file, language=language
+    print(
+      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 1: Octets reçus du client: {len(audio_bytes)} octets."
     )
 
-    result = transcript.text
-    print(f"SUCCESS: Direct transcription returned: {result}")
-    return {"success": True, "transcription": result}
+    with anvil.media.TempFile() as tmp_file_path:
+      with open(tmp_file_path, "wb") as f:
+        f.write(audio_bytes)
+
+        # STEP 2: Load the audio from the file path.
+        # This is the critical sanitization step. By loading from a file path,
+        # we force FFmpeg to seek for the 'moov atom' (even at the end) and
+        # correctly reconstruct the audio stream in memory.
+      print(
+        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 2: Chargement de l'audio depuis le fichier temporaire pour réparation..."
+      )
+      raw_audio = AudioSegment.from_file(tmp_file_path)
+
+      duration_ms = len(raw_audio)
+      print(
+        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 3: Audio chargé avec succès. Durée détectée: {duration_ms} ms."
+      )
+
+      # If duration is still too short, the file is genuinely empty or corrupted.
+      if duration_ms < 500:  # Using a 500ms threshold
+        print(
+          f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] {CONTEXT} La durée est trop courte. L'audio est peut-être silencieux ou corrompu."
+        )
+        return ""
+
+        # STEP 3: Normalize the (now correct) audio and prepare it for Whisper.
+      normalized_audio = raw_audio.set_frame_rate(16000).set_channels(1)
+
+      wav_buffer = io.BytesIO()
+      normalized_audio.export(wav_buffer, format="wav")
+      wav_buffer.seek(0)
+      wav_buffer.name = "audio.wav"
+
+      # STEP 4: Call the Whisper API with the clean WAV data.
+      for n in range(RETRY_LIMIT):
+        try:
+          print(
+            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [DEBUG] {CONTEXT} Appel API Whisper, tentative {n + 1}/{RETRY_LIMIT}."
+          )
+          wav_buffer.seek(0)
+          transcript = client.audio.transcriptions.create(
+            model="whisper-1", file=wav_buffer, language=language
+          )
+
+          final_transcription = transcript.text
+          print(
+            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} Transcription terminée. Longueur: {len(final_transcription)} caractères."
+          )
+          return final_transcription
+
+        except Exception as e:
+          wait_time = 2**n
+          print(
+            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] {CONTEXT} Tentative {n + 1} de l'API Whisper a échoué: {e}. Nouvelle tentative dans {wait_time}s..."
+          )
+          if n < RETRY_LIMIT - 1:
+            time.sleep(wait_time)
+          else:
+            print(
+              f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} La transcription Whisper a échoué après {RETRY_LIMIT} tentatives."
+            )
+            return {
+              "error": "La transcription Whisper a échoué après plusieurs tentatives."
+            }
 
   except Exception as e:
-    error_message = f"FAILURE: Direct transcription crashed with an error: {str(e)}"
-    print(error_message)
+    print(
+      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} Une erreur critique est survenue: {e}"
+    )
     print(traceback.format_exc())
-    return {"success": False, "error": error_message}
+    return {
+      "error": "Une erreur serveur est survenue lors du traitement du fichier audio."
+    }

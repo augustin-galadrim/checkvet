@@ -22,7 +22,7 @@ container:
           width: 450px; /* Ajustez la taille si nécessaire */
           height: auto;
           /* Animation: nom, durée, fonction de temporisation, délai, mode de remplissage */
-          animation: move-up 0.5s ease-out 0.75s forwards;
+          animation: move-up 0.5s ease-out 1.5s forwards;
         }
 
         .spinner {

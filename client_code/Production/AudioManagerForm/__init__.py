@@ -231,6 +231,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.call_js("setAudioWorkflowState", "decision")
 
   def handle_new_recording(self, audio_blob, mime_type, **event_args):
+    self.logger.info(
+      f"New recording received from widget. MIME Type: {mime_type}, Blob Size: {audio_blob.size} bytes"
+    )
     self.current_audio_mime_type = mime_type  # Store the mime_type
     self.audio_playback_1.audio_blob = audio_blob
     self.recording_widget.visible = False

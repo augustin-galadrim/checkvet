@@ -37,7 +37,7 @@ container:
           opacity: 0; /* Initialement masqué */
           transform: translate(-50%, -50%); /* Center the spinner */
           /* Enchaînement des animations : fondu en entrée, puis rotation infinie */
-          animation: fade-in 0.5s ease-out 1.25s forwards, spin 1s linear 1.75s infinite;
+          animation: fade-in 0.5s ease-out 2.5s forwards, spin 1s linear 1.75s infinite;
         }
 
         .status-text {

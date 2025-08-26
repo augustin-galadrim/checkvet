@@ -11,6 +11,7 @@ from pydub import AudioSegment
 import io
 from datetime import datetime
 import traceback
+import anvil.media
 
 # --- Suppression de la dépendance au logger personnalisé ---
 # from ...logging_server import get_logger
@@ -33,8 +34,10 @@ def process_audio_whisper(audio_blob, language, mime_type=None):
 
 @anvil.server.background_task
 def bg_process_audio_whisper(audio_blob, language, mime_type=None):
-  # --- Remplacement des logs par des prints formatés ---
-
+  """
+  Processes an audio blob by first sanitizing its file structure and then transcribing it.
+  This robustly handles files from sources like iPhones that place metadata at the end.
+  """
   print(
     f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} --- BG_TASK_START --- Tâche de fond démarrée."
   )
@@ -42,160 +45,83 @@ def bg_process_audio_whisper(audio_blob, language, mime_type=None):
     f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} --- BG_TASK_INFO --- Langue: {language}, Type MIME: {mime_type}"
   )
 
-  def whisper_call(segment):
-    wav_buffer = io.BytesIO()
-    segment.export(wav_buffer, format="wav")
-    wav_buffer.seek(0)
-    wav_buffer.name = "audio.wav"
-
-    for n in range(RETRY_LIMIT):
-      try:
-        print(
-          f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [DEBUG] {CONTEXT} Appel API Whisper, tentative {n + 1}/{RETRY_LIMIT}."
-        )
-        transcript = client.audio.transcriptions.create(
-          model="whisper-1", file=wav_buffer, language=language
-        )
-        print(
-          f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [DEBUG] {CONTEXT} Appel API Whisper réussi."
-        )
-        return transcript.text
-      except Exception as e:
-        wait_time = 2**n
-        print(
-          f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] {CONTEXT} Tentative {n + 1} de l'API Whisper a échoué : {e}. Nouvelle tentative dans {wait_time}s..."
-        )
-        if n < RETRY_LIMIT - 1:
-          time.sleep(wait_time)
-        else:
-          print(
-            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} La transcription Whisper a échoué après {RETRY_LIMIT} tentatives."
-          )
-          print(traceback.format_exc())
-          return {
-            "error": "La transcription Whisper a échoué après plusieurs tentatives."
-          }
-
-  # --- Étape 0 : Obtenir les octets bruts de l'objet Media ---
   try:
+    # STEP 1: Get bytes and save to a temporary file. This is crucial for FFmpeg to seek properly.
     audio_bytes = audio_blob.get_bytes()
     print(
-      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 1 : Taille des octets reçus du client : {len(audio_bytes)} octets."
+      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 1: Octets reçus du client: {len(audio_bytes)} octets."
     )
-    if len(audio_bytes) < 1000:
+
+    with anvil.media.TempFile() as tmp_file_path:
+      with open(tmp_file_path, "wb") as f:
+        f.write(audio_bytes)
+
+        # STEP 2: Load the audio from the file path.
+        # This is the critical sanitization step. By loading from a file path,
+        # we force FFmpeg to seek for the 'moov atom' (even at the end) and
+        # correctly reconstruct the audio stream in memory.
       print(
-        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] {CONTEXT} La taille des données reçues est très faible, suspectant un fichier vide ou corrompu."
+        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 2: Chargement de l'audio depuis le fichier temporaire pour réparation..."
       )
+      raw_audio = AudioSegment.from_file(tmp_file_path)
+
+      duration_ms = len(raw_audio)
+      print(
+        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 3: Audio chargé avec succès. Durée détectée: {duration_ms} ms."
+      )
+
+      # If duration is still too short, the file is genuinely empty or corrupted.
+      if duration_ms < 500:  # Using a 500ms threshold
+        print(
+          f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] {CONTEXT} La durée est trop courte. L'audio est peut-être silencieux ou corrompu."
+        )
+        return ""
+
+        # STEP 3: Normalize the (now correct) audio and prepare it for Whisper.
+      normalized_audio = raw_audio.set_frame_rate(16000).set_channels(1)
+
+      wav_buffer = io.BytesIO()
+      normalized_audio.export(wav_buffer, format="wav")
+      wav_buffer.seek(0)
+      wav_buffer.name = "audio.wav"
+
+      # STEP 4: Call the Whisper API with the clean WAV data.
+      for n in range(RETRY_LIMIT):
+        try:
+          print(
+            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [DEBUG] {CONTEXT} Appel API Whisper, tentative {n + 1}/{RETRY_LIMIT}."
+          )
+          wav_buffer.seek(0)
+          transcript = client.audio.transcriptions.create(
+            model="whisper-1", file=wav_buffer, language=language
+          )
+
+          final_transcription = transcript.text
+          print(
+            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} Transcription terminée. Longueur: {len(final_transcription)} caractères."
+          )
+          return final_transcription
+
+        except Exception as e:
+          wait_time = 2**n
+          print(
+            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] {CONTEXT} Tentative {n + 1} de l'API Whisper a échoué: {e}. Nouvelle tentative dans {wait_time}s..."
+          )
+          if n < RETRY_LIMIT - 1:
+            time.sleep(wait_time)
+          else:
+            print(
+              f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} La transcription Whisper a échoué après {RETRY_LIMIT} tentatives."
+            )
+            return {
+              "error": "La transcription Whisper a échoué après plusieurs tentatives."
+            }
+
   except Exception as e:
     print(
-      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} CHECKPOINT 1 ÉCHEC : Impossible d'obtenir les octets de l'objet média : {e}"
+      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} Une erreur critique est survenue: {e}"
     )
     print(traceback.format_exc())
-    return {"error": "Objet média invalide reçu."}
-
-  # --- CHECKPOINT 2 : Tentative de chargement par pydub ---
-  raw_audio = None
-  file_format = None
-  if mime_type and "/" in mime_type:
-    file_format = mime_type.split("/")[1].replace("x-", "")
-    if file_format in ["aac", "mpeg"]:
-      file_format = "m4a" if file_format == "aac" else "mp3"
-
-  try:
-    print(
-      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 2 : Tentative de chargement de l'audio avec l'indice de format : '{file_format}'"
-    )
-    raw_audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format=file_format)
-  except Exception as e:
-    print(
-      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] {CONTEXT} Impossible de charger l'audio avec l'indice '{file_format}': {e}. Tentative de détection automatique."
-    )
-    try:
-      raw_audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
-    except Exception as final_e:
-      print(
-        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} CHECKPOINT 2 ÉCHEC : Pydub n'a pas réussi à charger l'audio. Erreur : {final_e}"
-      )
-      print(traceback.format_exc())
-      return {
-        "error": "Format audio non supporté. Le fichier n'a pas pu être lu par le serveur."
-      }
-
-  # --- CHECKPOINT 3 : Vérifier le résultat après chargement par pydub ---
-  duration_ms = len(raw_audio)
-  dbfs = raw_audio.dBFS
-  frame_rate = raw_audio.frame_rate
-  channels = raw_audio.channels
-  sample_width = raw_audio.sample_width
-
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 3 : Pydub loaded audio properties:"
-  )
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Duration: {duration_ms} ms"
-  )
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Loudness (dBFS): {dbfs}"
-  )
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Frame Rate: {frame_rate} Hz"
-  )
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Channels: {channels}"
-  )
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Sample Width: {sample_width} bytes"
-  )
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 3 : Durée de l'audio après chargement par pydub : {duration_ms} ms."
-  )
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 3 : Niveau sonore (dBFS) : {dbfs}."
-  )
-  if duration_ms == 0:
-    print(
-      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} ERREUR FATALE : Pydub a chargé l'audio mais sa durée est de 0 ms. Le fichier est considéré comme vide."
-    )
-    return "Erreur de décodage, audio vide."
-
-  # --- Normalisation ---
-  try:
-    print(
-      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} Normalisation de l'audio en WAV mono 16kHz pour le traitement."
-    )
-    normalized_audio = raw_audio.set_frame_rate(16000).set_channels(1)
-  except Exception as e:
-    print(
-      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} Échec lors de l'étape de normalisation de l'audio : {e}"
-    )
-    print(traceback.format_exc())
-    return {"error": "Échec de la normalisation de l'audio."}
-
-  # --- Traitement Final ---
-  if normalized_audio.dBFS == float("-inf") or normalized_audio.dBFS < -80:
-    print(
-      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] {CONTEXT} L'audio semble être silencieux après normalisation."
-    )
-    return ""
-
-  if len(normalized_audio) <= MAX_SINGLE_CHUNK_MS:
-    transcription = whisper_call(normalized_audio)
-  else:
-    print(
-      f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} L'audio normalisé est trop long ({len(normalized_audio)}ms). Découpage en morceaux."
-    )
-    parts = []
-    p = 0
-    while p < len(normalized_audio):
-      chunk = normalized_audio[p : p + MAX_SINGLE_CHUNK_MS]
-      parts.append(whisper_call(chunk).strip())
-      p += MAX_SINGLE_CHUNK_MS
-    transcription = " ".join(parts)
-
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} Transcription terminée. Longueur du résultat : {len(transcription)} caractères."
-  )
-  print(
-    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [DEBUG] {CONTEXT} Transcription Finale (100 premiers caractères) : {transcription[:100]}"
-  )
-  return transcription
+    return {
+      "error": "Une erreur serveur est survenue lors du traitement du fichier audio."
+    }

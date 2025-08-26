@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 ADMIN_EMAILS = [
   "augustincramer.galadrim@gmail.com",
   "biffy071077@gmail.com",
-  "navetl@yahoo.fr",
+  "navetl@yahoo.com",
 ]
 
 

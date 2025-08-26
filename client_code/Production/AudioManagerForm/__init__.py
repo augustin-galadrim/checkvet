@@ -244,62 +244,60 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.reset_audio_workflow()
 
   def process_recording(self, **event_args):
-    self.logger.info("Starting initial report generation process.")
+    self.logger.info("Starting report creation process.")
     js_blob_proxy = self.audio_playback_1.audio_blob
     if not js_blob_proxy:
-      self.logger.warning("process_recording halted: No audio blob available.")
       return alert(t.t("audioManager_alert_noAudio"))
 
-    editor_content = self.text_editor_1.get_content()
     if self.selected_template is None:
-      self.logger.warning("process_recording halted: No template selected.")
       return alert(t.t("audioManager_alert_noTemplate"))
 
-    self.logger.debug(
-      f"Using template '{self.selected_template.get('name')}' with language '{self.selected_template_language}'."
-    )
-
+      # Show initial feedback immediately
     self.call_js("setAudioWorkflowState", "processing")
     self.user_feedback_1.show(t.t("feedback_transcribing"))
+
     anvil_media_blob = anvil.js.to_media(js_blob_proxy)
     lang = self.selected_template_language
+    template_html = self.text_editor_1.get_content()
 
     try:
-      self.logger.info("Step 1: Transcribing audio...")
-      self.raw_transcription = self._transcribe_audio(anvil_media_blob, lang)
-      self.logger.info("Transcription successful.")
-      self.logger.debug(
-        f"Raw transcription (first 100 chars): {self.raw_transcription[:100]}"
+      # Call our single, clean entry point
+      task = anvil.server.call(
+        "process_audio_for_report",
+        anvil_media_blob,
+        lang,
+        self.current_audio_mime_type,
+        template_html,
       )
 
-      self.user_feedback_1.set_status(t.t("feedback_generating"))
-      self.logger.info("Step 2: Generating report from transcription...")
-      report_content = self._generate_report_from_transcription(
-        self.raw_transcription, lang
-      )
-      self.logger.info("Report generation successful.")
+      # Wait for the background task to complete, updating the UI with progress
+      last_displayed_step = "feedback_transcribing"
+      while not task.is_completed():
+        time.sleep(1)
+        state = task.get_state()
+        current_step = state.get("step")
 
-      self.user_feedback_1.set_status(t.t("feedback_formatting"))
-      self.logger.info("Step 3: Formatting final report...")
-      final_html = self._format_report(report_content, editor_content, lang)
-      self.logger.info("Formatting successful. Displaying final report.")
+        # Only update the UI if the step has changed
+        if current_step and current_step != last_displayed_step:
+          self.user_feedback_1.set_status(t.t(current_step))
+          last_displayed_step = current_step
 
-      self.text_editor_1.html_content = final_html
-      self.mode = "modification"
-      self.call_js("setFormMode", self.mode)
+      result = task.get_return_value()
 
-    except anvil.server.AppOfflineError:
-      self.logger.warning(
-        "Connection lost during AI processing. Saving audio to offline queue."
-      )
-      alert(t.t("alert_offlineSave"))
-      self.queue_manager_1.open_title_modal(js_blob_proxy)
+      if result and result.get("success"):
+        self.logger.info("Report pipeline completed successfully.")
+        self.text_editor_1.html_content = result.get("final_html")
+        self.raw_transcription = result.get("raw_transcription")
+        self.mode = "modification"
+        self.call_js("setFormMode", self.mode)
+      else:
+        error_msg = result.get("error", "An unknown error occurred.")
+        self.logger.error(f"Report pipeline failed: {error_msg}")
+        alert(f"Processing failed: {error_msg}")
+
     except Exception as e:
-      self.logger.error("An exception occurred in process_recording.", e)
-      self.call_js("displayBanner", f"{t.t('error_processingFailed')}: {e}", "error")
-      if confirm(t.t("confirm_offlineSaveOnError")):
-        self.logger.warning("User confirmed saving to offline queue after error.")
-        self.queue_manager_1.open_title_modal(js_blob_proxy)
+      self.logger.error(f"A critical client-side error occurred: {e}", e)
+      alert(f"A critical error occurred: {e}")
     finally:
       self.user_feedback_1.hide()
       self.reset_audio_workflow()
@@ -362,7 +360,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def _transcribe_audio(self, audio_blob, lang):
     self.logger.info("Launching background task for transcription.")
     task = anvil.server.call_s(
-      "transcribe_direct_to_whisper",
+      "process_audio_whisper",
       audio_blob,
       language=lang,
       mime_type=self.current_audio_mime_type,

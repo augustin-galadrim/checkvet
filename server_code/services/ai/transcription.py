@@ -124,6 +124,28 @@ def bg_process_audio_whisper(audio_blob, language, mime_type=None):
   # --- CHECKPOINT 3 : Vérifier le résultat après chargement par pydub ---
   duration_ms = len(raw_audio)
   dbfs = raw_audio.dBFS
+  frame_rate = raw_audio.frame_rate
+  channels = raw_audio.channels
+  sample_width = raw_audio.sample_width
+
+  print(
+    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 3 : Pydub loaded audio properties:"
+  )
+  print(
+    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Duration: {duration_ms} ms"
+  )
+  print(
+    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Loudness (dBFS): {dbfs}"
+  )
+  print(
+    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Frame Rate: {frame_rate} Hz"
+  )
+  print(
+    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Channels: {channels}"
+  )
+  print(
+    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT}   -> Sample Width: {sample_width} bytes"
+  )
   print(
     f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} CHECKPOINT 3 : Durée de l'audio après chargement par pydub : {duration_ms} ms."
   )

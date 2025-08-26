@@ -46,11 +46,15 @@ def bg_process_audio_whisper(audio_blob, language):
         return transcript.text
       except Exception as e:
         wait_time = 2**n
-        logger.warning(f"Whisper API attempt {n + 1} failed: {e}. Retrying in {wait_time}s...")
+        logger.warning(
+          f"Whisper API attempt {n + 1} failed: {e}. Retrying in {wait_time}s..."
+        )
         if n < RETRY_LIMIT - 1:
           time.sleep(wait_time)
         else:
-          logger.error(f"Whisper transcription failed after {RETRY_LIMIT} attempts.", exc_info=True)
+          logger.error(
+            f"Whisper transcription failed after {RETRY_LIMIT} attempts.", exc_info=True
+          )
           return {"error": "Whisper transcription failed after multiple retries."}
 
   # --- 0. Convert to raw bytes ---
@@ -150,3 +154,37 @@ def bg_process_audio_whisper(audio_blob, language):
   logger.info(f"Transcription complete. Result length: {len(transcription)} chars.")
   logger.debug(f"Final Transcription (first 100 chars): {transcription[:100]}")
   return transcription
+
+
+@anvil.server.callable
+def bg_process_audio_whisper(audio_blob, language, mime_type):
+  """
+  Attempts to transcribe an audio blob by sending it directly to Whisper
+  without any conversion. This is for diagnostic purposes.
+  """
+  print(f"--- DIRECT TRANSCRIPTION ATTEMPT ---")
+  try:
+    audio_bytes = audio_blob.get_bytes()
+    print(f"Received {len(audio_bytes)} bytes to send directly.")
+
+    # We must create an in-memory file-like object for the OpenAI library
+    in_memory_file = io.BytesIO(audio_bytes)
+
+    # The library needs a filename to guess the type, this is crucial
+    filename = f"audio.{mime_type.split('/')[1]}"  # e.g., 'audio.mp4'
+    in_memory_file.name = filename
+    print(f"Sending to Whisper as '{filename}'...")
+
+    transcript = client.audio.transcriptions.create(
+      model="whisper-1", file=in_memory_file, language=language
+    )
+
+    result = transcript.text
+    print(f"SUCCESS: Direct transcription returned: {result}")
+    return {"success": True, "transcription": result}
+
+  except Exception as e:
+    error_message = f"FAILURE: Direct transcription crashed with an error: {str(e)}"
+    print(error_message)
+    print(traceback.format_exc())
+    return {"success": False, "error": error_message}

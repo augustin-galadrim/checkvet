@@ -15,42 +15,39 @@ logger = get_logger(__name__)
 @anvil.server.callable
 def admin_assign_base_template_to_users(template_id, user_ids):
   """
-  Admin function to assign a BASE template to multiple users by creating copies for each.
+  Admin function to assign a BASE template to multiple users by unconditionally
+  creating a new copy for each.
   """
-  logger.info(f"Admin request to assign base template ID '{template_id}' to {len(user_ids)} users.")
+  logger.info(
+    f"Admin request to assign base template ID '{template_id}' to {len(user_ids)} users."
+  )
   if not template_id or not user_ids:
     logger.warning("Assignment failed: template_id or user_ids not provided.")
     return False
 
   try:
-    # Get the base template from the correct table
     base_template = app_tables.base_templates.get_by_id(template_id)
     if not base_template:
-      logger.error(f"Assignment failed: Base template with ID '{template_id}' not found.")
+      logger.error(
+        f"Assignment failed: Base template with ID '{template_id}' not found."
+      )
       return False
 
-    # Process each user ID
     for user_id in user_ids:
       try:
         user = app_tables.users.get_by_id(user_id)
         if user:
-          # Check if user already has a custom template with the same name
-          existing_template = app_tables.custom_templates.get(
-            name=base_template["name"], owner=user
+          # Unconditionally create a copy of the base template.
+          app_tables.custom_templates.add_row(
+            name=base_template["name"],
+            owner=user,
+            html=base_template["html"],
+            display=True,
+            language=base_template["language"],
           )
-
-          if not existing_template:
-            # Create a copy of the base template in the custom_templates table
-            app_tables.custom_templates.add_row(
-              name=base_template["name"],
-              owner=user,
-              html=base_template["html"],
-              display=True,  # New templates are visible by default
-              language=base_template['language']
-            )
-            logger.debug(f"Assigned template '{base_template['name']}' to user '{user['email']}'.")
-          else:
-            logger.debug(f"User '{user['email']}' already has template '{base_template['name']}'. Skipping.")
+          logger.debug(
+            f"Assigned template '{base_template['name']}' ({base_template['language']}) to user '{user['email']}'."
+          )
       except Exception as e:
         logger.error(f"Error assigning template to user {user_id}: {str(e)}")
 

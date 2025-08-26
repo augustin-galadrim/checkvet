@@ -4,38 +4,77 @@ container:
     html: |-
       <style>
         .startup-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background-color: #3974CB;
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 40px 20px;
-          gap: 15px;
-          color: #888;
-          font-style: italic;
-          margin: 3em;
+          margin: 0;
+          padding: 0;
+          overflow: hidden; /* Empêche les barres de défilement */
         }
+
+        .startup-logo {
+          width: 450px; /* Ajustez la taille si nécessaire */
+          height: auto;
+          /* Animation: nom, durée, fonction de temporisation, délai, mode de remplissage */
+          animation: move-up 0.5s ease-out 1.5s forwards;
+        }
+
         .spinner {
+          position: absolute;
+          top: 50%;
+          left: 50%;
           width: 50px;
           height: 50px;
-          border: 5px solid #f3f3f3; /* Light grey base */
-          border-top: 5px solid #4CAF50; /* Checkvet Green */
+          border: 5px solid rgba(255, 255, 255, 0.3); /* Bordure plus claire pour le contraste */
+          border-top: 5px solid #FFFFFF; /* Bordure supérieure blanche */
           border-radius: 50%;
-          animation: spin 1s linear infinite;
+          opacity: 0; /* Initialement masqué */
+          transform: translate(-50%, -50%); /* Center the spinner */
+          /* Enchaînement des animations : fondu en entrée, puis rotation infinie */
+          animation: fade-in 0.5s ease-out 2.5s forwards, spin 1s linear 1.75s infinite;
         }
+
         .status-text {
-          font-size: 16px;
-          font-weight: 500;
+          display: none; /* Masque le texte de chargement */
         }
+
+        @keyframes move-up {
+          100% {
+            transform: translateY(-120px); /* Increased upward movement */
+          }
+        }
+
+        @keyframes fade-in {
+          100% {
+            opacity: 1;
+          }
+        }
+
         @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+          0% {
+            transform: translate(-50%, -50%) rotate(0deg);
+          }
+          100% {
+            transform: translate(-50%, -50%) rotate(360deg);
+          }
         }
       </style>
-
       <div class="startup-container">
+        <!-- Le logo s'anime vers le haut -->
+        <img src="_/theme/imgs/startup/checkvet_long.png" alt="Logo Checkvet" class="startup-logo">
+
+        <!-- Le spinner apparaît au centre après le mouvement du logo -->
         <div class="spinner"></div>
+
+        <!-- Le message de chargement original est conservé mais masqué -->
         <p class="status-text" id="startupForm-center-loadingMessage">
-          Loading application...
+          Chargement de l'application...
         </p>
       </div>
 

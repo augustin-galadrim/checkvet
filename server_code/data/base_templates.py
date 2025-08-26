@@ -91,29 +91,17 @@ def _create_custom_template_from_base(base_template, user):
     bool: True if the template was created, False if it already existed.
   """
   try:
-    template_name = base_template["name"]
-    template_html = base_template["html"]
-
-    # Check if a custom template with the same name already exists for this user to avoid duplicates.
-    is_existing = app_tables.custom_templates.get(owner=user, name=template_name)
-
-    if is_existing:
-      print(
-        f"[INFO] User '{user['email']}' already has template '{template_name}'. Skipping."
-      )
-      return False
-
     # Create the new row in the custom_templates table.
     app_tables.custom_templates.add_row(
-      name=template_name,
-      html=template_html,
+      name=base_template["name"],
+      html=base_template["html"],
       owner=user,
       display=True,
       language=base_template["language"],
     )
 
     print(
-      f"[INFO] Created custom template '{template_name}' for user '{user['email']}'."
+      f"[INFO] Created custom template '{base_template['name']}' for user '{user['email']}'."
     )
     return True
 

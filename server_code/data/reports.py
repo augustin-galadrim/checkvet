@@ -117,7 +117,7 @@ def write_report_first_time(
   last_modified=None,
   report_rich=None,
   statut=None,
-  animal_id=None, # MODIFIED: Changed from unique_id to animal_id
+  animal_id=None,
   transcript=None,
   language=None
 ):
@@ -174,7 +174,7 @@ def write_report_first_time(
     report_row["statut"] = statut
 
   if transcript is not None:
-    print(f"[DEBUG] Updating statut to {transcript}")
+    print(f"[DEBUG] Updating transcript to {transcript}")
     report_row["transcript"] = transcript
 
   if language is not None:

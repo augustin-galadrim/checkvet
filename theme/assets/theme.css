@@ -5,7 +5,7 @@
 
 /* Then, style the container to use your GIF as the background */
 .anvil-spinner {
-  background-image: url('_/theme/beautiful-running-horse-sprite-animation.gif') !important; /* Make sure the filename matches what you uploaded */
+  background-image: url('_/theme/berautiful-running-horse-sprite-animation.gif') !important; /* Make sure the filename matches what you uploaded */
   background-repeat: no-repeat !important;
   background-position: center !important;
   background-color: transparent !important; /* Make sure there is no white box behind it */

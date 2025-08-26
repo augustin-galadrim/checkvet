@@ -362,7 +362,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def _transcribe_audio(self, audio_blob, lang):
     self.logger.info("Launching background task for transcription.")
     task = anvil.server.call_s(
-      "process_audio_whisper",
+      "transcribe_direct_to_whisper",
       audio_blob,
       language=lang,
       mime_type=self.current_audio_mime_type,

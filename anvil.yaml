@@ -613,8 +613,11 @@ metadata: {logo_img: 'asset:Plan de travail 1 copie 5.png'}
 name: checkvet
 native_deps:
   head_html: |-
+    <meta name="theme-color" content="#3974CB">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/NoSleep.js/0.12.0/NoSleep.min.js"></script>
     <script src="_/theme/global-scripts.js"></script>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 package_name: checkvet
 runtime_options:
   client_version: '3'

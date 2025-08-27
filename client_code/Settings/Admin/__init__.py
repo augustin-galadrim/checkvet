@@ -61,6 +61,31 @@ class Admin(AdminTemplate):
       alert(f"Error saving structure: {e}")
       return False
 
+  def add_vet_to_structure(self, vet_email, **event_args):
+    """Called from JS to add a vet to the current structure."""
+    if not self.current_structure_name:
+      alert("No structure selected. Please select a structure to modify first.")
+      return
+    if not vet_email:
+      alert("Please enter the veterinarian's email address.")
+      return
+
+    try:
+      success = anvil.server.call_s(
+        "admin_add_vet_to_structure", self.current_structure_name, vet_email
+      )
+      if success:
+        alert(f"Successfully added {vet_email} to {self.current_structure_name}.")
+        # Refresh the details view to show the new vet
+        self.get_structure_details(self.current_structure_name)
+      else:
+        # The server function returns False on specific failures (e.g., user not found)
+        alert(
+          f"Failed to add vet. Please check the email address and that the user exists."
+        )
+    except Exception as e:
+      alert(f"An error occurred while adding the vet: {e}")
+
   def remove_vet_from_structure(self, user_id, **event_args):
     """Called from JS to remove a vet from the current structure."""
     if not user_id:

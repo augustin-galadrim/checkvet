@@ -16,13 +16,13 @@ class Admin(AdminTemplate):
     # Load all data and pass it to Javascript for client-side searching and rendering
     try:
       all_structures = anvil.server.call_s("read_structures")
-      self.call_js("initializeData", "structures", all_structures)
+      self.call_js("admin_initializeData", "structures", all_structures)
 
       all_users = anvil.server.call_s("admin_get_all_users")
-      self.call_js("initializeData", "users", all_users)
+      self.call_js("admin_initializeData", "users", all_users)
 
       all_base_templates = anvil.server.call_s("admin_get_all_base_templates")
-      self.call_js("initializeData", "templates", all_base_templates)
+      self.call_js("admin_initializeData", "templates", all_base_templates)
     except Exception as e:
       alert(f"An error occurred while loading initial data: {e}")
 
@@ -30,20 +30,20 @@ class Admin(AdminTemplate):
   def get_structure_details(self, structure_name, **event_args):
     self.current_structure_name = structure_name
     # Data is already on the client, just find it
-    structure = self.call_js("findDataById", "structures", structure_name)
+    structure = self.call_js("admin_findDataById", "structures", structure_name)
 
     if structure:
-      self.call_js("displayStructureDetails", structure)
+      self.call_js("admin_displayStructureDetails", structure)
       # Fetch and display affiliated vets
       vets = anvil.server.call_s("get_vets_in_structure", structure_name)
-      self.call_js("displayAffiliatedVets", vets)
+      self.call_js("admin_displayAffiliatedVets", vets)
     else:
       alert(f"Structure '{structure_name}' not found.")
 
   def new_structure(self, **event_args):
     self.current_structure_name = None
-    self.call_js("clearStructureForm")
-    self.call_js("showStructureForm", True)
+    self.call_js("admin_clearStructureForm")
+    self.call_js("admin_showStructureForm", True)
 
   def save_structure(self, structure_data, **event_args):
     try:
@@ -55,7 +55,7 @@ class Admin(AdminTemplate):
       alert("Structure saved successfully!")
       # Reload all data after save
       self.on_form_show()
-      self.call_js("showStructureForm", False)
+      self.call_js("admin_showStructureForm", False)
       return True
     except Exception as e:
       alert(f"Error saving structure: {e}")
@@ -79,20 +79,20 @@ class Admin(AdminTemplate):
 
   # ----- User Management -----
   def get_user_details(self, user_id, **event_args):
-    user = self.call_js("findDataById", "users", user_id)
+    user = self.call_js("admin_findDataById", "users", user_id)
     if user:
       self.current_user_id = user_id
-      all_structures = self.call_js("getAllData", "structures")
+      all_structures = self.call_js("admin_getAllData", "structures")
       user_templates = anvil.server.call_s("admin_get_templates_for_user", user_id)
-      self.call_js("displayUserDetails", user, all_structures, user_templates)
+      self.call_js("admin_displayUserDetails", user, all_structures, user_templates)
     else:
       alert(f"User with ID '{user_id}' not found.")
 
   def new_user(self, **event_args):
     self.current_user_id = None
-    all_structures = self.call_js("getAllData", "structures")
-    self.call_js("clearUserForm")
-    self.call_js("showUserForm", True, all_structures)
+    all_structures = self.call_js("admin_getAllData", "structures")
+    self.call_js("admin_clearUserForm")
+    self.call_js("admin_showUserForm", True, all_structures)
 
   def save_user(self, user_data, **event_args):
     try:
@@ -119,7 +119,7 @@ class Admin(AdminTemplate):
 
       alert("User saved successfully!")
       self.on_form_show()
-      self.call_js("showUserForm", False)
+      self.call_js("admin_showUserForm", False)
       return True
 
     except Exception as e:
@@ -130,11 +130,11 @@ class Admin(AdminTemplate):
 
   # ----- Template Management -----
   def get_template_details(self, template_id, **event_args):
-    template = self.call_js("findDataById", "templates", template_id)
+    template = self.call_js("admin_findDataById", "templates", template_id)
     if template:
       self.current_template_id = template_id
-      all_users = self.call_js("getAllData", "users")
-      self.call_js("displayTemplateDetails", template, all_users, "base")
+      all_users = self.call_js("admin_getAllData", "users")
+      self.call_js("admin_displayTemplateDetails", template, all_users, "base")
     else:
       alert(f"Base Template '{template_id}' not found.")
 
@@ -145,7 +145,7 @@ class Admin(AdminTemplate):
       if template_data:
         self.current_template_id = template_id
         # New JS function to populate the editor in the user tab
-        self.call_js("displayUserTemplateEditor", template_data)
+        self.call_js("admin_displayUserTemplateEditor", template_data)
       else:
         alert("Could not load the selected template.")
     except Exception as e:
@@ -153,9 +153,9 @@ class Admin(AdminTemplate):
 
   def new_template(self, **event_args):
     self.current_template_id = None
-    self.call_js("clearTemplateForm")
+    self.call_js("admin_clearTemplateForm")
     # The last argument 'False' tells JS to hide the assignment section for new templates
-    self.call_js("showTemplateForm", True, [], False)
+    self.call_js("admin_showTemplateForm", True, [], False)
 
   def save_base_template(self, template_data, **event_args):
     try:
@@ -164,13 +164,13 @@ class Admin(AdminTemplate):
         return False
       template_data["template_id"] = (
         self.current_template_id
-        if self.call_js("getCurrentEditingMode") == "base"
+        if self.call_js("admin_getCurrentEditingMode") == "base"
         else None
       )
       anvil.server.call_s("admin_write_base_template", **template_data)
       alert("Base template saved successfully!")
       self.on_form_show()
-      self.call_js("showTemplateForm", False)
+      self.call_js("admin_showTemplateForm", False)
       return True
     except Exception as e:
       alert(f"Error saving base template: {e}")
@@ -191,9 +191,9 @@ class Admin(AdminTemplate):
         language=template_data.get("language"),
       )
       alert("User template saved successfully!")
-      self.call_js("showTemplateForm", False)
+      self.call_js("admin_showTemplateForm", False)
       # Hide user template editor and refresh the user details to see the updated template list
-      self.call_js("hideUserTemplateEditor")
+      self.call_js("admin_hideUserTemplateEditor")
       self.get_user_details(self.current_user_id)
       return True
     except Exception as e:

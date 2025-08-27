@@ -283,7 +283,7 @@ container:
                 if (!file.type.startsWith('audio/') && !/\.(m4a|caf|mp3|aac|wav)$/i.test(file.name)) {
                   return alert(localeTexts.invalidFile);
                 }
-                anvil.call(document.getElementById('stableAnchor'), 'process_uploaded_audio', file);
+                anvil.call(document.getElementById('stableAnchor'), 'process_uploaded_audio', file, file.type);
               };
 
               window.renderTemplates = (templates) => {

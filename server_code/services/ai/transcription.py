@@ -3,8 +3,12 @@ from . import client
 import io
 import traceback
 from datetime import datetime
+from pydub import AudioSegment
+
 
 CONTEXT = "[SERVER:transcription]"
+# Set a safe limit just below OpenAI's 25MB limit to be safe.
+MAX_FILE_SIZE_BYTES = 24 * 1024 * 1024
 
 
 def transcribe_audio(audio_blob, language, mime_type):
@@ -18,13 +22,34 @@ def transcribe_audio(audio_blob, language, mime_type):
     f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} Starting audio transcription..."
   )
   try:
-    # Step 1: Get the raw bytes from the client.
     audio_bytes = audio_blob.get_bytes()
+    if len(audio_bytes) > MAX_FILE_SIZE_BYTES:
+      print(
+        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] {CONTEXT} Audio file exceeds size limit. Compressing..."
+      )
+      try:
+        audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes))
+        compressed_audio_io = io.BytesIO()
+        audio_segment.export(compressed_audio_io, format="mp3", bitrate="64k")
+        audio_bytes = compressed_audio_io.getvalue()
+        new_size_mb = len(audio_bytes) / (1024 * 1024)
+        print(
+          f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] {CONTEXT} Compression successful. New size: {new_size_mb:.2f} MB."
+        )
+      except Exception as e:
+        print(
+          f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] {CONTEXT} Failed to compress audio file: {e}"
+        )
+        raise Exception(f"Failed to compress oversized audio file: {e}")
 
-    # Step 2: Prepare a file-like object for the OpenAI library.
-    # The filename with a proper extension is crucial for the API.
     in_memory_file = io.BytesIO(audio_bytes)
-    extension = mime_type.split("/")[-1] if "/" in mime_type else "mp4"
+    if mime_type and "/" in mime_type:
+      extension = mime_type.split("/")[-1]
+      # Handle non-standard prefixes like 'x-m4a' -> 'm4a'
+      if "x-" in extension:
+        extension = extension.split("x-")[-1]
+    else:
+      extension = "mp4"
     filename = f"audio.{extension}"
     in_memory_file.name = filename
 

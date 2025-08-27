@@ -231,7 +231,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
   def set_active_template_language(self, language, **event_args):
     self.selected_template_language = language or "en"
 
-  def process_uploaded_audio(self, audio_blob, **event_args):
+  def process_uploaded_audio(self, audio_blob, mime_type, **event_args):
+    self.current_audio_mime_type = mime_type
     self.audio_playback_1.audio_blob = audio_blob
     self.recording_widget.visible = False
     self.audio_playback_1.visible = True
@@ -331,7 +332,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     audio_proxy = self.audio_playback_1.audio_blob
     if not audio_proxy:
       self.logger.warning("Modification halted: No audio command available.")
-    return alert(t.t("audioManager_alert_noAudioCommand"))
+      return alert(t.t("audioManager_alert_noAudioCommand"))
     self.call_js("setAudioWorkflowState", "processing")
     self.user_feedback_1.show(t.t("feedback_transcribing"))
 

@@ -16,22 +16,21 @@ class Admin(AdminTemplate):
     # Load all data and pass it to Javascript for client-side searching and rendering
     try:
       all_structures = anvil.server.call_s("read_structures")
-      self.call_js("initializeData", 'structures', all_structures)
+      self.call_js("initializeData", "structures", all_structures)
 
       all_users = anvil.server.call_s("admin_get_all_users")
-      self.call_js("initializeData", 'users', all_users)
+      self.call_js("initializeData", "users", all_users)
 
       all_base_templates = anvil.server.call_s("admin_get_all_base_templates")
-      self.call_js("initializeData", 'templates', all_base_templates)
+      self.call_js("initializeData", "templates", all_base_templates)
     except Exception as e:
       alert(f"An error occurred while loading initial data: {e}")
-
 
   # ----- Structure Management -----
   def get_structure_details(self, structure_name, **event_args):
     self.current_structure_name = structure_name
     # Data is already on the client, just find it
-    structure = self.call_js("findDataById", 'structures', structure_name)
+    structure = self.call_js("findDataById", "structures", structure_name)
 
     if structure:
       self.call_js("displayStructureDetails", structure)
@@ -80,10 +79,10 @@ class Admin(AdminTemplate):
 
   # ----- User Management -----
   def get_user_details(self, user_id, **event_args):
-    user = self.call_js("findDataById", 'users', user_id)
+    user = self.call_js("findDataById", "users", user_id)
     if user:
       self.current_user_id = user_id
-      all_structures = self.call_js("getAllData", 'structures')
+      all_structures = self.call_js("getAllData", "structures")
       structure_names = ["Indépendant"] + [s["structure"] for s in all_structures]
       user_templates = anvil.server.call_s("admin_get_templates_for_user", user_id)
       self.call_js("displayUserDetails", user, structure_names, user_templates)
@@ -92,7 +91,7 @@ class Admin(AdminTemplate):
 
   def new_user(self, **event_args):
     self.current_user_id = None
-    all_structures = self.call_js("getAllData", 'structures')
+    all_structures = self.call_js("getAllData", "structures")
     structure_names = ["Indépendant"] + [s["structure"] for s in all_structures]
     self.call_js("clearUserForm")
     self.call_js("showUserForm", True, structure_names)
@@ -105,40 +104,39 @@ class Admin(AdminTemplate):
         alert("Email and name are required.")
         return False
 
-      if not self.current_user_id:  # It's a new user
-        password = user_data.pop("password", None)
-        if not password:
-          alert("Password is required for new users.")
-          return False
-
+        # Handle new user creation if no ID is set
+      if not self.current_user_id:
         self.current_user_id = anvil.server.call_s(
-          "admin_create_user", email=email, name=name, password=password
+          "admin_create_user", email=email, name=name
         )
         if not self.current_user_id:
-          alert("Failed to create the user. They may already exist.")
-          self.current_user_id = None
+          alert("Failed to create user. The email may already be in use.")
           return False
 
+        # Update the user with the rest of the data (for both new and existing users)
       update_data = {k: v for k, v in user_data.items() if k != "email"}
       anvil.server.call_s(
         "admin_update_user", user_id=self.current_user_id, **update_data
       )
+
       alert("User saved successfully!")
-      self.on_form_show() # Reload data
+      self.on_form_show()
       self.call_js("showUserForm", False)
       return True
+
     except Exception as e:
       alert(f"Error saving user: {e}")
+      # Reset the ID in case of a failure during the creation step
       self.current_user_id = None
       return False
 
   # ----- Template Management -----
   def get_template_details(self, template_id, **event_args):
-    template = self.call_js("findDataById", 'templates', template_id)
+    template = self.call_js("findDataById", "templates", template_id)
     if template:
       self.current_template_id = template_id
-      all_users = self.call_js("getAllData", 'users')
-      self.call_js("displayTemplateDetails", template, all_users, 'base')
+      all_users = self.call_js("getAllData", "users")
+      self.call_js("displayTemplateDetails", template, all_users, "base")
     else:
       alert(f"Base Template '{template_id}' not found.")
 
@@ -166,7 +164,11 @@ class Admin(AdminTemplate):
       if not template_data.get("name"):
         alert("Template name is required.")
         return False
-      template_data["template_id"] = self.current_template_id if self.call_js("getCurrentEditingMode") == 'base' else None
+      template_data["template_id"] = (
+        self.current_template_id
+        if self.call_js("getCurrentEditingMode") == "base"
+        else None
+      )
       anvil.server.call_s("admin_write_base_template", **template_data)
       alert("Base template saved successfully!")
       self.on_form_show()
@@ -188,7 +190,7 @@ class Admin(AdminTemplate):
         template_id=self.current_template_id,
         name=template_data.get("name"),
         html=template_data.get("html"),
-        language=template_data.get("language")
+        language=template_data.get("language"),
       )
       alert("User template saved successfully!")
       self.call_js("showTemplateForm", False)

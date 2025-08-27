@@ -83,18 +83,16 @@ class Admin(AdminTemplate):
     if user:
       self.current_user_id = user_id
       all_structures = self.call_js("getAllData", "structures")
-      structure_names = ["Indépendant"] + [s["structure"] for s in all_structures]
       user_templates = anvil.server.call_s("admin_get_templates_for_user", user_id)
-      self.call_js("displayUserDetails", user, structure_names, user_templates)
+      self.call_js("displayUserDetails", user, all_structures, user_templates)
     else:
       alert(f"User with ID '{user_id}' not found.")
 
   def new_user(self, **event_args):
     self.current_user_id = None
     all_structures = self.call_js("getAllData", "structures")
-    structure_names = ["Indépendant"] + [s["structure"] for s in all_structures]
     self.call_js("clearUserForm")
-    self.call_js("showUserForm", True, structure_names)
+    self.call_js("showUserForm", True, all_structures)
 
   def save_user(self, user_data, **event_args):
     try:

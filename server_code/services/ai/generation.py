@@ -15,9 +15,6 @@ from . import (
 from ..prompts_service import get_prompt
 from ...logging_server import get_logger
 
-from . import transcription
-from . import formatting
-
 logger = get_logger(__name__)
 
 
@@ -80,57 +77,3 @@ def generate_report(transcription, language):
   except Exception as e:
     logger.error(f"An error occurred in generate_report: {e}", exc_info=True)
     raise Exception(f"Error generating report: {e}")
-
-
-@anvil.server.callable
-def process_audio_for_report(audio_blob, language, mime_type, template_html):
-  """
-  Launches the full audio-to-report pipeline as a background task.
-  This is the primary entry point for the client.
-  """
-  print("Launching report creation background task...")
-  task = anvil.server.launch_background_task(
-    "bg_create_report_from_audio", audio_blob, language, mime_type, template_html
-  )
-  return task
-
-
-@anvil.server.background_task
-def bg_create_report_from_audio(audio_blob, language, mime_type, template_html):
-  """
-  Full pipeline background task:
-  1. Transcribes audio.
-  2. Generates a structured report from the transcription.
-  3. Formats the report into the final HTML.
-  This version includes progress updates for the client.
-  """
-  try:
-    # Step 1: Transcribe Audio
-    anvil.server.task_state["step"] = (
-      "feedback_transcribing"  # Set state for the client
-    )
-    print("Pipeline [1/3]: Transcribing audio...")
-    raw_transcription = transcription.transcribe_audio(audio_blob, language, mime_type)
-    print(f"Pipeline [1/3] SUCCESS. Transcription: {raw_transcription[:100]}...")
-
-    # Step 2: Generate Report from the transcription
-    anvil.server.task_state["step"] = "feedback_generating"  # Set state for the client
-    print("Pipeline [2/3]: Generating structured report...")
-    report_content = generate_report(raw_transcription, language)
-    print("Pipeline [2/3] SUCCESS.")
-
-    # Step 3: Format the report into the final HTML
-    anvil.server.task_state["step"] = "feedback_formatting"  # Set state for the client
-    print("Pipeline [3/3]: Formatting final report...")
-    final_html = formatting.format_report(report_content, template_html, language)
-    print("Pipeline [3/3] SUCCESS. Pipeline complete.")
-
-    return {
-      "success": True,
-      "final_html": final_html,
-      "raw_transcription": raw_transcription,
-    }
-
-  except Exception as e:
-    print(f"ERROR: The report creation pipeline failed. Error: {e}")
-    return {"success": False, "error": str(e)}

@@ -99,7 +99,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.call_js("setAudioWorkflowState", "input")
 
   def process_modification(self, **event_args):
-    """Orchestrates the modification process: transcribe, then edit."""
+    """Orchestrates the modification process using a background task."""
     self.logger.info("Starting report modification process.")
     audio_proxy = self.audio_playback_1.audio_blob
     if not audio_proxy:
@@ -116,47 +116,36 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.logger.debug(f"Using language '{language}' for modification command.")
 
     try:
-      self.logger.info("Step 1: Transcribing modification command...")
-      task = anvil.server.call_s(
-        "process_audio_whisper",
+      task = anvil.server.call(
+        "process_audio_for_edit",
         anvil_media_blob,
-        language=language,
-        mime_type=self.current_audio_mime_type,
+        language,
+        self.current_audio_mime_type,
+        current_content,
       )
-      elapsed = 0
-      while not task.is_completed() and elapsed < 240:
+
+      last_displayed_step = "feedback_transcribing"
+      while not task.is_completed():
         time.sleep(1)
-        elapsed += 1
+        state = task.get_state()
+        current_step = state.get("step")
 
-      if not task.is_completed():
-        self.logger.error("Transcription task timed out.")
-        raise anvil.server.AppOfflineError(t.t("error_transcriptionTimeout"))
+        if current_step and current_step != last_displayed_step:
+          self.user_feedback_1.set_status(t.t(current_step))
+          last_displayed_step = current_step
 
-      self.logger.info("Transcription task completed.")
-      transcription = task.get_return_value()
+      result = task.get_return_value()
 
-      if isinstance(transcription, dict) and "error" in transcription:
-        self.logger.error(
-          f"Transcription task returned an error: {transcription['error']}"
-        )
-        raise Exception(f"{t.t('error_transcriptionFailed')}: {transcription['error']}")
-      if transcription is None:
-        self.logger.error("Transcription returned None, likely silent audio.")
-        raise Exception(t.t("error_transcriptionEmpty"))
-
-      self.logger.info("Transcription successful.")
-      self.logger.debug(f"Transcribed command: '{transcription}'")
-
-      self.user_feedback_1.set_status(t.t("feedback_applyingModification"))
-      self.logger.info("Step 2: Applying modification to report...")
-      edited_report = anvil.server.call_s(
-        "edit_report", transcription, current_content, language
-      )
-      self.logger.info("Modification applied successfully.")
-      self.text_editor_1.html_content = edited_report
+      if result and result.get("success"):
+        self.logger.info("Report editing pipeline completed successfully.")
+        self.text_editor_1.html_content = result.get("edited_html")
+      else:
+        error_msg = result.get("error", "An unknown error occurred.")
+        self.logger.error(f"Report editing pipeline failed: {error_msg}")
+        alert(f"{t.t('error_processingFailed')}: {error_msg}")
 
     except Exception as e:
-      self.logger.error("An error occurred during the modification process.", e)
+      self.logger.error("A critical client-side error occurred during modification.", e)
       alert(f"{t.t('error_processingFailed')}: {e}")
     finally:
       self.user_feedback_1.hide()

@@ -101,7 +101,30 @@ container:
             .patients-list, .templates-list { max-height: 300px; overflow-y: auto; }
             .close-button { position: absolute; top: 15px; right: 15px; background: none; border: none; cursor: pointer; padding: 5px; color: #666; }
             .divider { height: 1px; background-color: #ddd; margin: 15px 0; }
-            #modification-instructions { text-align: center; padding: 15px; margin: 10px auto; background-color: #e9f5ff; border-left: 4px solid #007bff; border-radius: 4px; max-width: 90%; color: #333; font-style: italic;}
+            #modification-instructions {
+              background: #f8f8f8;
+              border: 1px solid #ddd;
+              padding: 15px;
+              margin-bottom: 20px;
+              margin-top: 10px;
+              margin-left: auto;
+              margin-right: auto;
+              border-radius: 8px;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+              text-align: center;
+              max-width: 90%;
+            }
+            .edit-instructions {
+              font-size: 14px;
+              color: #555;
+              margin-bottom: 10px;
+            }
+            .edit-instructions em {
+              color: #333;
+              background-color: #e9e9e9;
+              padding: 2px 5px;
+              border-radius: 3px;
+            }
           </style>
         </head>
         <body>
@@ -125,7 +148,13 @@ container:
               <div class="audio-section">
                 <div id="audioInputContainer">
                   <div id="modification-instructions" style="display: none;">
-                    <strong id="audioManager-strong-modTitle">Modification Mode:</strong> <span id="audioManager-span-modDesc">You can now edit the report with your voice. Provide a clear command to the AI.</span>
+                    <div class="edit-instructions">
+                      <p id="audioManager-p-instructions"></p>
+                      <p>
+                        <strong id="audioManager-strong-example"></strong>
+                        <em id="audioManager-em-exampleText"></em>
+                      </p>
+                    </div>
                   </div>
                   <div class="slide-toggle-container">
                     <div class="toggle-option active" id="audioManager-div-recordToggle">Record</div>

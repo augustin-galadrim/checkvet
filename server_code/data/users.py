@@ -40,7 +40,7 @@ def admin_get_all_users():
 
 @admin_required
 @anvil.server.callable
-def admin_create_user(email, name, password=None):
+def admin_create_user(email, name):
   """Admin function to create a new user."""
   logger.info(f"Admin request to create user: Email='{email}'")
   if not email or not name:
@@ -60,9 +60,6 @@ def admin_create_user(email, name, password=None):
     "supervisor": False,
     "additional_info": True,
   }
-
-  if password:
-    user_data["password_hash"] = anvil.secrets.hash_password(password)
 
   new_user = app_tables.users.add_row(**user_data)
 
@@ -84,10 +81,12 @@ def admin_update_user(user_id, **kwargs):
 
   if "structure" in kwargs:
     structure_name = kwargs.pop("structure")
+    # Check for the special 'independent' key.
     if not structure_name or structure_name.lower() == INDEPENDENT_KEY:
       user_row["structure"] = None
       logger.debug(f"Set user '{user_row['email']}' structure to None (Independent).")
     else:
+      # If it's not the special key, look up the structure in the database.
       structure_row = app_tables.structures.get(name=structure_name)
       if not structure_row:
         logger.error(
@@ -99,8 +98,10 @@ def admin_update_user(user_id, **kwargs):
         f"Linked user '{user_row['email']}' to structure '{structure_name}'."
       )
 
+  # Update all other provided fields
   for key, value in kwargs.items():
-    user_row[key] = value
+    if key in user_row:
+      user_row[key] = value
 
   logger.info(f"Successfully updated user ID '{user_id}'.")
   return True

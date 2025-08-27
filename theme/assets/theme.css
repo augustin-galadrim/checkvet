@@ -87,3 +87,7 @@
   align-items: center;
   justify-content: center;
 }
+
+body {
+  background-color: #3974CB; 
+}

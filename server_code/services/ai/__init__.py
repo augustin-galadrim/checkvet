@@ -23,8 +23,13 @@ RETRY_LIMIT = 3
 
 @anvil.server.callable
 def initialize_server_environment():
+  """
+  A callable function to check if the server's audio processing capabilities are working.
+  This is a diagnostic tool to verify the FFmpeg dependency.
+  """
   print("--- SERVER INITIALIZATION CHECK ---")
   try:
+    # This simple operation requires a functional FFmpeg installation.
     AudioSegment.silent(duration=10)
     print("SUCCESS: FFmpeg dependency is correctly installed and accessible.")
   except Exception as e:

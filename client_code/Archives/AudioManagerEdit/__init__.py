@@ -27,6 +27,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.add_event_handler("show", self.form_show)
     self.report = report if report is not None else {}
     self.selected_statut = self.report.get("statut")
+    self.current_audio_mime_type = None
     self.logger.debug("Initialization complete.")
 
   def update_ui_texts(self, **event_args):
@@ -72,7 +73,9 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       open_form("Archives.ArchivesForm")
       return
 
-    self.logger.debug(f"Editing report ID: {self.report.get('id')}, Name: '{self.report.get('file_name')}'.")
+    self.logger.debug(
+      f"Editing report ID: {self.report.get('id')}, Name: '{self.report.get('file_name')}'."
+    )
 
     self.header_return_1.title = self.report.get(
       "file_name", t.t("audioManagerEdit_default_headerTitle")
@@ -82,9 +85,10 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.reset_ui_to_input_state()
     self.logger.info("Form setup complete.")
 
-  def handle_new_recording(self, audio_blob, **event_args):
+  def handle_new_recording(self, audio_blob, mime_type, **event_args):
     """Event handler from RecordingWidget. Moves UI to the 'decision' state."""
     self.logger.info("New recording received from widget.")
+    self.current_audio_mime_type = mime_type
     self.audio_playback_1.audio_blob = audio_blob
     self.call_js("setAudioWorkflowState", "decision")
 
@@ -114,7 +118,10 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     try:
       self.logger.info("Step 1: Transcribing modification command...")
       task = anvil.server.call_s(
-        "process_audio_whisper", anvil_media_blob, language=language
+        "process_audio_whisper",
+        anvil_media_blob,
+        language=language,
+        mime_type=self.current_audio_mime_type,
       )
       elapsed = 0
       while not task.is_completed() and elapsed < 240:
@@ -129,7 +136,9 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       transcription = task.get_return_value()
 
       if isinstance(transcription, dict) and "error" in transcription:
-        self.logger.error(f"Transcription task returned an error: {transcription['error']}")
+        self.logger.error(
+          f"Transcription task returned an error: {transcription['error']}"
+        )
         raise Exception(f"{t.t('error_transcriptionFailed')}: {transcription['error']}")
       if transcription is None:
         self.logger.error("Transcription returned None, likely silent audio.")

@@ -27,6 +27,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.add_event_handler("show", self.form_show)
     self.report = report if report is not None else {}
     self.selected_statut = self.report.get("statut")
+    self.current_audio_mime_type = None
     self.logger.debug("Initialization complete.")
 
   def update_ui_texts(self, **event_args):
@@ -72,7 +73,9 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       open_form("Archives.ArchivesForm")
       return
 
-    self.logger.debug(f"Editing report ID: {self.report.get('id')}, Name: '{self.report.get('file_name')}'.")
+    self.logger.debug(
+      f"Editing report ID: {self.report.get('id')}, Name: '{self.report.get('file_name')}'."
+    )
 
     self.header_return_1.title = self.report.get(
       "file_name", t.t("audioManagerEdit_default_headerTitle")
@@ -82,9 +85,10 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.reset_ui_to_input_state()
     self.logger.info("Form setup complete.")
 
-  def handle_new_recording(self, audio_blob, **event_args):
+  def handle_new_recording(self, audio_blob, mime_type, **event_args):
     """Event handler from RecordingWidget. Moves UI to the 'decision' state."""
     self.logger.info("New recording received from widget.")
+    self.current_audio_mime_type = mime_type
     self.audio_playback_1.audio_blob = audio_blob
     self.call_js("setAudioWorkflowState", "decision")
 
@@ -95,7 +99,7 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.call_js("setAudioWorkflowState", "input")
 
   def process_modification(self, **event_args):
-    """Orchestrates the modification process: transcribe, then edit."""
+    """Orchestrates the modification process using a background task."""
     self.logger.info("Starting report modification process.")
     audio_proxy = self.audio_playback_1.audio_blob
     if not audio_proxy:
@@ -112,42 +116,36 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.logger.debug(f"Using language '{language}' for modification command.")
 
     try:
-      self.logger.info("Step 1: Transcribing modification command...")
-      task = anvil.server.call_s(
-        "process_audio_whisper", anvil_media_blob, language=language
+      task = anvil.server.call(
+        "process_audio_for_edit",
+        anvil_media_blob,
+        language,
+        self.current_audio_mime_type,
+        current_content,
       )
-      elapsed = 0
-      while not task.is_completed() and elapsed < 240:
+
+      last_displayed_step = "feedback_transcribing"
+      while not task.is_completed():
         time.sleep(1)
-        elapsed += 1
+        state = task.get_state()
+        current_step = state.get("step")
 
-      if not task.is_completed():
-        self.logger.error("Transcription task timed out.")
-        raise anvil.server.AppOfflineError(t.t("error_transcriptionTimeout"))
+        if current_step and current_step != last_displayed_step:
+          self.user_feedback_1.set_status(t.t(current_step))
+          last_displayed_step = current_step
 
-      self.logger.info("Transcription task completed.")
-      transcription = task.get_return_value()
+      result = task.get_return_value()
 
-      if isinstance(transcription, dict) and "error" in transcription:
-        self.logger.error(f"Transcription task returned an error: {transcription['error']}")
-        raise Exception(f"{t.t('error_transcriptionFailed')}: {transcription['error']}")
-      if transcription is None:
-        self.logger.error("Transcription returned None, likely silent audio.")
-        raise Exception(t.t("error_transcriptionEmpty"))
-
-      self.logger.info("Transcription successful.")
-      self.logger.debug(f"Transcribed command: '{transcription}'")
-
-      self.user_feedback_1.set_status(t.t("feedback_applyingModification"))
-      self.logger.info("Step 2: Applying modification to report...")
-      edited_report = anvil.server.call_s(
-        "edit_report", transcription, current_content, language
-      )
-      self.logger.info("Modification applied successfully.")
-      self.text_editor_1.html_content = edited_report
+      if result and result.get("success"):
+        self.logger.info("Report editing pipeline completed successfully.")
+        self.text_editor_1.html_content = result.get("edited_html")
+      else:
+        error_msg = result.get("error", "An unknown error occurred.")
+        self.logger.error(f"Report editing pipeline failed: {error_msg}")
+        alert(f"{t.t('error_processingFailed')}: {error_msg}")
 
     except Exception as e:
-      self.logger.error("An error occurred during the modification process.", e)
+      self.logger.error("A critical client-side error occurred during modification.", e)
       alert(f"{t.t('error_processingFailed')}: {e}")
     finally:
       self.user_feedback_1.hide()

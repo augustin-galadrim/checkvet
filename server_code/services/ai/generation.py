@@ -6,16 +6,17 @@ from anvil.tables import app_tables
 import anvil.server
 import time
 from . import (
-client,
-RETRY_LIMIT,
-DEFAULT_MODEL,
-DEFAULT_TEMPERATURE,
-DEFAULT_MAX_TOKENS,
+  client,
+  RETRY_LIMIT,
+  DEFAULT_MODEL,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_MAX_TOKENS,
 )
 from ..prompts_service import get_prompt
 from ...logging_server import get_logger
 
 logger = get_logger(__name__)
+
 
 @anvil.server.callable
 def generate_report(transcription, language):
@@ -55,7 +56,9 @@ def generate_report(transcription, language):
         if attempt < RETRY_LIMIT - 1:
           time.sleep(wait)
 
-    logger.error("GPT-4 report generation failed after multiple attempts.", exc_info=True)
+    logger.error(
+      "GPT-4 report generation failed after multiple attempts.", exc_info=True
+    )
     raise Exception("GPT-4 report generation failed after multiple attempts")
 
   try:

@@ -31,10 +31,10 @@ class RecordingWidget(RecordingWidgetTemplate):
   def show_error(self, error_message, **event_args):
     alert(error_message)
 
-  def handle_js_recording_complete(self, blob, **event_args):
+  def handle_js_recording_complete(self, blob, mime_type, **event_args):
     """Called by this component's own JavaScript when a recording is finished."""
-    self.raise_event("recording_complete", audio_blob=blob)
+    self.raise_event("recording_complete", audio_blob=blob, mime_type=mime_type)
 
-  def on_recording_complete(self, audio_blob, **event_args):
+  def on_recording_complete(self, audio_blob, mime_type, **event_args):
     """This is the event handler for our custom event."""
     pass

@@ -35,7 +35,7 @@ class MicrophoneTest(MicrophoneTestTemplate):
     self.update_ui_texts()
     self.reset_to_record_mode()
 
-  def handle_recording_complete(self, audio_blob, **event_args):
+  def handle_recording_complete(self, audio_blob, mime_type, **event_args):
     """Switches the UI to "playback mode"."""
     self.recording_widget_1.visible = False
     self.audio_playback_1.audio_blob = audio_blob

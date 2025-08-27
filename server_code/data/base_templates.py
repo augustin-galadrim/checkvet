@@ -27,6 +27,40 @@ def admin_get_all_base_templates():
   return result
 
 
+@admin_required
+@anvil.server.callable
+def admin_write_base_template(template_id=None, name=None, html=None, language=None):
+  """
+  Admin function to create or update a base template.
+  If template_id is provided, it updates; otherwise, it creates a new one.
+  """
+  logger.info(f"Admin request to write base template. ID: {template_id}, Name: {name}")
+
+  try:
+    if template_id:
+      # Update existing template
+      template_row = app_tables.base_templates.get_by_id(template_id)
+      if not template_row:
+        logger.error(f"Update failed: Base template with ID '{template_id}' not found.")
+        raise ValueError(f"Base template with ID '{template_id}' not found.")
+
+      logger.debug(f"Updating base template ID: {template_id}")
+      template_row.update(name=name, html=html, language=language)
+
+    else:
+      # Create new template
+      logger.debug(f"Creating new base template with name: '{name}'")
+      app_tables.base_templates.add_row(name=name, html=html, language=language)
+
+    logger.info(f"Successfully wrote base template '{name}'.")
+    return True
+  except Exception as e:
+    logger.error(
+      f"Exception in admin_write_base_template for name '{name}': {e}", exc_info=True
+    )
+    raise
+
+
 @anvil.server.callable
 def assign_all_base_templates(user):
   """

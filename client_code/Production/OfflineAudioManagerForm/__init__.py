@@ -50,7 +50,7 @@ class OfflineAudioManagerForm(OfflineAudioManagerFormTemplate):
     self.call_js("setAudioWorkflowState", "input")
     self.queue_manager_1.refresh_badge()
 
-  def handle_new_recording(self, audio_blob, **event_args):
+  def handle_new_recording(self, audio_blob, mime_type, **event_args):
     """Shows the AudioPlayback component and moves the UI to the decision state."""
     self.recording_widget_1.visible = False
     self.audio_playback_1.audio_blob = audio_blob

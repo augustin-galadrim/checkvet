@@ -13,7 +13,6 @@ class Admin(AdminTemplate):
     self.add_event_handler("show", self.on_form_show)
 
   def on_form_show(self, **event_args):
-    # Load all data and pass it to Javascript for client-side searching and rendering
     try:
       all_structures = anvil.server.call_s("read_structures")
       self.call_js("admin_initializeData", "structures", all_structures)

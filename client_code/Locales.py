@@ -247,7 +247,7 @@ fr = {
   "audioManager_alert_saveFailed": "Le serveur a retourné une erreur lors de la sauvegarde du rapport.",
   "feedback_generating": "Génération du rapport depuis la transcription...",
   "feedback_formatting": "Formatage du rapport final...",
-  "alert_offlineSave": "Connexion perdue. Votre enregistrement a été sauvegardé dans la file d'attente hors ligne.",
+  "alert_offlineSave": "Connexion perdue. Vous pouvez sauvegarder votre enregistrement dans la file d'attente hors ligne.",
   "confirm_offlineSaveOnError": "Une erreur inattendue est survenue. Sauvegarder dans la file d'attente hors ligne ?",
   # --- OfflineAudioManager Form ---
   "offlineAudioManager_h2_title": "Enregistrement hors ligne",
@@ -519,7 +519,7 @@ en = {
   "feedback_applyingModification": "Applying the modification...",
   "feedback_generating": "Generating report from transcription...",
   "feedback_formatting": "Formatting final report...",
-  "alert_offlineSave": "Connection lost. Your recording has been saved to the offline queue.",
+  "alert_offlineSave": "Connection lost. You can save your recording to the offline queue.",
   "confirm_offlineSaveOnError": "An unexpected error occurred. Save to offline queue?",
   "banner_statusSetTo": "Status set to",
   "banner_reportUpdateSuccess": "Report updated.",

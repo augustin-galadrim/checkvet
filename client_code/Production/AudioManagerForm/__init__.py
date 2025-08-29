@@ -378,11 +378,18 @@ class AudioManagerForm(AudioManagerFormTemplate):
       )
       alert(t.t("alert_offlineSave"))
       self.queue_manager_1.open_title_modal(audio_proxy)
-    except TypeError as e:
+    except anvil.server.TimeoutError as e:
+      self.logger.error("Launching the task took too much time.", e)
+      alert(t.t("alert_offlineSave"))
+      self.queue_manager_1.open_title_modal(audio_proxy)
+    except TypeError as e:  # when user navigates to another page
       self.logger.error("A TypeError occurred during modification.", e)
     except Exception as e:
-      self.logger.error("A critical client-side error occurred during modification.", e)
-      alert(f"{t.t('error_processingFailed')}: {e}")
+      self.logger.error(
+        "A critical client-side error occurred during modification",
+        e,
+      )
+      alert(f"{t.t('error_processingFailed')}")
       if confirm(t.t("confirm_offlineSaveOnError")):
         self.queue_manager_1.open_title_modal(audio_proxy)
     finally:

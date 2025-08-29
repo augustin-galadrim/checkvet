@@ -7,6 +7,7 @@ import anvil.users
 class Admin(AdminTemplate):
   def __init__(self, **properties):
     self.init_components(**properties)
+    self.current_structure_id = None
     self.current_structure_name = None
     self.current_user_id = None
     self.current_template_id = None
@@ -23,23 +24,24 @@ class Admin(AdminTemplate):
       all_base_templates = anvil.server.call_s("admin_get_all_base_templates")
       self.call_js("admin_initializeData", "templates", all_base_templates)
     except Exception as e:
-      alert(f"An error occurred while loading initial data: {e}")
+      self.call_js("displayBanner", f"An error occurred while loading initial data: {e}", "error")
 
   # ----- Structure Management -----
-  def get_structure_details(self, structure_name, **event_args):
-    self.current_structure_name = structure_name
-    # Data is already on the client, just find it
-    structure = self.call_js("admin_findDataById", "structures", structure_name)
+  def get_structure_details(self, structure_id, **event_args):
+    self.current_structure_id = structure_id
+    structure = self.call_js("admin_findDataById", "structures", structure_id)
 
     if structure:
+      self.current_structure_name = structure.get('structure')
       self.call_js("admin_displayStructureDetails", structure)
       # Fetch and display affiliated vets
-      vets = anvil.server.call_s("get_vets_in_structure", structure_name)
+      vets = anvil.server.call_s("get_vets_in_structure", self.current_structure_name)
       self.call_js("admin_displayAffiliatedVets", vets)
     else:
-      alert(f"Structure '{structure_name}' not found.")
+      self.call_js("displayBanner", f"Structure with ID '{structure_id}' not found.", "error")
 
   def new_structure(self, **event_args):
+    self.current_structure_id = None
     self.current_structure_name = None
     self.call_js("admin_clearStructureForm")
     self.call_js("admin_showStructureForm", True)
@@ -48,25 +50,26 @@ class Admin(AdminTemplate):
     try:
       name = structure_data.get("name")
       if not name:
-        alert("Structure name is required.")
+        self.call_js("displayBanner", "Structure name is required.", "error")
         return False
-      anvil.server.call_s("admin_write_structure", **structure_data)
-      alert("Structure saved successfully!")
+      structure_data['id'] = self.current_structure_id
+      anvil.server.call_s("admin_write_structure", structure_data)
+      self.call_js("displayBanner", "Structure saved successfully!", "success")
       # Reload all data after save
       self.on_form_show()
       self.call_js("admin_showStructureForm", False)
       return True
     except Exception as e:
-      alert(f"Error saving structure: {e}")
+      self.call_js("displayBanner", f"Error saving structure: {e}", "error")
       return False
 
   def add_vet_to_structure(self, vet_email, **event_args):
     """Called from JS to add a vet to the current structure."""
-    if not self.current_structure_name:
-      alert("No structure selected. Please select a structure to modify first.")
+    if not self.current_structure_id:
+      self.call_js("displayBanner", "No structure selected. Please select a structure to modify first.", "error")
       return
     if not vet_email:
-      alert("Please enter the veterinarian's email address.")
+      self.call_js("displayBanner", "Please enter the veterinarian's email address.", "error")
       return
 
     try:
@@ -74,32 +77,32 @@ class Admin(AdminTemplate):
         "admin_add_vet_to_structure", self.current_structure_name, vet_email
       )
       if success:
-        alert(f"Successfully added {vet_email} to {self.current_structure_name}.")
+        self.call_js("displayBanner", f"Successfully added {vet_email} to {self.current_structure_name}.", "success")
         # Refresh the details view to show the new vet
-        self.get_structure_details(self.current_structure_name)
+        self.on_form_show()
+        self.get_structure_details(self.current_structure_id)
       else:
         # The server function returns False on specific failures (e.g., user not found)
-        alert(
-          f"Failed to add vet. Please check the email address and that the user exists."
-        )
+        self.call_js("displayBanner", f"Failed to add vet. Please check the email address and that the user exists.", "error")
     except Exception as e:
-      alert(f"An error occurred while adding the vet: {e}")
+      self.call_js("displayBanner", f"An error occurred while adding the vet: {e}", "error")
 
   def remove_vet_from_structure(self, user_id, **event_args):
     """Called from JS to remove a vet from the current structure."""
     if not user_id:
-      alert("User ID is missing.")
+      self.call_js("displayBanner", "User ID is missing.", "error")
       return
     try:
       success = anvil.server.call_s("admin_remove_vet_from_structure", user_id)
       if success:
-        alert("Vet removed from structure successfully.")
+        self.call_js("displayBanner", "Vet removed from structure successfully.", "success")
         # Refresh the details view
-        self.get_structure_details(self.current_structure_name)
+        self.on_form_show()
+        self.get_structure_details(self.current_structure_id)
       else:
-        alert("Failed to remove vet from structure.")
+        self.call_js("displayBanner", "Failed to remove vet from structure.", "error")
     except Exception as e:
-      alert(f"An error occurred while removing the vet: {e}")
+      self.call_js("displayBanner", f"An error occurred while removing the vet: {e}", "error")
 
   # ----- User Management -----
   def get_user_details(self, user_id, **event_args):
@@ -110,7 +113,7 @@ class Admin(AdminTemplate):
       user_templates = anvil.server.call_s("admin_get_templates_for_user", user_id)
       self.call_js("admin_displayUserDetails", user, all_structures, user_templates)
     else:
-      alert(f"User with ID '{user_id}' not found.")
+      self.call_js("displayBanner", f"User with ID '{user_id}' not found.", "error")
 
   def new_user(self, **event_args):
     self.current_user_id = None
@@ -123,33 +126,38 @@ class Admin(AdminTemplate):
       email = user_data.get("email")
       name = user_data.get("name")
       if not email or not name:
-        alert("Email and name are required.")
+        self.call_js("displayBanner", "Email and name are required.", "error")
         return False
 
-        # Handle new user creation if no ID is set
       if not self.current_user_id:
+        # This is a NEW user, call the enhanced create function
         self.current_user_id = anvil.server.call_s(
-          "admin_create_user", email=email, name=name
+          "admin_create_user",
+          email=email,
+          name=name,
+          phone=user_data.get("phone"),
+          supervisor=user_data.get("supervisor"),
+          favorite_language=user_data.get("favorite_language"),
+          structure_name=user_data.get("structure")
         )
         if not self.current_user_id:
-          alert("Failed to create user. The email may already be in use.")
+          self.call_js("displayBanner", "Failed to create user. The email may already be in use.", "error")
           return False
+      else:
+        # This is an EXISTING user, call the update function
+        update_data = {k: v for k, v in user_data.items() if k not in ["email"]}
+        anvil.server.call_s(
+          "admin_update_user", user_id=self.current_user_id, **update_data
+        )
 
-        # Update the user with the rest of the data (for both new and existing users)
-      update_data = {k: v for k, v in user_data.items() if k != "email"}
-      anvil.server.call_s(
-        "admin_update_user", user_id=self.current_user_id, **update_data
-      )
-
-      alert("User saved successfully!")
+      self.call_js("displayBanner", "User saved successfully!", "success")
       self.on_form_show()
       self.call_js("admin_showUserForm", False)
       return True
 
     except Exception as e:
-      alert(f"Error saving user: {e}")
-      # Reset the ID in case of a failure during the creation step
-      self.current_user_id = None
+      self.call_js("displayBanner", f"Error saving user: {e}", "error")
+      self.current_user_id = None # Reset ID on failure
       return False
 
   # ----- Template Management -----
@@ -160,7 +168,7 @@ class Admin(AdminTemplate):
       all_users = self.call_js("admin_getAllData", "users")
       self.call_js("admin_displayTemplateDetails", template, all_users, "base")
     else:
-      alert(f"Base Template '{template_id}' not found.")
+      self.call_js("displayBanner", f"Base Template '{template_id}' not found.", "error")
 
   def edit_user_template(self, template_id, **event_args):
     """Gets a custom user template and displays it in the editor within the User Tab."""
@@ -171,9 +179,9 @@ class Admin(AdminTemplate):
         # New JS function to populate the editor in the user tab
         self.call_js("admin_displayUserTemplateEditor", template_data)
       else:
-        alert("Could not load the selected template.")
+        self.call_js("displayBanner", "Could not load the selected template.", "error")
     except Exception as e:
-      alert(f"Error loading template: {e}")
+      self.call_js("displayBanner", f"Error loading template: {e}", "error")
 
   def new_template(self, **event_args):
     self.current_template_id = None
@@ -184,7 +192,7 @@ class Admin(AdminTemplate):
   def save_base_template(self, template_data, **event_args):
     try:
       if not template_data.get("name"):
-        alert("Template name is required.")
+        self.call_js("displayBanner", "Template name is required.", "error")
         return False
       template_data["template_id"] = (
         self.current_template_id
@@ -192,19 +200,19 @@ class Admin(AdminTemplate):
         else None
       )
       anvil.server.call_s("admin_write_base_template", **template_data)
-      alert("Base template saved successfully!")
+      self.call_js("displayBanner", "Base template saved successfully!", "success")
       self.on_form_show()
       self.call_js("admin_showTemplateForm", False)
       return True
     except Exception as e:
-      alert(f"Error saving base template: {e}")
+      self.call_js("displayBanner", f"Error saving base template: {e}", "error")
       return False
 
   def save_custom_template(self, template_data, **event_args):
     """Saves changes to a custom (user-owned) template."""
     try:
       if not template_data.get("name") or not self.current_template_id:
-        alert("Template name and ID are required.")
+        self.call_js("displayBanner", "Template name and ID are required.", "error")
         return False
 
       anvil.server.call_s(
@@ -214,32 +222,32 @@ class Admin(AdminTemplate):
         html=template_data.get("html"),
         language=template_data.get("language"),
       )
-      alert("User template saved successfully!")
+      self.call_js("displayBanner", "User template saved successfully!", "success")
       self.call_js("admin_showTemplateForm", False)
       # Hide user template editor and refresh the user details to see the updated template list
       self.call_js("admin_hideUserTemplateEditor")
       self.get_user_details(self.current_user_id)
       return True
     except Exception as e:
-      alert(f"Error saving user template: {e}")
+      self.call_js("displayBanner", f"Error saving user template: {e}", "error")
       return False
 
   def assign_template_to_users(self, template_id, user_ids, **event_args):
     try:
       if not template_id or not user_ids:
-        alert("Template and at least one user must be selected for assignment.")
+        self.call_js("displayBanner", "Template and at least one user must be selected for assignment.", "error")
         return False
       success = anvil.server.call_s(
         "admin_assign_base_template_to_users", template_id, user_ids
       )
       if success:
-        alert(f"Template successfully assigned to {len(user_ids)} user(s).")
+        self.call_js("displayBanner", f"Template successfully assigned to {len(user_ids)} user(s).", "success")
         return True
       else:
-        alert("An error occurred during template assignment.")
+        self.call_js("displayBanner", "An error occurred during template assignment.", "error")
         return False
     except Exception as e:
-      alert(f"Error assigning template: {e}")
+      self.call_js("displayBanner", f"Error assigning template: {e}", "error")
       return False
 
   def back_to_home(self, **event_args):

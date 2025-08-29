@@ -44,6 +44,7 @@ def read_structures():
       vet_count = 0  # Default to 0 on error to prevent crashing the entire function
 
     structure_dict = {
+      "id": structure_row.get_id(),
       "structure": structure_row["name"],
       "phone": structure_row["phone"],
       "email": structure_row["email"],
@@ -57,25 +58,37 @@ def read_structures():
 
 @admin_required
 @anvil.server.callable
-def admin_write_structure(name, phone, email, address):
+def admin_write_structure(structure_data):
   """Admin function to create or update a structure."""
-  logger.info(f"Admin request to write structure: Name='{name}'")
+  name = structure_data.get("name")
+  structure_id = structure_data.get("id")
+  logger.info(f"Admin request to write structure: ID='{structure_id}', Name='{name}'")
   if not name or not name.strip():
     logger.error("admin_write_structure failed: Structure name cannot be empty.")
     raise ValueError("Structure name cannot be empty.")
 
-  structure_row = app_tables.structures.get(name=name)
   try:
-    if structure_row:
+    if structure_id:
+      structure_row = app_tables.structures.get_by_id(structure_id)
+      if not structure_row:
+        raise ValueError(f"Structure with ID '{structure_id}' not found.")
       logger.info(f"Updating existing structure: '{name}'")
-      structure_row.update(phone=phone, email=email, address=address)
+      structure_row.update(
+        name=name,
+        phone=structure_data.get("phone"),
+        email=structure_data.get("email"),
+        address=structure_data.get("address"),
+      )
     else:
+      # Prevent creating a new structure if one with the same name already exists
+      if app_tables.structures.get(name=name):
+        raise ValueError(f"A structure with the name '{name}' already exists.")
       logger.info(f"Creating new structure: '{name}'")
       app_tables.structures.add_row(
         name=name,
-        phone=phone,
-        email=email,
-        address=address,
+        phone=structure_data.get("phone"),
+        email=structure_data.get("email"),
+        address=structure_data.get("address"),
         join_code=_generate_unique_join_code(),
       )
     logger.info(f"Successfully wrote structure '{name}'.")

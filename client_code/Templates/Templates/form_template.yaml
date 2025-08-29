@@ -73,8 +73,6 @@ container:
               let allTemplatesData = [];
               let currentDefaultId = null;
 
-              // ** THE FIX **
-              // Initialize with empty strings. All text will now be supplied by Python.
               let localeTexts = {
                 defaultTemplateTitle: "",
                 activeTemplatesTitle: "",

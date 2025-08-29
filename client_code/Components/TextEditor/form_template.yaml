@@ -67,20 +67,42 @@ container:
 
           window.copyEditorContent = function() {
             const editor = document.getElementById("editor");
-            if (!editor) return;
+            if (!editor) {
+              logger.error("Editor element not found for copying.");
+              return;
+            }
 
-            navigator.clipboard.writeText(editor.innerText || editor.textContent).then(() => {
+            // 1. Créer un élément temporaire pour contenir le HTML
+            const listener = function(e) {
+              // Empêcher l'action par défaut
+              e.preventDefault();
+
+              // Mettre le contenu HTML et le texte brut dans le presse-papiers
+              e.clipboardData.setData('text/html', editor.innerHTML);
+              e.clipboardData.setData('text/plain', editor.innerText || editor.textContent);
+
+              // Afficher la bannière de succès
               if (window.displayBanner) {
-                window.displayBanner("Content copied!", "success");
+                // Le message est en français pour correspondre au message d'erreur
+                window.displayBanner("Contenu formaté copié !", "success");
               }
-            }).catch(err => {
-              logger.error("Error copying content: ", err);
+            };
+
+            // 2. Ajouter l'écouteur d'événement `copy` et exécuter la commande
+            document.addEventListener('copy', listener);
+            try {
+              document.execCommand('copy');
+            } catch (err) {
+              logger.error("Error executing copy command: ", err);
               if (window.displayBanner) {
-                window.displayBanner("Failed to copy content.", "error");
+                // Le message est en français
+                window.displayBanner("Échec de la copie du contenu.", "error");
               }
-            });
+            } finally {
+              // 3. IMPORTANT : Retirer l'écouteur pour ne pas interférer avec d'autres copies
+              document.removeEventListener('copy', listener);
+            }
           };
-
           window.updateToolbarState = function() {
             const simpleCommands = {
               'textEditor-button-bold': 'bold',

@@ -3,9 +3,9 @@ container:
   properties:
     html: |-
       <div id="audioBar" style="display: none; width: 100%; height: 50px; background-color: #f8f8f8; border-radius: 5px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 20px; border: 1px solid #ddd; position: relative;">
-        <button id="audioPlayback-button-control" style="width: 30px; height: 30px; background-color: #4CAF50; border: none; border-radius: 50%; color: white; font-size: 16px; cursor: pointer; margin-right: 10px;">▶</button>
+        <button id="audioPlayback-button-control" style="width: 30px; height: 30px; background-color: #3974CB; border: none; border-radius: 50%; color: white; font-size: 16px; cursor: pointer; margin-right: 10px;">▶</button>
         <div id="audioPlayback-div-progress" style="flex-grow: 1; height: 10px; background-color: #ddd; border-radius: 5px; overflow: hidden; cursor: pointer; margin-right: 10px; touch-action: none;">
-          <div id="audioPlayback-div-progressBar" style="width: 0; height: 100%; background-color: #4CAF50; transition: width 0.1s linear;"></div>
+          <div id="audioPlayback-div-progressBar" style="width: 0; height: 100%; background-color: #3974CB; transition: width 0.1s linear;"></div>
         </div>
         <span id="audioPlayback-span-duration" style="font-size: 14px;">0:00 / 0:00</span>
         <button id="audioPlayback-button-clear" title="Reset recording" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #666; margin-left: 10px;">🗑</button>

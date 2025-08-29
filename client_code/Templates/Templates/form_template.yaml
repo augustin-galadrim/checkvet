@@ -66,71 +66,54 @@ container:
           </div>
 
           <script>
-            if (!window.__templates_globals) {
-              window.__templates_globals = true;
+            if (!window.templates_globals) {
+              window.templates_globals = true;
 
               const logger = window.createLogger('TemplatesForm');
-              let allTemplatesData = [];
-              let currentDefaultId = null;
 
-              let localeTexts = {
-                defaultTemplateTitle: "",
-                activeTemplatesTitle: "",
-                inactiveTemplatesTitle: "",
-                noDefaultTemplates: "",
-                noActiveTemplates: "",
-                noInactiveTemplates: "",
-                untitledTemplate: "",
-                setAsDefault: "",
-                hide: "",
-                show: "",
-                delete: ""
+              // Initialize state variables on the global 'window' object
+              window.templates_allTemplatesData = [];
+              window.templates_currentDefaultId = null;
+              window.templates_localeTexts = {
+                defaultTemplateTitle: "", activeTemplatesTitle: "", inactiveTemplatesTitle: "",
+                noDefaultTemplates: "", noActiveTemplates: "", noInactiveTemplates: "",
+                untitledTemplate: "", setAsDefault: "", hide: "", show: "", delete: ""
               };
 
+              // Define global functions
               window.setLocaleTexts = function(texts) {
                 logger.log('Setting locale texts from Python.');
-                localeTexts = { ...localeTexts, ...texts };
+                window.templates_localeTexts = { ...window.templates_localeTexts, ...texts };
               };
-
-              document.addEventListener('click', (e) => {
-                if (!e.target.closest('.kebab-menu-container')) {
-                  document.querySelectorAll('.actions-menu.visible').forEach(menu => menu.classList.remove('visible'));
-                }
-              });
 
               window.populateTemplates = function(templates, defaultTemplateId) {
                 logger.log(`Populating UI with ${templates.length} templates.`);
-                allTemplatesData = templates || [];
-                currentDefaultId = defaultTemplateId;
-                renderAllSections(allTemplatesData);
+                window.templates_allTemplatesData = templates || [];
+                window.templates_currentDefaultId = defaultTemplateId;
+                renderAllSections(window.templates_allTemplatesData);
               };
 
               function renderAllSections(templatesToRender) {
                 const container = document.getElementById('templates-container');
-                if (!container) {
-                  logger.error("Impossible de trouver l'élément 'templates-container'. Le DOM n'est peut-être pas encore prêt.");
-                  return;
-                }
+                if (!container) return;
                 container.innerHTML = '';
 
-                const defaultTpl = templatesToRender.find(t => t.id === currentDefaultId);
-                const activeTpls = templatesToRender.filter(t => t.id !== currentDefaultId && t.display);
-                const inactiveTpls = templatesToRender.filter(t => t.id !== currentDefaultId && !t.display);
+                const defaultTpl = templatesToRender.find(t => t.id === window.templates_currentDefaultId);
+                const activeTpls = templatesToRender.filter(t => t.id !== window.templates_currentDefaultId && t.display);
+                const inactiveTpls = templatesToRender.filter(t => t.id !== window.templates_currentDefaultId && !t.display);
 
-                container.appendChild(createSection(localeTexts.defaultTemplateTitle, 'default', defaultTpl ? [defaultTpl] : [], true));
-                container.appendChild(createSection(`${localeTexts.activeTemplatesTitle} (${activeTpls.length})`, 'active', activeTpls, true));
-                container.appendChild(createSection(`${localeTexts.inactiveTemplatesTitle} (${inactiveTpls.length})`, 'inactive', inactiveTpls, false));
+                container.appendChild(createSection(window.templates_localeTexts.defaultTemplateTitle, 'default', defaultTpl ? [defaultTpl] : [], true));
+                container.appendChild(createSection(`${window.templates_localeTexts.activeTemplatesTitle} (${activeTpls.length})`, 'active', activeTpls, true));
+                container.appendChild(createSection(`${window.templates_localeTexts.inactiveTemplatesTitle} (${inactiveTpls.length})`, 'inactive', inactiveTpls, false));
               }
 
               function createSection(title, key, templates, expandedDefault) {
                 const sectionDiv = document.createElement('div');
                 sectionDiv.className = `templates-section ${expandedDefault ? 'expanded' : ''}`;
-
                 const header = document.createElement('div');
                 header.className = 'section-header';
                 header.innerHTML = `<span class="section-title">${title}</span><div class="section-arrow"></div>`;
                 header.addEventListener('click', () => sectionDiv.classList.toggle('expanded'));
-
                 const content = document.createElement('div');
                 content.className = 'section-content';
                 const list = document.createElement('ul');
@@ -139,12 +122,11 @@ container:
                 if (templates && templates.length > 0) {
                   templates.forEach(t => list.appendChild(createTemplateElement(t, key === 'default')));
                 } else {
-                  let emptyMessage = localeTexts.noActiveTemplates;
-                  if (key === 'default') emptyMessage = localeTexts.noDefaultTemplates;
-                  if (key === 'inactive') emptyMessage = localeTexts.noInactiveTemplates;
+                  let emptyMessage = window.templates_localeTexts.noActiveTemplates;
+                  if (key === 'default') emptyMessage = window.templates_localeTexts.noDefaultTemplates;
+                  if (key === 'inactive') emptyMessage = window.templates_localeTexts.noInactiveTemplates;
                   list.innerHTML = `<div class='empty-list-message'>${emptyMessage}</div>`;
                 }
-
                 content.appendChild(list);
                 sectionDiv.appendChild(header);
                 sectionDiv.appendChild(content);
@@ -154,68 +136,62 @@ container:
               function createTemplateElement(tpl, isDefault = false) {
                 const li = document.createElement("li");
                 li.className = "template-item";
-
                 const spanName = document.createElement("span");
                 spanName.className = "template-name";
                 const langToFlag = { 'en': '🇬🇧', 'fr': '🇫🇷' };
                 const langCode = tpl.language || 'en';
                 const flag = langToFlag[langCode] || '🏳️';
-                const displayName = `${tpl.name || localeTexts.untitledTemplate} - ${flag}`;
+                const displayName = `${tpl.name || window.templates_localeTexts.untitledTemplate} - ${flag}`;
                 spanName.textContent = displayName;
                 spanName.addEventListener("click", () => anvil.call(li, 'open_template_editor', tpl.id));
-
                 li.appendChild(spanName);
-
                 const actionsContainer = document.createElement('div');
                 actionsContainer.className = 'item-actions';
-
                 const kebabContainer = document.createElement("div");
                 kebabContainer.className = "kebab-menu-container";
                 kebabContainer.addEventListener('click', (e) => e.stopPropagation());
-
                 const kebabBtn = document.createElement("button");
                 kebabBtn.className = "icon-button kebab-button";
                 kebabBtn.innerHTML = '...';
-
                 const kebabMenu = document.createElement("div");
                 kebabMenu.className = "actions-menu";
-
                 kebabBtn.addEventListener('click', (e) => {
                   document.querySelectorAll('.actions-menu.visible').forEach(m => { if (m !== kebabMenu) m.classList.remove('visible'); });
                   kebabMenu.classList.toggle('visible');
                 });
-
                 if (!isDefault) {
                   const setDefaultItem = document.createElement("button");
                   setDefaultItem.className = "menu-item";
-                  setDefaultItem.textContent = localeTexts.setAsDefault;
+                  setDefaultItem.textContent = window.templates_localeTexts.setAsDefault;
                   setDefaultItem.addEventListener("click", (e) => anvil.call(setDefaultItem, 'set_default_template', tpl.id));
                   kebabMenu.appendChild(setDefaultItem);
                 }
-
                 const toggleItem = document.createElement("button");
                 toggleItem.className = "menu-item";
-                toggleItem.textContent = tpl.display ? localeTexts.hide : localeTexts.show;
+                toggleItem.textContent = tpl.display ? window.templates_localeTexts.hide : window.templates_localeTexts.show;
                 toggleItem.addEventListener("click", (e) => {
                   anvil.call(toggleItem, 'toggle_template_display', tpl.id, !tpl.display);
                 });
                 kebabMenu.appendChild(toggleItem);
-
                 kebabContainer.appendChild(kebabBtn);
                 kebabContainer.appendChild(kebabMenu);
                 actionsContainer.appendChild(kebabContainer);
-
                 const deleteBtn = document.createElement("button");
                 deleteBtn.className = "icon-button";
-                deleteBtn.title = localeTexts.delete;
+                deleteBtn.title = window.templates_localeTexts.delete;
                 deleteBtn.innerHTML = '🗑️';
                 deleteBtn.addEventListener("click", (e) => { e.stopPropagation(); anvil.call(deleteBtn, 'delete_template', tpl.id); });
                 actionsContainer.appendChild(deleteBtn);
-
                 li.appendChild(actionsContainer);
-
                 return li;
               }
+
+              // Attach one-time global listeners
+              document.addEventListener('click', (e) => {
+                if (!e.target.closest('.kebab-menu-container')) {
+                  document.querySelectorAll('.actions-menu.visible').forEach(menu => menu.classList.remove('visible'));
+                }
+              });
 
               window.attachTemplatesEvents = function() {
                 logger.log('Attaching templates event listeners.');
@@ -227,22 +203,17 @@ container:
                     newElement.addEventListener(event, handler);
                   }
                 };
-
                 reattachListener('#templates-button-create', 'click', (e) => anvil.call(e.target, 'open_template_editor'));
                 reattachListener('#templates-input-search', 'input', (e) => {
                   const query = e.target.value.toLowerCase();
-                  const filtered = query ? allTemplatesData.filter(t => (t.name || "").toLowerCase().includes(query)) : allTemplatesData;
+                  const filtered = query ? window.templates_allTemplatesData.filter(t => (t.name || "").toLowerCase().includes(query)) : window.templates_allTemplatesData;
                   renderAllSections(filtered);
                 });
               };
             }
 
+            // Run instance-specific setup every time
             window.attachTemplatesEvents();
-
-            if (!window.__session_handlers_initialized) {
-              window.__session_handlers_initialized = true;
-              window.setupSessionHandlers();
-            }
           </script>
         </body>
       </html>

@@ -264,7 +264,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       return alert(t.t("audioManager_alert_noTemplate"))
 
     self.call_js("setAudioWorkflowState", "processing")
-    self.user_feedback_1.show(t.t("feedback_transcribing"))
+    self.user_feedback_1.show(t.t("feedback_uploading"))
 
     anvil_media_blob = anvil.js.to_media(js_blob_proxy)
     lang = self.selected_template_language
@@ -279,7 +279,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
         template_html,
       )
 
-      last_displayed_step = "feedback_transcribing"
+      last_displayed_step = "feedback_uploading"
       while not task.is_completed():
         time.sleep(1)
         state = task.get_state()
@@ -334,7 +334,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       self.logger.warning("Modification halted: No audio command available.")
       return alert(t.t("audioManager_alert_noAudioCommand"))
     self.call_js("setAudioWorkflowState", "processing")
-    self.user_feedback_1.show(t.t("feedback_transcribing"))
+    self.user_feedback_1.show(t.t("feedback_uploading"))
 
     anvil_media_blob = anvil.js.to_media(audio_proxy)
     current_content = self.text_editor_1.get_content()
@@ -350,7 +350,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
         current_content,
       )
 
-      last_displayed_step = "feedback_transcribing"
+      last_displayed_step = "feedback_uploading"
       while not task.is_completed():
         time.sleep(1)
         state = task.get_state()
@@ -378,6 +378,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
       )
       alert(t.t("alert_offlineSave"))
       self.queue_manager_1.open_title_modal(audio_proxy)
+    except TypeError as e:
+      self.logger.error("A TypeError occurred during modification.", e)
     except Exception as e:
       self.logger.error("A critical client-side error occurred during modification.", e)
       alert(f"{t.t('error_processingFailed')}: {e}")

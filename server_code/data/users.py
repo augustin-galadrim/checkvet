@@ -304,13 +304,14 @@ def register_user_and_setup(reg_data):
     return {"success": False, "message": "User not logged in."}
 
   try:
+    choice = reg_data.get("structure_choice")
     write_user(
       name=reg_data.get("name"),
       phone=reg_data.get("phone"),
       favorite_language=reg_data.get("favorite_language"),
       additional_info=True,
+      supervisor=choice == "create",
     )
-    choice = reg_data.get("structure_choice")
     if choice == "join":
       result = structures.join_structure_by_code(reg_data.get("join_code"))
       if not result.get("success"):

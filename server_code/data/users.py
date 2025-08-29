@@ -40,7 +40,9 @@ def admin_get_all_users():
 
 @admin_required
 @anvil.server.callable
-def admin_create_user(email, name):
+def admin_create_user(
+  email, name, phone=None, supervisor=False, favorite_language="en", structure_name=None
+):
   """Admin function to create a new user."""
   logger.info(f"Admin request to create user: Email='{email}'")
   if not email or not name:
@@ -52,13 +54,23 @@ def admin_create_user(email, name):
 
   logger.info(f"Creating new user: {email}")
 
+  structure_row = None
+  if structure_name and structure_name.lower() != INDEPENDENT_KEY:
+    structure_row = app_tables.structures.get(name=structure_name)
+    if not structure_row:
+      logger.error(f"admin_create_user failed: Structure '{structure_name}' not found.")
+      raise ValueError(f"Structure '{structure_name}' not found.")
+
   user_data = {
     "email": email,
     "name": name,
+    "phone": phone,
     "enabled": True,
     "confirmed_email": True,
-    "supervisor": False,
+    "supervisor": supervisor,
     "additional_info": True,
+    "favorite_language": favorite_language,
+    "structure": structure_row,
   }
 
   new_user = app_tables.users.add_row(**user_data)
@@ -79,31 +91,38 @@ def admin_update_user(user_id, **kwargs):
     logger.error(f"admin_update_user failed: No user found with ID '{user_id}'.")
     raise ValueError(f"No user found with ID '{user_id}'.")
 
+  update_dict = {}
+
   if "structure" in kwargs:
     structure_name = kwargs.pop("structure")
-    # Check for the special 'independent' key.
     if not structure_name or structure_name.lower() == INDEPENDENT_KEY:
-      user_row["structure"] = None
+      update_dict["structure"] = None
       logger.debug(f"Set user '{user_row['email']}' structure to None (Independent).")
     else:
-      # If it's not the special key, look up the structure in the database.
       structure_row = app_tables.structures.get(name=structure_name)
       if not structure_row:
         logger.error(
           f"admin_update_user failed: Structure '{structure_name}' not found."
         )
         raise ValueError(f"Structure '{structure_name}' not found.")
-      user_row["structure"] = structure_row
+      update_dict["structure"] = structure_row
       logger.debug(
         f"Linked user '{user_row['email']}' to structure '{structure_name}'."
       )
 
-  # Update all other provided fields
+  # Add remaining kwargs to the update dictionary
   for key, value in kwargs.items():
-    if key in user_row:
-      user_row[key] = value
+    update_dict[key] = value
 
-  logger.info(f"Successfully updated user ID '{user_id}'.")
+  # Perform a single update operation
+  if update_dict:
+    user_row.update(**update_dict)
+    logger.info(
+      f"Successfully updated user ID '{user_id}' with fields: {list(update_dict.keys())}."
+    )
+  else:
+    logger.info(f"No fields to update for user ID '{user_id}'.")
+
   return True
 
 

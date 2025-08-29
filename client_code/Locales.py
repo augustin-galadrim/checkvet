@@ -118,7 +118,7 @@ fr = {
   "settings_button_admin": "Administration",
   "settings_button_logout": "Déconnexion",
   "settings_h3_joinModalTitle": "Rejoindre une structure",
-  "settings_p_joinModalDesc": "Entrez le code à 6 chiffres fourni par l'administrateur de votre structure.",
+  "settings_p_joinModalDesc": "Entrez le code à 6 lettres fourni par l'administrateur de votre structure.",
   "settings_label_joinCodeModal": "Code d'accès",
   "settings_button_submitJoinCode": "Rejoindre la structure",
   "settings_h3_favLangModalTitle": "Sélectionner la langue",
@@ -157,6 +157,7 @@ fr = {
   "audioManagerEdit_p_instructions": "Pour modifier, enregistrez une commande vocale claire.",
   "audioManagerEdit_strong_example": "Exemple :",
   "audioManagerEdit_em_exampleText": "\"Remplace la première phrase par 'L'animal est en bonne santé.'\"",
+  "feedback_uploading": "Envoi de l'audio...",
   "feedback_transcribing": "Transcription de l'audio...",
   "feedback_applyingModification": "Application de la modification...",
   "error_transcriptionTimeout": "La transcription prend trop de temps. Veuillez réessayer.",
@@ -195,7 +196,7 @@ fr = {
   "regFlow_span_structJoin": "Rejoindre une structure existante",
   "regFlow_span_structCreate": "Créer une nouvelle structure",
   "regFlow_label_joinCode": "Code pour rejoindre la structure",
-  "regFlow_placeholder_joinCode": "Entrez le code à 6 chiffres",
+  "regFlow_placeholder_joinCode": "Entrez le code à 6 lettres",
   "regFlow_button_finish": "Terminer l'inscription",
   "regFlow_h2_createTitle": "Créer votre nouvelle structure",
   "regFlow_p_createDesc": "Veuillez entrer les détails de votre nouveau cabinet.",
@@ -513,7 +514,8 @@ en = {
   "audioManager_alert_invalidPatient": "Invalid patient data provided.",
   "audioManager_banner_saveSuccess": "Report saved successfully.",
   "audioManager_alert_saveFailed": "Server returned failure while saving report.",
-  "feedback_transcribing": "Transcribing the audio",
+  "feedback_uploading": "Uploading the audio...",
+  "feedback_transcribing": "Transcribing the audio...",
   "feedback_applyingModification": "Applying the modification...",
   "feedback_generating": "Generating report from transcription...",
   "feedback_formatting": "Formatting final report...",
@@ -558,4 +560,667 @@ en = {
 LOCALES = {
   "fr": fr,
   "en": en,
+}
+
+# A IMPLEMENTER
+# ============================================================================
+# ===                          Main Dictionary v2                          ===
+# ============================================================================
+AVAILABLE_LOCALES = ["en", "fr"]
+TRANSLATIONS = {
+  "language_fr": {"fr": "Français", "en": "Français"},
+  "language_en": {"fr": "English", "en": "English"},
+  "cancel": {"fr": "Annuler", "en": "Cancel"},
+  "pending_correction": {"fr": "À corriger", "en": "Pending Correction"},
+  "validated": {"fr": "Validé", "en": "Validated"},
+  "sent": {"fr": "Envoyé", "en": "Sent"},
+  "not_specified": {"fr": "Non spécifié", "en": "Not Specified"},
+  "title_success": {"fr": "Succès", "en": "Success"},
+  "title_updateFailed": {"fr": "Échec de la mise à jour", "en": "Update Failed"},
+  "headerNav_button_production": {"fr": "Production", "en": "Production"},
+  "headerNav_button_templates": {"fr": "Modèles", "en": "Templates"},
+  "headerNav_button_archives": {"fr": "Archives", "en": "Archives"},
+  "headerNav_button_settings": {"fr": "Réglages", "en": "Settings"},
+  "headerReturn_button_return": {"fr": "Retour", "en": "Return"},
+  "audioPlayback_button_clear_tooltip": {
+    "fr": "Réinitialiser l'enregistrement",
+    "en": "Reset recording",
+  },
+  "modal_button_close_tooltip": {"fr": "Fermer", "en": "Close"},
+  "queueManager_span_viewQueue": {"fr": "File d'attente", "en": "Queue"},
+  "queueManager_header_queueTitle": {
+    "fr": "File d'attente des enregistrements hors ligne",
+    "en": "Offline recordings Queue",
+  },
+  "queueManager_button_closeQueue": {"fr": "Fermer", "en": "Close"},
+  "queueManager_header_nameRecordingTitle": {
+    "fr": "Nommez votre enregistrement",
+    "en": "Name Your Recording",
+  },
+  "queueManager_paragraph_nameRecordingDesc": {
+    "fr": "Donnez un titre à cet enregistrement pour l'identifier dans la file d'attente.",
+    "en": "Provide a title for this recording to identify it in the queue.",
+  },
+  "queueManager_label_recordingTitle": {
+    "fr": "Titre de l'enregistrement :",
+    "en": "Recording Title:",
+  },
+  "queueManager_input_recordingTitle_placeholder": {
+    "fr": "ex: Examen de 'Fido'",
+    "en": "e.g., Exam of 'Fido'",
+  },
+  "queueManager_button_cancelTitle": {"fr": "Annuler", "en": "Cancel"},
+  "queueManager_button_confirmTitle": {"fr": "Sauvegarder", "en": "Save to queue"},
+  "queueManager_renderer_no_recordings": {
+    "fr": "Aucun enregistrement en attente.",
+    "en": "No recordings in queue.",
+  },
+  "queueManager_renderer_import_disabled_tooltip": {
+    "fr": "L'importation n'est pas disponible dans ce mode",
+    "en": "Import is not available in this mode",
+  },
+  "queueManager_renderer_import_button": {"fr": "Importer", "en": "Import"},
+  "queueManager_renderer_status_label": {"fr": "Statut :", "en": "Status:"},
+  "queueManager_renderer_delete_button": {"fr": "Supprimer", "en": "Delete"},
+  "queueManager_renderer_delete_confirm": {
+    "fr": "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
+    "en": "Are you sure you want to delete this recording?",
+  },
+  "queueManager_renderer_default_title_prefix": {
+    "fr": "Enregistrement du",
+    "en": "Recording from",
+  },
+  "recordingWidget_button_toggle_tooltip": {
+    "fr": "Démarrer l'enregistrement",
+    "en": "Start recording",
+  },
+  "reportFooter_button_status": {"fr": "Statut", "en": "Status"},
+  "reportFooter_button_archive": {"fr": "Sauvegarder", "en": "Save"},
+  "reportFooter_button_share": {"fr": "Partager", "en": "Share"},
+  "reportFooter_status_dialog_title": {
+    "fr": "Choisir le statut :",
+    "en": "Choose status:",
+  },
+  "textEditor_button_undo_tooltip": {"fr": "Annuler", "en": "Undo"},
+  "textEditor_button_redo_tooltip": {"fr": "Rétablir", "en": "Redo"},
+  "textEditor_button_bold_tooltip": {"fr": "Gras", "en": "Bold"},
+  "textEditor_button_italic_tooltip": {"fr": "Italique", "en": "Italic"},
+  "textEditor_button_underline_tooltip": {"fr": "Souligné", "en": "Underline"},
+  "textEditor_button_alignLeft_tooltip": {"fr": "Aligner à gauche", "en": "Align Left"},
+  "textEditor_button_alignCenter_tooltip": {"fr": "Centrer", "en": "Align Center"},
+  "textEditor_button_alignRight_tooltip": {
+    "fr": "Aligner à droite",
+    "en": "Align Right",
+  },
+  "textEditor_button_insertImage": {"fr": "Image", "en": "Image"},
+  "textEditor_button_copy": {"fr": "Copier", "en": "Copy"},
+  "userFeedback_p_status_default": {
+    "fr": "Traitement en cours...",
+    "en": "Processing...",
+  },
+  "archivesForm_button_create": {"fr": "Nouveau rapport", "en": "New report"},
+  "archivesForm_input_search_placeholder": {
+    "fr": "Rechercher dans les rapports...",
+    "en": "Search in reports...",
+  },
+  "archivesForm_tab_myReports": {"fr": "Mes rapports", "en": "My reports"},
+  "archivesForm_tab_structureReports": {"fr": "Ma structure", "en": "My structure"},
+  "archivesForm_h2_myReportsTitle": {"fr": "Mes rapports", "en": "My reports"},
+  "archivesForm_button_filter": {"fr": "Filtrer", "en": "Filter"},
+  "archivesForm_h2_structureTitle": {"fr": "Ma structure", "en": "My structure"},
+  "archivesForm_button_refresh_tooltip": {"fr": "Rafraîchir", "en": "Refresh"},
+  "archivesForm_h3_myReportsFilterTitle": {
+    "fr": "Filtrer mes rapports",
+    "en": "Filter my reports",
+  },
+  "archivesForm_h4_filterByStatus": {"fr": "Par statut", "en": "By status"},
+  "archivesForm_h4_filterByPatient": {"fr": "Par patient", "en": "By patient"},
+  "archivesForm_button_filterReturn": {"fr": "Retour", "en": "Return"},
+  "archivesForm_button_filterApply": {"fr": "Appliquer", "en": "Apply"},
+  "archivesForm_h3_structureFilterTitle": {
+    "fr": "Filtrer ma structure",
+    "en": "Filter my structure",
+  },
+  "archivesForm_h4_filterByVet": {"fr": "Par vétérinaire", "en": "By veterinarian"},
+  "archivesForm_confirm_delete": {
+    "fr": "Êtes-vous sûr de vouloir supprimer ce rapport ?",
+    "en": "Are you sure you want to delete this report?",
+  },
+  "archivesForm_alert_refreshed": {
+    "fr": "Les rapports ont été rafraîchis.",
+    "en": "Reports have been refreshed.",
+  },
+  "month_jan": {"fr": "janv.", "en": "jan."},
+  "month_feb": {"fr": "févr.", "en": "feb."},
+  "month_mar": {"fr": "mars", "en": "mar."},
+  "month_apr": {"fr": "avr.", "en": "apr."},
+  "month_may": {"fr": "mai", "en": "may"},
+  "month_jun": {"fr": "juin", "en": "jun."},
+  "month_jul": {"fr": "juil.", "en": "jul."},
+  "month_aug": {"fr": "août", "en": "aug."},
+  "month_sep": {"fr": "sept.", "en": "sep."},
+  "month_oct": {"fr": "oct.", "en": "oct."},
+  "month_nov": {"fr": "nov.", "en": "nov."},
+  "month_dec": {"fr": "déc.", "en": "dec."},
+  "renderer_notAvailable": {"fr": "(N/A)", "en": "(N/A)"},
+  "renderer_noPatient": {"fr": "(Aucun patient)", "en": "(No patient)"},
+  "renderer_unknownVet": {"fr": "(Inconnu)", "en": "(Unknown)"},
+  "renderer_notSpecified": {"fr": "(Non spécifié)", "en": "(Not specified)"},
+  "renderer_noMyReports": {
+    "fr": "Aucun rapport personnel à afficher.",
+    "en": "No personal reports to display.",
+  },
+  "renderer_noStructureReports": {
+    "fr": "Aucun rapport de structure à afficher.",
+    "en": "No structure reports to display.",
+  },
+  "settings_h2_vetInfoTitle": {
+    "fr": "Informations vétérinaire",
+    "en": "Vet Information",
+  },
+  "settings_label_name": {"fr": "Nom", "en": "Name"},
+  "settings_label_phone": {"fr": "Téléphone", "en": "Phone"},
+  "settings_label_email": {"fr": "Email", "en": "Email"},
+  "settings_h2_orgTitle": {"fr": "Organisation", "en": "Organization"},
+  "settings_label_structure": {"fr": "Structure", "en": "Structure"},
+  "settings_button_joinStructure": {"fr": "Rejoindre", "en": "Join"},
+  "settings_span_supervisorMessage": {
+    "fr": "Vous avez le rôle d'Administrateur dans votre structure.",
+    "en": "You have the Adminstrator role in your structure.",
+  },
+  "settings_label_joinCode": {
+    "fr": "Code pour rejoindre la structure",
+    "en": "Structure join code",
+  },
+  "settings_h2_prefsTitle": {"fr": "Préférences", "en": "Preferences"},
+  "settings_label_favLanguage": {"fr": "Langue préférée", "en": "Favorite language"},
+  "settings_h2_toolsTitle": {"fr": "Outils", "en": "Tools"},
+  "settings_button_micTest": {
+    "fr": "Tester mon microphone",
+    "en": "Test my microphone",
+  },
+  "settings_button_installGuide": {
+    "fr": "Afficher le guide d'installation",
+    "en": "Show App install guide",
+  },
+  "settings_button_cancel": {"fr": "Annuler", "en": "Cancel"},
+  "settings_button_submit": {"fr": "Mettre à jour", "en": "Update settings"},
+  "settings_button_admin": {"fr": "Administration", "en": "Administration"},
+  "settings_button_logout": {"fr": "Déconnexion", "en": "Logout"},
+  "settings_h3_joinModalTitle": {
+    "fr": "Rejoindre une structure",
+    "en": "Join a structure",
+  },
+  "settings_p_joinModalDesc": {
+    "fr": "Entrez le code à 6 lettres fourni par l'administrateur de votre structure.",
+    "en": "Enter the 6-digit join code provided by your structure's Administrator.",
+  },
+  "settings_label_joinCodeModal": {"fr": "Code d'accès", "en": "Join code"},
+  "settings_button_submitJoinCode": {
+    "fr": "Rejoindre la structure",
+    "en": "Join structure",
+  },
+  "settings_h3_favLangModalTitle": {
+    "fr": "Sélectionner la langue",
+    "en": "Select favorite language",
+  },
+  "settings_structure_independent": {"fr": "Indépendant", "en": "Independent"},
+  "settings_update_success_banner": {
+    "fr": "Réglages mis à jour avec succès !",
+    "en": "Settings updated successfully!",
+  },
+  "settings_update_fail_alert": {
+    "fr": "La mise à jour des réglages a échoué.",
+    "en": "Failed to update settings.",
+  },
+  "settings_submit_error_alert": {
+    "fr": "Une erreur est survenue lors de la soumission",
+    "en": "An error occurred while submitting",
+  },
+  "settings_cancel_banner": {
+    "fr": "Les modifications ont été annulées.",
+    "en": "Changes have been discarded.",
+  },
+  "templates_button_create": {"fr": "Nouveau modèle", "en": "New template"},
+  "templates_input_search_placeholder": {
+    "fr": "Rechercher dans les modèles...",
+    "en": "Search in templates...",
+  },
+  "templates_confirm_delete": {
+    "fr": "Êtes-vous sûr de vouloir supprimer ce modèle ?",
+    "en": "Are you sure you want to delete this template?",
+  },
+  "templates_title_default": {"fr": "Modèle par défaut", "en": "Default template"},
+  "templates_title_active": {"fr": "Modèles visibles", "en": "Visible templates"},
+  "templates_title_inactive": {"fr": "Modèles masqués", "en": "Hidden templates"},
+  "templates_renderer_noDefault": {
+    "fr": "Aucun modèle par défaut défini.",
+    "en": "No default template set.",
+  },
+  "templates_renderer_noActive": {
+    "fr": "Aucun modèle actif trouvé.",
+    "en": "No active templates found.",
+  },
+  "templates_renderer_noInactive": {
+    "fr": "Aucun modèle inactif trouvé.",
+    "en": "No inactive templates found.",
+  },
+  "templates_renderer_untitled": {"fr": "Modèle sans titre", "en": "Untitled template"},
+  "templates_renderer_setAsDefault": {
+    "fr": "Définir par défaut",
+    "en": "Set as default",
+  },
+  "templates_renderer_hide": {"fr": "Masquer", "en": "Hide"},
+  "templates_renderer_show": {"fr": "Afficher", "en": "Show"},
+  "templates_renderer_delete_tooltip": {"fr": "Supprimer", "en": "Delete"},
+  "startupForm_loading_message": {
+    "fr": "Chargement de l'application...",
+    "en": "Loading application...",
+  },
+  "startupForm_alert_loginCancelled": {
+    "fr": "Connexion annulée. Accès au mode hors ligne.",
+    "en": "Login cancelled. Proceeding with offline capabilities.",
+  },
+  "startupForm_alert_offline": {
+    "fr": "L'application est hors ligne. Chargement du mode hors ligne.",
+    "en": "Application is offline. Loading offline mode.",
+  },
+  "startupForm_alert_unexpectedError": {
+    "fr": "Une erreur inattendue est survenue au démarrage de l'application",
+    "en": "An unexpected error occurred while starting the app",
+  },
+  "audioManagerEdit_button_discard": {"fr": "Annuler", "en": "Discard"},
+  "audioManagerEdit_button_process": {
+    "fr": "Traiter la modification",
+    "en": "Process modification",
+  },
+  "audioManagerEdit_alert_noReportError": {
+    "fr": "Erreur : Aucun rapport n'a été fourni pour l'édition.",
+    "en": "Error: No report was provided to edit.",
+  },
+  "audioManagerEdit_alert_navErrorTitle": {
+    "fr": "Erreur de navigation",
+    "en": "Navigation error",
+  },
+  "audioManagerEdit_default_headerTitle": {
+    "fr": "Modifier le rapport",
+    "en": "Edit report",
+  },
+  "audioManagerEdit_alert_noAudio": {
+    "fr": "Aucune commande audio disponible pour le traitement.",
+    "en": "No audio command available to process.",
+  },
+  "audioManagerEdit_p_instructions": {
+    "fr": "Pour modifier, enregistrez une commande vocale claire.",
+    "en": "To edit, record a clear voice command.",
+  },
+  "audioManagerEdit_strong_example": {"fr": "Exemple :", "en": "Example:"},
+  "audioManagerEdit_em_exampleText": {
+    "fr": "\"Remplace la première phrase par 'L'animal est en bonne santé.'\"",
+    "en": "\"Replace the first sentence with 'The animal is in good health.'\"",
+  },
+  "feedback_transcribing": {
+    "fr": "Transcription de l'audio...",
+    "en": "Transcribing the audio",
+  },
+  "feedback_applyingModification": {
+    "fr": "Application de la modification...",
+    "en": "Applying the modification...",
+  },
+  "error_transcriptionTimeout": {
+    "fr": "La transcription prend trop de temps. Veuillez réessayer."
+  },
+  "error_transcriptionFailed": {"fr": "La transcription a échoué"},
+  "error_transcriptionEmpty": {
+    "fr": "La transcription a renvoyé un résultat vide. L'audio était peut-être silencieux."
+  },
+  "error_processingFailed": {
+    "fr": "Une erreur est survenue lors du traitement de la modification"
+  },
+  "error_reportUpdateFailed": {
+    "fr": "La mise à jour du rapport sur le serveur a échoué."
+  },
+  "error_reportSaveFailed": {
+    "fr": "Une erreur est survenue lors de la sauvegarde du rapport"
+  },
+  "banner_statusSetTo": {"fr": "Statut défini sur", "en": "Status set to"},
+  "banner_reportUpdateSuccess": {
+    "fr": "Rapport mis à jour avec succès !",
+    "en": "Report updated.",
+  },
+  "microphoneTest_header_title": {"fr": "Test du microphone", "en": "Microphone test"},
+  "microphoneTest_h1_title": {
+    "fr": "Testez votre microphone",
+    "en": "Test your microphone",
+  },
+  "microphoneTest_p_instructions": {
+    "fr": "Cliquez sur le microphone pour démarrer l'enregistrement, puis cliquez à nouveau pour l'arrêter. Vous pourrez ensuite écouter votre enregistrement.",
+    "en": "Click the microphone to start recording, then click the checkmark to stop. You will be able to play back your recording.",
+  },
+  "templateEditor_header_title": {"fr": "Éditeur de modèle", "en": "Template editor"},
+  "templateEditor_input_name_placeholder": {
+    "fr": "Nom du modèle",
+    "en": "Template name",
+  },
+  "templateEditor_button_cancel": {"fr": "Annuler", "en": "Cancel"},
+  "templateEditor_button_save": {"fr": "Sauvegarder", "en": "Save"},
+  "templateEditor_alert_nameRequired": {
+    "fr": "Veuillez entrer un nom pour le modèle.",
+    "en": "Please enter a template name.",
+  },
+  "templateEditor_banner_saveSuccess": {
+    "fr": "Modèle sauvegardé avec succès",
+    "en": "Template saved successfully",
+  },
+  "templateEditor_alert_saveFailed": {
+    "fr": "La sauvegarde du modèle a échoué. Veuillez réessayer.",
+    "en": "Failed to save template. Please try again.",
+  },
+  "templateEditor_alert_saveError": {
+    "fr": "Erreur lors de la sauvegarde du modèle",
+    "en": "Error saving template",
+  },
+  "regFlow_h2_langTitle": {
+    "fr": "Choisissez votre langue",
+    "en": "Choose your language",
+  },
+  "regFlow_p_langDesc": {
+    "fr": "Veuillez sélectionner votre langue préférée pour l'application.",
+    "en": "Please select your preferred language for the application.",
+  },
+  "regFlow_button_next": {"fr": "Suivant", "en": "Next"},
+  "regFlow_h2_infoTitle": {"fr": "Vos informations", "en": "Your information"},
+  "regFlow_p_infoDesc": {
+    "fr": "Veuillez entrer votre nom et votre numéro de téléphone pour continuer.",
+    "en": "Please enter your name and phone number to continue.",
+  },
+  "regFlow_label_name": {"fr": "Nom", "en": "Name"},
+  "regFlow_label_phone": {"fr": "Téléphone", "en": "Phone"},
+  "regFlow_button_back": {"fr": "Retour", "en": "Back"},
+  "regFlow_h2_structTitle": {
+    "fr": "Configurez votre cabinet",
+    "en": "Set up your practice",
+  },
+  "regFlow_p_structDesc": {
+    "fr": "Comment souhaitez-vous configurer votre compte ?",
+    "en": "How would you like to configure your account?",
+  },
+  "regFlow_span_structIndep": {
+    "fr": "S'inscrire en tant qu'indépendant",
+    "en": "Register as independent",
+  },
+  "regFlow_span_structJoin": {
+    "fr": "Rejoindre une structure existante",
+    "en": "Join an existing structure",
+  },
+  "regFlow_span_structCreate": {
+    "fr": "Créer une nouvelle structure",
+    "en": "Create a new structure",
+  },
+  "regFlow_label_joinCode": {
+    "fr": "Code pour rejoindre la structure",
+    "en": "Structure join code",
+  },
+  "regFlow_placeholder_joinCode": {
+    "fr": "Entrez le code à 6 lettres",
+    "en": "Enter the 6-digit code",
+  },
+  "regFlow_button_finish": {
+    "fr": "Terminer l'inscription",
+    "en": "Finish registration",
+  },
+  "regFlow_h2_createTitle": {
+    "fr": "Créer votre nouvelle structure",
+    "en": "Create your new structure",
+  },
+  "regFlow_p_createDesc": {
+    "fr": "Veuillez entrer les détails de votre nouveau cabinet.",
+    "en": "Please enter the details for your new practice.",
+  },
+  "regFlow_label_structName": {"fr": "Nom de la structure", "en": "Structure name"},
+  "regFlow_label_structPhone": {
+    "fr": "Téléphone de la structure",
+    "en": "Structure phone",
+  },
+  "regFlow_label_structEmail": {"fr": "Email de la structure", "en": "Structure email"},
+  "regFlow_alert_langRequired": {
+    "fr": "Veuillez sélectionner une langue.",
+    "en": "Please select a language.",
+  },
+  "regFlow_alert_infoRequired": {
+    "fr": "Veuillez remplir votre nom et votre numéro de téléphone.",
+    "en": "Please fill in both your name and phone number.",
+  },
+  "regFlow_alert_joinCodeRequired": {
+    "fr": "Veuillez entrer le code pour rejoindre la structure.",
+    "en": "Please enter the structure join code.",
+  },
+  "regFlow_alert_structNameRequired": {
+    "fr": "Veuillez entrer un nom pour votre nouvelle structure.",
+    "en": "Please enter a name for your new structure.",
+  },
+  "regFlow_alert_regSuccess": {
+    "fr": "Inscription réussie !",
+    "en": "Registration successful!",
+  },
+  "regFlow_alert_regFailed": {
+    "fr": "L'inscription a échoué",
+    "en": "Registration failed",
+  },
+  "regFlow_alert_regError": {
+    "fr": "Une erreur est survenue lors de l'inscription",
+    "en": "An error occurred during registration",
+  },
+  "audioManager_label_template": {"fr": "Modèle", "en": "Template"},
+  "audioManager_span_templatePlaceholder": {
+    "fr": "Sélectionner un modèle",
+    "en": "Select a template",
+  },
+  "audioManager_strong_modTitle": {
+    "fr": "Mode Modification :",
+    "en": "Modification mode:",
+  },
+  "audioManager_span_modDesc": {
+    "fr": "Vous pouvez maintenant éditer le rapport avec votre voix. Donnez une commande claire à l'IA.",
+    "en": "You can now edit the report with your voice. Provide a clear command to the AI.",
+  },
+  "audioManager_div_recordToggle": {"fr": "Enregistrer", "en": "Record"},
+  "audioManager_div_uploadToggle": {"fr": "Importer", "en": "Upload"},
+  "audioManager_div_uploadText": {
+    "fr": "Déposez votre mémo vocal ici",
+    "en": "Drop your voice memo here",
+  },
+  "audioManager_p_uploadDesc": {"fr": "ou", "en": "or"},
+  "audioManager_label_uploadButton": {
+    "fr": "Sélectionner un fichier",
+    "en": "Select file",
+  },
+  "audioManager_button_discard": {"fr": "Supprimer l'audio", "en": "Discard audio"},
+  "audioManager_button_process": {"fr": "Traiter l'audio", "en": "Process audio"},
+  "audioManager_button_modify": {
+    "fr": "Traiter la modification",
+    "en": "Process modification",
+  },
+  "audioManager_h3_newPatientTitle": {
+    "fr": "Créer un nouveau patient",
+    "en": "Create a new patient",
+  },
+  "audioManager_label_newPatientName": {"fr": "Nom", "en": "Name"},
+  "audioManager_placeholder_newPatientName": {"fr": "ex: Fido", "en": "e.g., Fido"},
+  "audioManager_label_newPatientSpecies": {"fr": "Espèce", "en": "Species"},
+  "audioManager_placeholder_newPatientSpecies": {
+    "fr": "ex: Canin",
+    "en": "e.g., Canine",
+  },
+  "audioManager_label_newPatientOwner": {"fr": "Propriétaire", "en": "Owner"},
+  "audioManager_placeholder_newPatientOwner": {
+    "fr": "ex: Jean Dupont",
+    "en": "e.g., Jane Doe",
+  },
+  "audioManager_button_newPatientCancel": {"fr": "Annuler", "en": "Cancel"},
+  "audioManager_button_newPatientSave": {
+    "fr": "Créer et sélectionner",
+    "en": "Create and select",
+  },
+  "audioManager_h3_selectPatientTitle": {
+    "fr": "Sélectionner un patient",
+    "en": "Select a patient",
+  },
+  "audioManager_placeholder_patientSearch": {
+    "fr": "Rechercher un patient...",
+    "en": "Search for a patient...",
+  },
+  "audioManager_h3_selectTemplateTitle": {
+    "fr": "Sélectionner un modèle",
+    "en": "Select a template",
+  },
+  "audioManager_placeholder_templateSearch": {
+    "fr": "Rechercher un modèle...",
+    "en": "Search for a template...",
+  },
+  "audioManager_alert_invalidFile": {
+    "fr": "Veuillez sélectionner un fichier audio valide.",
+    "en": "Please select a valid audio file.",
+  },
+  "audioManager_button_newPatient": {"fr": "+ Nouveau patient", "en": "+ New patient"},
+  "audioManager_alert_patientNameRequired": {
+    "fr": "Le nom du patient est requis.",
+    "en": "Patient name is required.",
+  },
+  "audioManager_alert_noAudio": {
+    "fr": "Aucun audio disponible pour le traitement.",
+    "en": "No audio available to process.",
+  },
+  "audioManager_alert_noTemplate": {
+    "fr": "Impossible de traiter sans modèle. Veuillez d'abord en sélectionner un.",
+    "en": "Cannot process without a template. Please select a template first.",
+  },
+  "audioManager_alert_noAudioCommand": {
+    "fr": "Aucune commande audio disponible pour le traitement.",
+    "en": "No audio command available to process.",
+  },
+  "audioManager_alert_invalidPatient": {
+    "fr": "Données patient non valides.",
+    "en": "Invalid patient data provided.",
+  },
+  "audioManager_banner_saveSuccess": {
+    "fr": "Rapport sauvegardé avec succès.",
+    "en": "Report saved successfully.",
+  },
+  "audioManager_alert_saveFailed": {
+    "fr": "Le serveur a retourné une erreur lors de la sauvegarde du rapport.",
+    "en": "Server returned failure while saving report.",
+  },
+  "feedback_generating": {
+    "fr": "Génération du rapport depuis la transcription...",
+    "en": "Generating report from transcription...",
+  },
+  "feedback_formatting": {
+    "fr": "Formatage du rapport final...",
+    "en": "Formatting final report...",
+  },
+  "alert_offlineSave": {
+    "fr": "Connexion perdue. Votre enregistrement a été sauvegardé dans la file d'attente hors ligne.",
+    "en": "Connection lost. Your recording has been saved to the offline queue.",
+  },
+  "confirm_offlineSaveOnError": {
+    "fr": "Une erreur inattendue est survenue. Sauvegarder dans la file d'attente hors ligne ?",
+    "en": "An unexpected error occurred. Save to offline queue?",
+  },
+  "offlineAudioManager_h2_title": {
+    "fr": "Enregistrement hors ligne",
+    "en": "Offline recorder",
+  },
+  "offlineAudioManager_p_instructions": {
+    "fr": "Enregistrez votre audio. Il sera sauvegardé dans la file d'attente de votre appareil.",
+    "en": "Record your audio. It will be saved to your device's queue.",
+  },
+  "offlineAudioManager_button_discard": {"fr": "Annuler", "en": "Discard"},
+  "offlineAudioManager_button_queue": {"fr": "Mettre en attente", "en": "Put in Queue"},
+  "offlineAudioManager_alert_noRecording": {
+    "fr": "Aucun enregistrement disponible pour la sauvegarde.",
+    "en": "No recording available to save.",
+  },
+  "install_ios_safari_step1_title": {
+    "fr": "Étape 1 : Ouvrir le menu de partage",
+    "en": "Step 1: Open Share Menu",
+  },
+  "install_ios_safari_step1_text": {
+    "fr": "D'abord, appuyez sur l'icône 'Partager' en bas de votre navigateur Safari.",
+    "en": "First, tap the 'Share' icon at the bottom of your Safari browser.",
+  },
+  "install_ios_safari_step2_title": {
+    "fr": "Étape 2 : Ajouter à l'écran d'accueil",
+    "en": "Step 2: Add to Home Screen",
+  },
+  "install_ios_safari_step2_text": {
+    "fr": "Ensuite, faites défiler le menu de partage vers le bas et appuyez sur 'Ajouter à l'écran d'accueil'.",
+    "en": "Next, scroll down in the share menu and tap on 'Add to Home Screen'.",
+  },
+  "install_ios_safari_step3_title": {
+    "fr": "Étape 3 : Confirmer l'ajout",
+    "en": "Step 3: Confirm Addition",
+  },
+  "install_ios_safari_step3_text": {
+    "fr": "Enfin, appuyez sur 'Ajouter' dans le coin supérieur droit pour placer l'application sur votre écran d'accueil.",
+    "en": "Finally, tap 'Add' in the top right corner to place the app on your home screen.",
+  },
+  "install_ios_chrome_step1_title": {
+    "fr": "Étape 1 : Ouvrir le menu de partage",
+    "en": "Step 1: Open Share Menu",
+  },
+  "install_ios_chrome_step1_text": {
+    "fr": "D'abord, appuyez sur l'icône 'Partager' dans la barre d'adresse de votre navigateur Chrome.",
+    "en": "First, tap the 'Share' icon in your Chrome browser's address bar.",
+  },
+  "install_ios_chrome_step2_title": {
+    "fr": "Étape 2 : Ajouter à l'écran d'accueil",
+    "en": "Step 2: Add to Home Screen",
+  },
+  "install_ios_chrome_step2_text": {
+    "fr": "Ensuite, faites défiler vers le bas et appuyez sur 'Ajouter à l'écran d'accueil'.",
+    "en": "Next, scroll down and tap on 'Add to Home Screen'.",
+  },
+  "install_ios_chrome_step3_title": {
+    "fr": "Étape 3 : Confirmer l'ajout",
+    "en": "Step 3: Confirm Addition",
+  },
+  "install_ios_chrome_step3_text": {
+    "fr": "Enfin, confirmez le nom et appuyez sur 'Ajouter' pour placer l'application sur votre écran d'accueil.",
+    "en": "Finally, confirm the name and tap 'Add' to place the app on your home screen.",
+  },
+  "install_android_chrome_step1_title": {
+    "fr": "Étape 1 : Ouvrir le menu",
+    "en": "Step 1: Open Menu",
+  },
+  "install_android_chrome_step1_text": {
+    "fr": "D'abord, appuyez sur l'icône de menu à trois points dans le coin supérieur droit de votre navigateur Chrome.",
+    "en": "First, tap the three-dot menu icon in the top right corner of your Chrome browser.",
+  },
+  "install_android_chrome_step2_title": {
+    "fr": "Étape 2 : Installer l'application",
+    "en": "Step 2: Install App",
+  },
+  "install_android_chrome_step2_text": {
+    "fr": "Ensuite, appuyez sur 'Installer l'application' ou 'Ajouter à l'écran d'accueil' dans le menu.",
+    "en": "Next, tap on 'Install app' or 'Add to Home screen' from the menu.",
+  },
+  "install_android_chrome_step3_title": {
+    "fr": "Étape 3 : Confirmer l'installation",
+    "en": "Step 3: Confirm Installation",
+  },
+  "install_android_chrome_step3_text": {
+    "fr": "Une fenêtre de confirmation apparaîtra. Appuyez sur 'Installer' pour terminer l'ajout de l'application à votre écran d'accueil.",
+    "en": "A confirmation popup will appear. Tap 'Install' to finish adding the app to your home screen.",
+  },
+  "install_guide_finish_button": {
+    "fr": "J'ai installé l'application",
+    "en": "I've Installed It",
+  },
+  "install_guide_back_button": {"fr": "Retour", "en": "Back"},
+  "install_guide_next_button": {"fr": "Suivant", "en": "Next"},
+  "install_guide_unavailable_alert": {
+    "fr": "Désolé, un guide d'installation pour votre appareil et navigateur spécifiques n'est pas encore disponible. Veuillez essayer depuis un navigateur standard comme Safari sur iOS ou Chrome sur Android.",
+    "en": "Sorry, an installation guide for your specific device and browser is not yet available. Please try from a standard browser like Safari on iOS or Chrome on Android.",
+  },
 }

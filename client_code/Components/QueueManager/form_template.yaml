@@ -61,15 +61,17 @@ container:
       </style>
 
       <script>
-        if (!window.__queue_manager_globals) {
-          window.__queue_manager_globals = true;
+        if (!window.qm_globals) {
+          window.qm_globals = true;
 
           const logger = window.createLogger('QueueManager');
-          let dbPromise = null;
-          let isImportDisabled = false;
+
+          // Initialize state variables on the global 'window' object
+          window.qm_dbPromise = null;
+          window.qm_isImportDisabled = false;
 
           window.qm_initialize = function(disableImport) {
-            isImportDisabled = disableImport;
+            window.qm_isImportDisabled = disableImport;
             initDB();
           };
 
@@ -106,8 +108,8 @@ container:
           };
 
           function initDB() {
-            if (dbPromise) return dbPromise;
-            dbPromise = new Promise((resolve, reject) => {
+            if (window.qm_dbPromise) return window.qm_dbPromise;
+            window.qm_dbPromise = new Promise((resolve, reject) => {
               const request = indexedDB.open('audioQueueDB', 1);
               request.onerror = event => reject("IndexedDB error: " + event.target.errorCode);
               request.onsuccess = event => resolve(event.target.result);
@@ -115,7 +117,7 @@ container:
                 event.target.result.createObjectStore('recordings', { keyPath: 'id' });
               };
             });
-            return dbPromise;
+            return window.qm_dbPromise;
           }
 
           async function saveToQueue(jsBlob, title) {
@@ -166,23 +168,23 @@ container:
             queue.forEach(item => {
               const div = document.createElement('div');
               div.className = 'queue-item';
-              const importButtonHTML = isImportDisabled
+              const importButtonHTML = window.qm_isImportDisabled
                 ? `<button class="button button-primary" disabled title="${t.import_disabled}">${t.import_button}</button>`
                 : `<button class="button button-primary import-btn" data-id="${item.id}">${t.import_button}</button>`;
               div.innerHTML = `
-                <div>
-                  <div class="queue-item-title">${item.title}</div>
-                  <div class="queue-item-status">${t.status_label} <strong>${item.status}</strong></div>
-                </div>
-                <div class="queue-item-actions">
-                  ${importButtonHTML}
-                  <button class="button delete-btn" data-id="${item.id}">${t.delete_button}</button>
-                </div>`;
+                  <div>
+                    <div class="queue-item-title">${item.title}</div>
+                    <div class="queue-item-status">${t.status_label} <strong>${item.status}</strong></div>
+                  </div>
+                  <div class="queue-item-actions">
+                    ${importButtonHTML}
+                    <button class="button delete-btn" data-id="${item.id}">${t.delete_button}</button>
+                  </div>`;
               container.appendChild(div);
             });
           }
 
-          function attachQueueManagerEvents() {
+          window.qm_reattach_events = function() {
             const reattach = (selector, event, handler) => {
               const element = document.querySelector(selector);
               if (element) {
@@ -243,9 +245,6 @@ container:
               window.closeModal('qm-titleModal');
             });
           }
-
-          window.qm_reattach_events = attachQueueManagerEvents;
-          attachQueueManagerEvents();
         }
       </script>
   type: HtmlTemplate

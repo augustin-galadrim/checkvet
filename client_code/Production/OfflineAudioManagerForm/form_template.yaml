@@ -31,7 +31,7 @@ container:
             .decision-buttons { display: flex; gap: 15px; margin-top: 15px; }
             .decision-button { padding: 10px 20px; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; font-size: 14px; font-weight: bold; }
             .btn-discard { background-color: #f44336; color: white; border-color: #f44336; }
-            .btn-queue { background-color: #4CAF50; color: white; border-color: #4CAF50; }
+            .btn-queue { background-color: #3974CB; color: white; border-color: #3974CB; }
           </style>
         </head>
         <body>

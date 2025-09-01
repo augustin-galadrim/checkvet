@@ -20,8 +20,8 @@ container:
           .bottom-buttons { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 800px; max-width: 100%; background: #fff; padding: 15px 20px; display: flex; justify-content: center; gap: 20px; border-top: 1px solid #ddd; box-shadow: 0 -2px 4px rgba(0,0,0,0.1); z-index: 10; }
           .bottom-button { padding: 10px 30px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; transition: all 0.2s ease; }
           .bottom-button:hover { background: #f5f5f5; border-color: #999; }
-          .primary-button { background: #4caf50; color: white; border-color: #4caf50; }
-          .primary-button:hover { background: #45a049; border-color: #45a049; }
+          .primary-button { background: #3974CB; color: white; border-color: #3974CB; }
+          .primary-button:hover { background: #2C5DA4; border-color: #2C5DA4; }
         </style>
       </head>
       <body>

@@ -61,6 +61,39 @@ def admin_write_base_template(template_id=None, name=None, html=None, language=N
     raise
 
 
+@admin_required
+@anvil.server.callable
+def admin_delete_base_template(template_id):
+  """Admin function to delete a base template by its ID."""
+  if not template_id:
+    logger.error("Admin delete base template failed: No template_id provided.")
+    return False
+
+  logger.info(f"Admin request to delete base template ID: {template_id}")
+  try:
+    template_row = app_tables.base_templates.get_by_id(template_id)
+    if not template_row:
+      logger.warning(f"Delete failed: Base template with ID '{template_id}' not found.")
+      return False
+
+    # FIX : Obtenir le nom pour le journal AVANT de supprimer la ligne.
+    template_name = template_row["name"]
+
+    template_row.delete()
+
+    # Maintenant, loguer en utilisant le nom stocké.
+    logger.info(
+      f"Successfully deleted base template '{template_name}' (ID: {template_id})."
+    )
+    return True
+  except Exception as e:
+    logger.error(
+      f"Exception in admin_delete_base_template for ID '{template_id}': {e}",
+      exc_info=True,
+    )
+    raise
+
+
 @anvil.server.callable
 def assign_all_base_templates(user):
   """

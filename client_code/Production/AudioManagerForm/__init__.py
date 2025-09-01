@@ -437,6 +437,25 @@ class AudioManagerForm(AudioManagerFormTemplate):
           proprietaire=details.get("proprietaire"),
         )
         self.logger.info(f"New animal record created with ID: {animal_id}")
+        if animal_id:
+          new_patient_obj = {"id": animal_id, "name": animal_name}
+
+          # 1. Mettre à jour la liste Python
+          self.all_patients.append(new_patient_obj)
+          self.all_patients.sort(key=lambda x: x["name"])  # Garder la liste triée
+
+          # 2. Appeler le JS pour mettre à jour sa liste
+          self.call_js("addPatientToLocalList", new_patient_obj)
+          self.logger.info(
+            f"Locally updated patient list with new patient: {animal_name}"
+          )
+        else:
+          # Gérer le cas où la création de l'animal échoue
+          self.logger.error(
+            "Failed to get a valid ID for the new animal. Aborting save."
+          )
+          alert("There was a problem creating the new patient record on the server.")
+          return False
 
       html_content = self.text_editor_1.get_content()
       statut = self.selected_status or "not_specified"

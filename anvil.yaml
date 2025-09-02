@@ -205,7 +205,7 @@ db_schema:
     - admin_ui: {order: 2, width: 200}
       name: last_login
       type: datetime
-    - admin_ui: {order: 3, width: 200}
+    - admin_ui: {order: 3, width: 356}
       name: password_hash
       type: string
     - admin_ui: {order: 4, width: 200}

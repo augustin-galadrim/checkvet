@@ -65,45 +65,65 @@ container:
             document.execCommand('justify' + align.charAt(0).toUpperCase() + align.slice(1), false, null);
           };
 
-          window.copyEditorContent = function() {
+          window.copyEditorContent = async function() {
             const editor = document.getElementById("editor");
             if (!editor) {
-              logger.error("Editor element not found for copying.");
+              window.createLogger('TextEditor').error("Editor element not found for copying.");
               return;
             }
 
-            // 1. Créer un élément temporaire pour contenir le HTML
-            const listener = function(e) {
-              // Empêcher l'action par défaut
-              e.preventDefault();
-
-              // Mettre le contenu HTML et le texte brut dans le presse-papiers
-              // e.clipboardData.setData('text/html', editor.innerHTML);
-              // e.clipboardData.setData('text/plain', editor.innerText || editor.textContent);
-              e.clipboardData.setData('text/plain', 'du texte là');
-
-              // Afficher la bannière de succès
-              if (window.displayBanner) {
-                // Le message est en français pour correspondre au message d'erreur
-                window.displayBanner("Contenu formaté copié !", "success");
+            // Use the modern Clipboard API first (preferred method)
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              try {
+                // Check for clipboard permissions (optional but good practice)
+                // Note: Permissions API support is limited on iOS Safari
+                const permission = await navigator.permissions.query({ name: "clipboard-write" });
+                if (permission.state === "granted" || permission.state === "prompt") {
+                  await navigator.clipboard.writeText(editor.innerText || editor.textContent);
+                  if (window.displayBanner) {
+                    window.displayBanner("Contenu copié !", "success");
+                  }
+                } else {
+                  // Permission denied, fall back to execCommand
+                  throw new Error("Clipboard permission denied.");
+                }
+              } catch (err) {
+                console.error("Failed to copy with Clipboard API:", err);
+                // Fallback to legacy method
+                fallbackCopy(editor);
               }
-            };
-
-            // 2. Ajouter l'écouteur d'événement `copy` et exécuter la commande
-            document.addEventListener('copy', listener);
-            try {
-              document.execCommand('copy');
-            } catch (err) {
-              logger.error("Error executing copy command: ", err);
-              if (window.displayBanner) {
-                // Le message est en français
-                window.displayBanner("Échec de la copie du contenu.", "error");
-              }
-            } finally {
-              // 3. IMPORTANT : Retirer l'écouteur pour ne pas interférer avec d'autres copies
-              document.removeEventListener('copy', listener);
+            } else {
+              // Fallback for browsers that don't support the Clipboard API
+              fallbackCopy(editor);
             }
           };
+
+          function fallbackCopy(editor) {
+            let succeeded = false;
+            try {
+              // Create a temporary textarea to hold the text
+              const tempTextarea = document.createElement('textarea');
+              tempTextarea.value = editor.innerText || editor.textContent;
+              document.body.appendChild(tempTextarea);
+
+              // Select and copy the text
+              tempTextarea.select();
+              document.execCommand('copy');
+              succeeded = true;
+            } catch (err) {
+              window.createLogger('TextEditor').error("Fallback copy failed:", err);
+            } finally {
+              if (tempTextarea) {
+                document.body.removeChild(tempTextarea);
+              }
+            }
+
+            if (succeeded && window.displayBanner) {
+              window.displayBanner("Contenu copié (via fallback) !", "success");
+            } else if (window.displayBanner) {
+              window.displayBanner("Échec de la copie du contenu.", "error");
+            }
+          }
           window.updateToolbarState = function() {
             const simpleCommands = {
               'textEditor-button-bold': 'bold',

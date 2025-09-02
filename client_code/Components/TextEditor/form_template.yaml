@@ -78,8 +78,9 @@ container:
               e.preventDefault();
 
               // Mettre le contenu HTML et le texte brut dans le presse-papiers
-              e.clipboardData.setData('text/html', editor.innerHTML);
-              e.clipboardData.setData('text/plain', editor.innerText || editor.textContent);
+              // e.clipboardData.setData('text/html', editor.innerHTML);
+              // e.clipboardData.setData('text/plain', editor.innerText || editor.textContent);
+              e.clipboardData.setData('text/plain', 'du texte là');
 
               // Afficher la bannière de succès
               if (window.displayBanner) {
@@ -176,6 +177,7 @@ container:
           };
         }
       </script>
+    visible: true
   type: HtmlTemplate
 custom_component: true
 is_package: true

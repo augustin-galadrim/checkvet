@@ -113,6 +113,7 @@ unique_ids:
     services.ai.generation: '1754039646040245080540001.4252'
     services.ai.tasks: '1756284551154990096248806.0352'
     services.ai.transcription: '1754039298590204533436423.41492'
+    services.pdf_service: '1757601796342496353475754.3164'
     services.prompts_service: '1754475006837677496397816.3076'
     services.reports_service: '1737666835725319552995469.37866'
     services.structures_service: '1738779919445740028792595.802'

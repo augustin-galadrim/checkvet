@@ -138,7 +138,7 @@ container:
                 li.className = "template-item";
                 const spanName = document.createElement("span");
                 spanName.className = "template-name";
-                const langToFlag = { 'en': '🇬🇧', 'fr': '🇫🇷' };
+                const langToFlag = { 'en': '🇬🇧', 'fr': '🇫🇷', 'es': '🇪🇸', 'de': '🇩🇪', 'nl': '🇳🇱' };
                 const langCode = tpl.language || 'en';
                 const flag = langToFlag[langCode] || '🏳️';
                 const displayName = `${tpl.name || window.templates_localeTexts.untitledTemplate} - ${flag}`;

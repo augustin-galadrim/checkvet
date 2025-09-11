@@ -40,6 +40,9 @@ container:
                 <div class="radio-group" id="language-group">
                   <label><input type="radio" name="language" value="fr"> <span id="regFlow-span-langFr">Français</span></label>
                   <label><input type="radio" name="language" value="en"> <span id="regFlow-span-langEn">English</span></label>
+                  <label><input type="radio" name="language" value="es"> <span id="regFlow-span-langEs">Español</span></label>
+                  <label><input type="radio" name="language" value="de"> <span id="regFlow-span-langDe">Deutsch</span></label>
+                  <label><input type="radio" name="language" value="nl"> <span id="regFlow-span-langNl">Nederlands</span></label>
                 </div>
                 <div class="button-group">
                   <button id="regFlow-button-langNext" class="custom-button btn-primary">Next</button>

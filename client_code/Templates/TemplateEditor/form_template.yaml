@@ -32,6 +32,9 @@ container:
             <select id="templateEditor-select-language" style="padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
               <option value="en">🇬🇧</option>
               <option value="fr">🇫🇷</option>
+              <option value="es">🇪🇸</option>
+              <option value="de">🇩🇪</option>
+              <option value="nl">🇳🇱</option>
             </select>
           </div>
           <div class="scrollable-content">

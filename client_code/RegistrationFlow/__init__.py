@@ -30,6 +30,9 @@ class RegistrationFlow(RegistrationFlowTemplate):
     self.call_js("setElementText", "regFlow-p-langDesc", t.t("regFlow_p_langDesc"))
     self.call_js("setElementText", "regFlow-span-langFr", t.t("language_fr"))
     self.call_js("setElementText", "regFlow-span-langEn", t.t("language_en"))
+    self.call_js("setElementText", "regFlow-span-langEs", t.t("language_es"))
+    self.call_js("setElementText", "regFlow-span-langDe", t.t("language_de"))
+    self.call_js("setElementText", "regFlow-span-langNl", t.t("language_nl"))
     self.call_js(
       "setElementText", "regFlow-button-langNext", t.t("regFlow_button_next")
     )

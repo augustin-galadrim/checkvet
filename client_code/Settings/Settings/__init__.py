@@ -119,7 +119,13 @@ class Settings(SettingsTemplate):
       self.call_js("toggleJoinButton", is_independent)
 
       favorite_language = user_data.get("favorite_language", "en")
-      lang_map = {"fr": t.t("language_fr"), "en": t.t("language_en")}
+      lang_map = {
+        "fr": t.t("language_fr"),
+        "en": t.t("language_en"),
+        "es": t.t("language_es"),
+        "de": t.t("language_de"),
+        "nl": t.t("language_nl"),
+      }
       lang_display_text = lang_map.get(favorite_language, t.t("language_en"))
       self.call_js("setValue", "favorite-language", favorite_language)
       self.call_js("setElementText", "settings-button-favLanguage", lang_display_text)
@@ -147,6 +153,9 @@ class Settings(SettingsTemplate):
     options = [
       {"display": t.t("language_fr"), "value": "fr"},
       {"display": t.t("language_en"), "value": "en"},
+      {"display": t.t("language_es"), "value": "es"},
+      {"display": t.t("language_de"), "value": "de"},
+      {"display": t.t("language_nl"), "value": "nl"},
     ]
     current_fav = anvil.server.call_s("get_user_info", "favorite_language") or "en"
     self.call_js("populateFavoriteLanguageModal", options, current_fav)
@@ -201,7 +210,11 @@ class Settings(SettingsTemplate):
     user = anvil.users.get_user()
     if not user:
       return False
-    admin_emails = ["augustincramer.galadrim@gmail.com", "biffy071077@gmail.com", "navetl@yahoo.com"]
+    admin_emails = [
+      "augustincramer.galadrim@gmail.com",
+      "biffy071077@gmail.com",
+      "navetl@yahoo.com",
+    ]
     return user["email"].lower() in admin_emails
 
   def openAdmin(self, **event_args):

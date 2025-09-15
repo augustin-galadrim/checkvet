@@ -6,6 +6,8 @@ from anvil.tables import app_tables
 import anvil.server
 from datetime import datetime
 from ..logging_server import get_logger
+from ..auth import admin_required
+from ..data.structures import _generate_unique_join_code
 
 logger = get_logger(__name__)
 
@@ -29,6 +31,39 @@ def mark_additional_info_completed(user):
 
 
 #################### CUSTOM PDF SECTION #################
+
+
+@admin_required
+@anvil.server.callable
+def admin_make_user_independent(user_id):
+  """
+  Safely removes a user from their current structure by creating and assigning
+  them to a new, personal structure. This is the correct way to make a user independent.
+  """
+  logger.info(f"Admin request to make user ID '{user_id}' independent.")
+  user_to_update = app_tables.users.get_by_id(user_id)
+
+  if not user_to_update:
+    logger.error(
+      f"admin_make_user_independent failed: User with ID '{user_id}' not found."
+    )
+    raise ValueError(f"User with ID '{user_id}' not found.")
+
+  # Create a unique name for the new personal structure.
+  personal_structure_name = f"Personal Structure - User ID: {user_to_update.get_id()}"
+
+  new_personal_structure = app_tables.structures.add_row(
+    name=personal_structure_name,
+    owner=user_to_update,
+    is_personal=True,
+    join_code=_generate_unique_join_code(),
+  )
+
+  # Re-link the user and ensure they are no longer a supervisor.
+  user_to_update.update(structure=new_personal_structure, supervisor=False)
+
+  logger.info(f"Successfully made user '{user_to_update['email']}' independent.")
+  return True
 
 
 @anvil.server.callable
@@ -90,29 +125,30 @@ def create_user(email, name):
 
 @anvil.server.callable
 def update_user(user_id, **kwargs):
-  """Update a user by ID with the provided fields"""
+  """
+  Update a user by ID. Can only assign users to real, non-personal structures.
+  Making a user independent is handled by 'admin_make_user_independent'.
+  """
   try:
     user_row = app_tables.users.get_by_id(user_id)
     if not user_row:
       print(f"DEBUG: No user found with ID {user_id}")
       return False
 
-      # Handle structure separately
     if "structure" in kwargs:
       structure_value = kwargs.pop("structure")
-      if structure_value and structure_value != "Indépendant":
-        # Set to a structure row
-        structure_row = app_tables.structures.get(name=structure_value)
+      if structure_value:
+        # Ensure we only link to real, non-personal clinics.
+        structure_row = app_tables.structures.get(
+          name=structure_value, is_personal=False
+        )
         if structure_row:
           user_row["structure"] = structure_row
         else:
-          print(f"DEBUG: Structure not found: {structure_value}")
+          print(f"DEBUG: Non-personal structure not found: {structure_value}")
           return False
-      else:
-        # For "Indépendant", set structure to None
-        user_row["structure"] = None
+      # If structure_value is empty, this block is skipped, preserving the user's current structure.
 
-        # Update all other fields
     for key, value in kwargs.items():
       user_row[key] = value
 

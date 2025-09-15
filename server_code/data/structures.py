@@ -23,25 +23,22 @@ def _generate_unique_join_code(length=6):
 @anvil.server.callable(require_user=True)
 def read_structures():
   """
-  MODIFIED: Retrieves all structures and includes a count of affiliated vets.
-  Now correctly counts the users.
+  REFACTORED: Retrieves all non-personal structures and includes a count of affiliated vets.
   """
-  logger.info("Reading all structures from the database for admin panel.")
-  all_structures = app_tables.structures.search()
+  logger.info("Reading all non-personal structures from the database for admin panel.")
+  # This query now explicitly excludes personal structures from the results.
+  all_structures = app_tables.structures.search(is_personal=False)
   result = []
   for structure_row in all_structures:
     try:
-      # --- THIS IS THE FIX ---
-      # Convert the search iterator to a list and get its length.
       vet_count = len(list(app_tables.users.search(structure=structure_row)))
       logger.debug(f"Found {vet_count} vets for structure '{structure_row['name']}'.")
-      # --- END OF FIX ---
     except Exception as e:
       logger.error(
         f"Could not count vets for structure '{structure_row['name']}': {e}",
         exc_info=True,
       )
-      vet_count = 0  # Default to 0 on error to prevent crashing the entire function
+      vet_count = 0
 
     structure_dict = {
       "id": structure_row.get_id(),
@@ -52,7 +49,7 @@ def read_structures():
       "affiliated_vets": vet_count,
     }
     result.append(structure_dict)
-  logger.info(f"Returning {len(result)} structures.")
+  logger.info(f"Returning {len(result)} non-personal structures.")
   return result
 
 

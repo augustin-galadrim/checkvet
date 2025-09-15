@@ -252,3 +252,35 @@ def migrate_independent_users_to_personal_structures():
   summary = f"MIGRATION SCRIPT: Finished. Migrated: {migrated_count}, Skipped: {skipped_count}, Total Found: {total_users}."
   logger.info(summary)
   return summary
+
+
+@admin_required
+@anvil.server.callable
+def admin_get_all_users():
+  """
+  Admin function to retrieve a formatted list of all users for the admin panel.
+  """
+  logger.info("Admin request to get all users.")
+  all_users = app_tables.users.search()
+
+  result_list = []
+  for user_row in all_users:
+    is_independent = _is_user_independent(user_row)
+    structure_name = (
+      "Independent"
+      if is_independent
+      else (user_row["structure"]["name"] if user_row["structure"] else None)
+    )
+
+    result_list.append({
+      "id": user_row.get_id(),
+      "name": user_row["name"],
+      "email": user_row["email"],
+      "phone": user_row["phone"],
+      "supervisor": user_row["supervisor"],
+      "structure": structure_name,
+      "is_independent": is_independent,
+    })
+
+  logger.info(f"Returning {len(result_list)} users to the admin panel.")
+  return result_list

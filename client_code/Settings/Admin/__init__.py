@@ -108,17 +108,17 @@ class Admin(AdminTemplate):
       )
 
   def remove_vet_from_structure(self, user_id, **event_args):
-    """Called from JS to remove a vet from the current structure."""
+    """
+    REFACTORED: Called from the Structure tab to safely make a user independent.
+    """
     if not user_id:
       self.call_js("displayBanner", "User ID is missing.", "error")
       return
     try:
-      success = anvil.server.call_s("admin_remove_vet_from_structure", user_id)
+      # This now calls the new, safe server function.
+      success = anvil.server.call_s("admin_make_user_independent", user_id)
       if success:
-        self.call_js(
-          "displayBanner", "Vet removed from structure successfully.", "success"
-        )
-        # Refresh the details view
+        self.call_js("displayBanner", "Vet successfully made independent.", "success")
         self.on_form_show()
         self.get_structure_details(self.current_structure_id)
       else:
@@ -127,6 +127,22 @@ class Admin(AdminTemplate):
       self.call_js(
         "displayBanner", f"An error occurred while removing the vet: {e}", "error"
       )
+
+  def make_user_independent(self, user_id, **event_args):
+    """Called from the new button on the user edit form."""
+    if not user_id:
+      self.call_js("displayBanner", "User ID is missing.", "error")
+      return
+    try:
+      success = anvil.server.call_s("admin_make_user_independent", user_id)
+      if success:
+        self.call_js("displayBanner", "User successfully made independent.", "success")
+        self.on_form_show()  # Refresh all data
+        self.call_js("admin_showUserForm", False)  # Close the form
+      else:
+        self.call_js("displayBanner", "Operation failed.", "error")
+    except Exception as e:
+      self.call_js("displayBanner", f"An error occurred: {e}", "error")
 
   # ----- User Management -----
   def get_user_details(self, user_id, **event_args):

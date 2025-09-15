@@ -7,7 +7,7 @@ import anvil.server
 from datetime import datetime
 from ..logging_server import get_logger
 from ..auth import admin_required
-from ..data.structures import _generate_unique_join_code
+from ..data.structures import generate_unique_join_code
 
 logger = get_logger(__name__)
 
@@ -56,7 +56,7 @@ def admin_make_user_independent(user_id):
     name=personal_structure_name,
     owner=user_to_update,
     is_personal=True,
-    join_code=_generate_unique_join_code(),
+    join_code=generate_unique_join_code(),
   )
 
   # Re-link the user and ensure they are no longer a supervisor.

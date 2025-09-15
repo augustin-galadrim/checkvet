@@ -194,68 +194,6 @@ def register_user_and_setup(reg_data):
 
 @admin_required
 @anvil.server.callable
-def migrate_independent_users_to_personal_structures():
-  """
-  A one-time migration script to find all users with no linked structure,
-  create a personal structure for each one, and set the 'is_personal' flag.
-  """
-  logger.info("MIGRATION SCRIPT: Starting migration of independent users.")
-
-  # Find all users where the 'structure' column is empty (None)
-  independent_users = app_tables.users.search(structure=None)
-
-  migrated_count = 0
-  skipped_count = 0
-
-  users_to_migrate = list(independent_users)
-  total_users = len(users_to_migrate)
-  logger.info(f"MIGRATION SCRIPT: Found {total_users} user(s) to migrate.")
-
-  for user_row in users_to_migrate:
-    try:
-      # Safety check: ensure we don't accidentally overwrite an existing link.
-      if user_row["structure"] is not None:
-        logger.warning(
-          f"MIGRATION SCRIPT: Skipping user '{user_row['email']}' as they already have a structure."
-        )
-        skipped_count += 1
-        continue
-
-        # ======================= KEY CHANGES =======================
-        # 1. Use a programmatic, unique name for the structure.
-        # This makes it clear it's a system-managed entity.
-      personal_structure_name = f"Personal Structure - User ID: {user_row.get_id()}"
-
-      new_structure = app_tables.structures.add_row(
-        name=personal_structure_name,
-        owner=user_row,
-        join_code=structures._generate_unique_join_code(),
-        # 2. Set the new flag to True to identify this structure's purpose.
-        is_personal=True,
-      )
-      # ==========================================================
-
-      # Link the user to their new personal structure
-      user_row["structure"] = new_structure
-
-      logger.info(
-        f"MIGRATION SCRIPT: Successfully migrated user '{user_row['email']}'. Created personal structure '{new_structure['name']}'."
-      )
-      migrated_count += 1
-
-    except Exception as e:
-      logger.error(
-        f"MIGRATION SCRIPT: FAILED to migrate user '{user_row['email']}'. Error: {e}",
-        exc_info=True,
-      )
-
-  summary = f"MIGRATION SCRIPT: Finished. Migrated: {migrated_count}, Skipped: {skipped_count}, Total Found: {total_users}."
-  logger.info(summary)
-  return summary
-
-
-@admin_required
-@anvil.server.callable
 def admin_get_all_users():
   """
   Admin function to retrieve a formatted list of all users for the admin panel.

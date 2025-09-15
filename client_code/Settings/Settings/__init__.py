@@ -99,6 +99,56 @@ class Settings(SettingsTemplate):
       "settings-h3-favLangModalTitle",
       t.t("settings_h3_favLangModalTitle"),
     )
+    self.call_js(
+      "setElementText",
+      "settings-h2-pdfBrandingTitle",
+      t.t("settings_h2_pdfBrandingTitle"),
+    )
+    self.call_js(
+      "setElementText", "settings-h3-mySignature", t.t("settings_h3_mySignature")
+    )
+    self.call_js(
+      "setElementText", "settings-p-signatureHelp", t.t("settings_p_signatureHelp")
+    )
+    self.call_js(
+      "setElementText",
+      "settings-label-uploadSignature",
+      t.t("settings_label_uploadSignature"),
+    )
+    self.call_js(
+      "setElementText",
+      "settings-h3-structureBranding",
+      t.t("settings_h3_structureBranding"),
+    )
+    self.call_js(
+      "setElementText", "settings-p-headerHelp", t.t("settings_p_headerHelp")
+    )
+    self.call_js(
+      "setElementText",
+      "settings-label-uploadHeader",
+      t.t("settings_label_uploadHeader"),
+    )
+    self.call_js(
+      "setElementText", "settings-p-footerHelp", t.t("settings_p_footerHelp")
+    )
+    self.call_js(
+      "setElementText",
+      "settings-label-uploadFooter",
+      t.t("settings_label_uploadFooter"),
+    )
+    self.call_js(
+      "setElementText",
+      "settings-p-brandingManagedBy",
+      t.t("settings_p_brandingManagedBy"),
+    )
+    self.call_js(
+      "setElementText", "signature-no-asset-msg", t.t("settings_msg_noSignature")
+    )
+    self.call_js("setElementText", "header-no-asset-msg", t.t("settings_msg_noHeader"))
+    self.call_js("setElementText", "footer-no-asset-msg", t.t("settings_msg_noFooter"))
+    self.call_js("setElementText", "signature-delete-btn", t.t("settings_btn_delete"))
+    self.call_js("setElementText", "header-delete-btn", t.t("settings_btn_delete"))
+    self.call_js("setElementText", "footer-delete-btn", t.t("settings_btn_delete"))
 
   def load_vet_data(self):
     """Retrieves the current user's data and their active assets, then updates the UI."""
@@ -145,10 +195,17 @@ class Settings(SettingsTemplate):
       # ======================= NEW ASSET LOGIC =======================
       # Fetch and display the user's active branding assets
       active_assets_data = anvil.server.call("get_active_assets_for_user_with_ids")
+      self.logger.info(f"Recieved assets: {active_assets_data}")
       self.active_asset_ids = {
-        "signature": active_assets_data.get("signature", {}).get("id"),
-        "header": active_assets_data.get("header", {}).get("id"),
-        "footer": active_assets_data.get("footer", {}).get("id"),
+        "signature": active_assets_data.get("signature").get("id")
+        if active_assets_data.get("signature") is not None
+        else None,
+        "header": active_assets_data.get("header").get("id")
+        if active_assets_data.get("header") is not None
+        else None,
+        "footer": active_assets_data.get("footer").get("id")
+        if active_assets_data.get("footer") is not None
+        else None,
       }
       self._update_asset_previews(active_assets_data)
 
@@ -163,9 +220,17 @@ class Settings(SettingsTemplate):
   def _update_asset_previews(self, assets):
     """Helper to update the src of preview images and visibility of messages."""
 
-    signature_asset = assets.get("signature").get('file')
-    header_asset = assets.get("header").get('file')
-    footer_asset = assets.get("footer")
+    signature_asset = (
+      assets.get("signature").get("file")
+      if assets.get("signature") is not None
+      else None
+    )
+    header_asset = (
+      assets.get("header").get("file") if assets.get("header") is not None else None
+    )
+    footer_asset = (
+      assets.get("footer").get("file") if assets.get("footer") is not None else None
+    )
 
     # Pass the URL string (or None) to the JavaScript function.
     self.call_js(
@@ -239,7 +304,8 @@ class Settings(SettingsTemplate):
       self.call_js("displayBanner", f"No active {asset_type} to delete.", "info")
       return
 
-    if confirm(f"Are you sure you want to delete this {asset_type}?"):
+    confirm_text = t.t("settings_confirm_delete_asset", asset_type=asset_type)
+    if confirm(confirm_text):
       try:
         success = anvil.server.call("delete_asset", asset_id)
         if success:

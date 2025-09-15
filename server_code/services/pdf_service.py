@@ -37,16 +37,22 @@ def generate_pdf_from_html(html_content):
 
   try:
     # --- Step 1: Fetch all required assets via the new service ---
-    active_assets = anvil.server.call("get_active_assets_for_user")
+    active_assets = anvil.server.call("get_active_assets_for_user_with_ids")
 
     header_data_uri = _convert_media_to_data_uri(
-      active_assets.get("header", {}).get("file")
+      active_assets.get("header").get("file")
+      if active_assets.get("header") is not None
+      else None
     )
     footer_data_uri = _convert_media_to_data_uri(
-      active_assets.get("footer", {}).get("file")
+      active_assets.get("footer").get("file")
+      if active_assets.get("footer") is not None
+      else None
     )
     signature_data_uri = _convert_media_to_data_uri(
-      active_assets.get("signature", {}).get("file")
+      active_assets.get("signature").get("file")
+      if active_assets.get("signature") is not None
+      else None
     )
 
     # --- Step 2: Build HTML blocks ---

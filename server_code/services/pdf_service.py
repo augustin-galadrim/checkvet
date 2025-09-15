@@ -3,6 +3,7 @@ from anvil.tables import app_tables
 from ..logging_server import get_logger
 import io
 import base64
+from datetime import datetime
 
 try:
   from weasyprint import HTML, CSS
@@ -14,111 +15,84 @@ except ImportError:
 logger = get_logger(__name__)
 
 
-def _get_image_data_uri(asset_name):
+def _convert_media_to_data_uri(media_object):
   """
-  Helper function to fetch an image from the app_assets table and convert it to a Data URI.
-  Returns None if the asset is not found.
+  Helper function to convert any Anvil Media object into a Base64 Data URI.
+  Returns None if the media_object is invalid.
   """
-  asset_row = app_tables.assets.get(name=asset_name)
-  if asset_row and asset_row["file"]:
-    media = asset_row["file"]
-    content_type = media.get_content_type()
-    base64_data = base64.b64encode(media.get_bytes()).decode("ascii")
+  if media_object:
+    content_type = media_object.get_content_type()
+    base64_data = base64.b64encode(media_object.get_bytes()).decode("ascii")
     return f"data:{content_type};base64,{base64_data}"
-  logger.warning(f"Asset '{asset_name}' not found in 'app_assets' table.")
   return None
 
 
 @anvil.server.callable(require_user=True)
 def generate_pdf_from_html(html_content):
   """
-  Generates a PDF from HTML, with a correctly scaled header/footer on every page,
-  and a signature at the end of the document body.
+  Generates a PDF from HTML, dynamically fetching the correct header, footer,
+  and signature for the user from the new asset_service.
   """
-  logger.info("Starting PDF generation with the definitive header/footer method.")
+  logger.info("Starting PDF generation using the new asset service.")
 
   try:
-    # --- Step 1: Fetch all required assets ---
-    header_data_uri = _get_image_data_uri("default_header")
-    footer_data_uri = _get_image_data_uri("default_footer")
-    signature_data_uri = _get_image_data_uri("default_signature")
+    # --- Step 1: Fetch all required assets via the new service ---
+    active_assets = anvil.server.call("get_active_assets_for_user")
 
-    # --- Step 2: Build HTML blocks for header, footer, and signature ---
-    header_html = ""
-    if header_data_uri:
-      # This div will be captured by CSS and placed in the page header
-      header_html = f'<div id="header"><img src="{header_data_uri}"></div>'
+    header_data_uri = _convert_media_to_data_uri(
+      active_assets.get("header", {}).get("file")
+    )
+    footer_data_uri = _convert_media_to_data_uri(
+      active_assets.get("footer", {}).get("file")
+    )
+    signature_data_uri = _convert_media_to_data_uri(
+      active_assets.get("signature", {}).get("file")
+    )
 
-    footer_html = ""
-    if footer_data_uri:
-      # This div will be captured by CSS and placed in the page footer
-      footer_html = f'<div id="footer"><img src="{footer_data_uri}"></div>'
+    # --- Step 2: Build HTML blocks ---
+    header_html = (
+      f'<div id="header"><img src="{header_data_uri}"></div>' if header_data_uri else ""
+    )
+    footer_html = (
+      f'<div id="footer"><img src="{footer_data_uri}"></div>' if footer_data_uri else ""
+    )
+    signature_html = (
+      f'<div class="signature-section"><img src="{signature_data_uri}" alt="Signature"></div>'
+      if signature_data_uri
+      else ""
+    )
 
-    signature_html = ""
-    if signature_data_uri:
-      signature_html = f"""
-            <div class="signature-section">
-                <img src="{signature_data_uri}" alt="Signature">
-            </div>
+    # --- Step 3: Combine everything into a single, structured HTML document ---
+    full_html_document = f"""
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"></head>
+            <body>
+                {header_html}
+                {footer_html}
+                <div class="main-content">
+                    {html_content}
+                    {signature_html}
+                </div>
+            </body>
+            </html>
             """
 
-      # --- Step 3: Combine everything into a single, structured HTML document ---
-    full_html_document = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><meta charset="UTF-8"></head>
-        <body>
-            {header_html}
-            {footer_html}
-            
-            <div class="main-content">
-                {html_content}
-                {signature_html}
-            </div>
-        </body>
-        </html>
-        """
-
-    # --- Step 4: Define the final, robust stylesheet ---
+    # --- Step 4: Define the stylesheet ---
     css = CSS(
       string="""
-            /* --- 1. PAGE SETUP & RUNNING ELEMENTS --- */
             @page {
-                size: A4;
-                margin: 3.5cm 2cm 3.5cm 2cm; /* Increased bottom margin slightly for footer */
-
-                /* Place the captured 'header' and 'footer' elements into the margin boxes */
-                @top-center {
-                    content: element(header);
-                }
-                @bottom-center {
-                    content: element(footer);
-                }
+                size: A4; margin: 3.5cm 2cm 3.5cm 2cm;
+                @top-center { content: element(header); }
+                @bottom-center { content: element(footer); }
             }
-
-            /* --- 2. CAPTURE & STYLE HEADER/FOOTER --- */
-            
-            /* THIS IS THE FIX: Apply sizing and position directly to the captured element */
             #header, #footer {
-                position: running(header); /* Use the same name 'header' for the running element concept */
-                height: 2.5cm; /* Give the container a fixed height */
-                width: 100%;    /* Make the container fill the available width */
-                text-align: center; /* Center the image within the container */
+                position: running(header); height: 2.5cm; width: 100%; text-align: center;
             }
-
-            /* The footer needs its own running() name to be captured separately */
-            #footer {
-                position: running(footer);
-            }
-
-            /* Now, style the image to fit perfectly inside its sized container */
+            #footer { position: running(footer); }
             #header img, #footer img {
-                max-height: 100%;   /* Can't be taller than its parent div */
-                max-width: 100%;    /* Can't be wider than its parent div */
-                object-fit: contain; /* Maintain aspect ratio within the box */
+                max-height: 100%; max-width: 100%; object-fit: contain;
             }
-
-            /* --- 3. BODY & CONTENT STYLING --- */
             body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11pt; line-height: 1.4; color: #333333; }
             h1, h2, h3, p, ul, li { margin: 0; padding: 0; font-weight: normal; }
             h1 { font-size: 1.6em; text-align: center; margin-bottom: 25px; color: #111111; font-weight: bold; }
@@ -129,18 +103,17 @@ def generate_pdf_from_html(html_content):
             .signature-section img { max-width: 200px; height: auto; }
         """
     )
+
     # --- Step 5: Render and Return ---
     pdf_buffer = io.BytesIO()
     html = HTML(string=full_html_document)
     html.write_pdf(pdf_buffer, stylesheets=[css])
-
     pdf_bytes = pdf_buffer.getvalue()
-
     pdf_media = anvil.BlobMedia(
       content_type="application/pdf", content=pdf_bytes, name="report.pdf"
     )
 
-    logger.info("PDF generation with running elements successful.")
+    logger.info("PDF generation with dynamic assets successful.")
     return pdf_media
 
   except Exception as e:

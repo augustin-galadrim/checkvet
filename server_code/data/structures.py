@@ -130,6 +130,7 @@ def create_and_join_new_structure(structure_details):
       address=structure_details.get("address"),
       owner=user,
       join_code=new_join_code,
+      is_personal=False,
     )
     user["structure"] = new_structure
     logger.info(

@@ -224,3 +224,43 @@ window.closeModal = function(modalId) {
     console.warn(`closeModal: Element with ID '${modalId}' not found.`);
   }
 };
+
+/**
+ * Updates an asset preview UI block.
+ * @param {string} type - The asset type ('signature', 'header', 'footer').
+ * @param {string|null} imageUrl - The URL of the image to display, or null.
+ */
+window.updateAssetPreview = function(type, imageUrl) { // <-- Parameter name changed for clarity
+  const img = document.getElementById(`${type}-preview-img`);
+  const msg = document.getElementById(`${type}-no-asset-msg`);
+  const delBtn = document.getElementById(`${type}-delete-btn`);
+
+  if (img && msg) {
+    // ======================= THE FIX =======================
+    // The logic now checks for the existence of the imageUrl string directly.
+    if (imageUrl) {
+      img.src = imageUrl; // <-- Directly use the URL string
+      img.style.display = 'block';
+      msg.style.display = 'none';
+      if (delBtn) delBtn.style.display = 'inline-block';
+    } else {
+      img.style.display = 'none';
+      msg.style.display = 'block';
+      if (delBtn) delBtn.style.display = 'none';
+    }
+    // =======================================================
+  }
+};
+/**
+ * Enables or disables the controls for editing structure branding.
+ * @param {boolean} canEdit - If true, controls are enabled; otherwise, they are disabled.
+ */
+window.toggleStructureBrandingControls = function(canEdit) {
+  const controls = document.getElementById('structure-branding-controls');
+  const disabledMsg = document.getElementById('structure-branding-disabled-msg');
+
+  if (controls && disabledMsg) {
+    controls.style.display = canEdit ? 'block' : 'none';
+    disabledMsg.style.display = canEdit ? 'none' : 'block';
+  }
+};

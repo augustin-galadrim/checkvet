@@ -1,10 +1,11 @@
 unique_ids:
   assets:
     Icone appli-Checkvet.png: '1738605655877392149207318.92334'
-    Plan de travail 1 copie 5.png: '1745768642751700276938164.339'
     beautiful-running-horse-sprite-animation.gif: '1754498945420152349503694.1194'
+    checkvet_logo.png: '1745768642751700276938164.339'
     global-scripts.js: '1755521746178670632664058.7062'
     imgs/.gitkeep: '175612529289264290589738.7962'
+    imgs/default_signature.png: '1757604733663886897140336.7976'
     imgs/install/.gitkeep: '175612522105483476109432.8893'
     imgs/install/de/.gitkeep: '1757595755788814697736141.2227'
     imgs/install/de/android_chrome_step_1.jpg: '1757595999553935113710689.0742'
@@ -113,6 +114,8 @@ unique_ids:
     services.ai.generation: '1754039646040245080540001.4252'
     services.ai.tasks: '1756284551154990096248806.0352'
     services.ai.transcription: '1754039298590204533436423.41492'
+    services.assets_service: '17579440604398258288542.548841'
+    services.pdf_service: '1757601796342496353475754.3164'
     services.prompts_service: '1754475006837677496397816.3076'
     services.reports_service: '1737666835725319552995469.37866'
     services.structures_service: '1738779919445740028792595.802'

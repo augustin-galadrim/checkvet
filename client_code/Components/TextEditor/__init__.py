@@ -143,7 +143,7 @@ class TextEditor(TextEditorTemplate):
 
   def reset_content_and_history(self, new_html_content=""):
     """
-    Définit un nouveau contenu pour l'éditeur et réinitialise complètement 
+    Définit un nouveau contenu pour l'éditeur et réinitialise complètement
     l'historique d'annulation/rétablissement.
     Idéal pour charger un nouveau document ou un template.
     """
@@ -153,3 +153,12 @@ class TextEditor(TextEditorTemplate):
     if getattr(self, "parent", None):
       self.call_js("setEditorContent", self._html_content)
       self._update_undo_redo_buttons()
+
+  def export_content(self, **event_args):
+    """Called from JS. Calls the server to generate a PDF and initiates download."""
+    try:
+      html_content = self.get_content()
+      pdf_media = anvil.server.call("generate_pdf_from_html", html_content)
+      anvil.media.download(pdf_media)
+    except Exception as e:
+      alert(f"Failed to export PDF: {e}")

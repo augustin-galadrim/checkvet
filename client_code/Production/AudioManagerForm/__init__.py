@@ -4,7 +4,7 @@ import anvil.server
 import anvil.js
 import time
 from ... import TranslationService as t
-from ...Cache import template_cache_manager, user_settings_cache, reports_cache_manager
+from ...Cache import template_cache_manager, reports_cache_manager
 from ...LoggingClient import ClientLogger
 from ...AppEvents import events
 from ...AuthHelpers import setup_auth_handlers
@@ -178,12 +178,8 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
   def form_show(self, **event_args):
     self.logger.info("Form showing...")
-    self.header_nav_1.active_tab = "Production"
     self.update_ui_texts()
     self.call_js("setFormMode", self.mode)
-
-    # Registration & Installation Checks...
-    # (Existing logic remains the same)
 
     template_data = template_cache_manager.get()
     if template_data is None:

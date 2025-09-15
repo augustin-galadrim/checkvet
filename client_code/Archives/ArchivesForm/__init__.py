@@ -163,8 +163,20 @@ class ArchivesForm(ArchivesFormTemplate):
     self.header_nav_1.active_tab = "Archives"
     self.update_ui_texts()
     self.call_js("resetActiveTabState")
-    user = anvil.users.get_user()
-    self.is_supervisor = user and user["supervisor"]
+
+    # ======================= MODIFIED LOGIC =======================
+    # Fetch the comprehensive user data dictionary once.
+    user_data = anvil.server.call_s("read_user")
+    if not user_data:
+      alert("Could not load your user profile. Please try again.")
+      open_form("StartupForm")  # Or another appropriate fallback
+      return
+
+    # Use the data from the dictionary instead of making separate calls.
+    self.is_supervisor = user_data.get("supervisor", False)
+    self.structure_name = user_data.get("structure")
+    # =============================================================
+
     self.logger.debug(f"User is supervisor: {self.is_supervisor}")
 
     try:
@@ -201,23 +213,23 @@ class ArchivesForm(ArchivesFormTemplate):
       try:
         fresh_my_reports = anvil.server.call_s("read_reports") or []
         fresh_structure_reports = []
-        if self.is_supervisor:
-          self.structure_name = anvil.server.call_s("get_user_info", "structure")
-          self.has_structure = bool(
-            self.structure_name and self.structure_name != "independent"
-          )
+
+        # This logic now uses the reliable 'is_independent' flag from our new model
+        self.has_structure = not user_data.get("is_independent", True)
+
+        if self.is_supervisor and self.has_structure:
           self.logger.info(
             f"Supervisor has structure '{self.structure_name}': {self.has_structure}"
           )
-          if self.has_structure:
-            fresh_structure_reports = (
-              anvil.server.call_s("get_reports_by_structure", self.structure_name) or []
-            )
-            self.affiliated_vets = (
-              anvil.server.call_s("get_vets_in_structure", self.structure_name) or []
-            )
-          else:
-            self.affiliated_vets = []
+          fresh_structure_reports = (
+            anvil.server.call_s("get_reports_by_structure", self.structure_name) or []
+          )
+          self.affiliated_vets = (
+            anvil.server.call_s("get_vets_in_structure", self.structure_name) or []
+          )
+        else:
+          self.affiliated_vets = []
+
         self.my_reports = fresh_my_reports
         self.structure_reports = fresh_structure_reports
         reports_cache_manager.set(

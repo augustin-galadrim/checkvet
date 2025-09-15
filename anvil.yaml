@@ -19,6 +19,37 @@ db_schema:
       type: string
     server: full
     title: Animals
+  assets:
+    client: none
+    columns:
+    - admin_ui: {order: 0, width: 200}
+      name: name
+      type: string
+    - admin_ui: {order: 1, width: 192}
+      name: file
+      type: media
+    - admin_ui: {order: 0.5, width: 200}
+      name: type
+      type: string
+    - admin_ui: {order: 2, width: 200}
+      name: owner_user
+      target: users
+      type: link_single
+    - admin_ui: {order: 3, width: 200}
+      name: owner_structure
+      target: structures
+      type: link_single
+    - admin_ui: {order: 4, width: 200}
+      name: is_default
+      type: bool
+    - admin_ui: {order: 5, width: 200}
+      name: created_date
+      type: datetime
+    - admin_ui: {order: 6, width: 200}
+      name: is_archived
+      type: bool
+    server: full
+    title: Assets
   audio:
     client: none
     columns:
@@ -171,6 +202,12 @@ db_schema:
     - admin_ui: {order: 7, width: 200}
       name: join_code
       type: string
+    - admin_ui: {order: 8, width: 200}
+      name: is_archived
+      type: bool
+    - admin_ui: {order: 6, width: 200}
+      name: is_personal
+      type: bool
     server: full
     title: Structures
   translations:
@@ -226,7 +263,7 @@ db_schema:
     - admin_ui: {order: 9, width: 200}
       name: additional_info
       type: bool
-    - admin_ui: {order: 13, width: 200}
+    - admin_ui: {order: 13, width: 357}
       name: structure
       target: structures
       type: link_single
@@ -609,7 +646,7 @@ exported_table_schema:
   name: Base_templates
   python_name: base_templates
   server: full
-metadata: {logo_img: 'asset:Plan de travail 1 copie 5.png'}
+metadata: {logo_img: 'asset:checkvet_logo.png', title: checkvet}
 name: checkvet
 native_deps:
   head_html: |-

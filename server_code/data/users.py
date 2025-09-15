@@ -16,6 +16,25 @@ logger = get_logger(__name__)
 INDEPENDENT_KEY = "independent"
 
 
+# ======================= NEW CORE LOGIC =======================
+def _is_user_independent(user_row):
+  """
+  Checks if a user is independent.
+
+  Domain Logic: An independent user is defined as a user who is the owner
+  of the structure they belong to. This provides a single, reliable source of truth
+  and supports the "personal structure" model.
+  """
+  if not user_row or not user_row["structure"]:
+    return False
+
+  # The user is independent if their structure's owner is the user themselves.
+  return user_row["structure"]["owner"] == user_row
+
+
+# =============================================================
+
+
 @admin_required
 @anvil.server.callable
 def admin_get_all_users():
@@ -305,13 +324,16 @@ def register_user_and_setup(reg_data):
 
   try:
     choice = reg_data.get("structure_choice")
-    write_user(
+
+    # Update user with basic info first
+    user.update(
       name=reg_data.get("name"),
       phone=reg_data.get("phone"),
       favorite_language=reg_data.get("favorite_language"),
       additional_info=True,
-      supervisor=choice == "create",
+      supervisor=(choice == "create"),
     )
+
     if choice == "join":
       result = structures.join_structure_by_code(reg_data.get("join_code"))
       if not result.get("success"):
@@ -322,6 +344,28 @@ def register_user_and_setup(reg_data):
       )
       if not result.get("success"):
         return result
+    # ======================= MODIFIED LOGIC =======================
+    elif choice == "independent":
+      # Domain Logic: Create a personal, single-member structure for this user.
+      # This ensures that every user in the system has a structure, simplifying
+      # all downstream logic for asset management.
+      logger.info(
+        f"Registering independent user '{user['email']}'. Creating personal structure."
+      )
+      personal_structure_name = f"Practice of {user['name']}"
+
+      # Check for name collision, though unlikely
+      if app_tables.structures.get(name=personal_structure_name):
+        personal_structure_name = f"Practice of {user['name']} ({user.get_id()[:4]})"
+
+      new_structure = app_tables.structures.add_row(
+        name=personal_structure_name,
+        owner=user,
+        join_code=structures._generate_unique_join_code(),
+      )
+      user["structure"] = new_structure
+      logger.info(f"Personal structure '{new_structure['name']}' created and linked.")
+    # =============================================================
 
     # Assign all base templates to the user, regardless of language
     base_templates.assign_all_base_templates(user)
@@ -332,3 +376,60 @@ def register_user_and_setup(reg_data):
       f"FATAL REGISTRATION ERROR User: {user['email']}, Error: {e}", exc_info=True
     )
     return {"success": False, "message": f"A fatal error occurred: {e}"}
+
+
+@admin_required
+@anvil.server.callable
+def migrate_independent_users_to_personal_structures():
+  """
+  A one-time migration script to find all users with no linked structure
+  and create a personal structure for each of them.
+  """
+  logger.info("MIGRATION SCRIPT: Starting migration of independent users.")
+
+  independent_users = app_tables.users.search(structure=None)
+
+  migrated_count = 0
+  skipped_count = 0
+
+  users_to_migrate = list(independent_users)
+  total_users = len(users_to_migrate)
+  logger.info(f"MIGRATION SCRIPT: Found {total_users} user(s) to migrate.")
+
+  for user_row in users_to_migrate:
+    try:
+      if user_row["structure"] is not None:
+        logger.warning(
+          f"MIGRATION SCRIPT: Skipping user '{user_row['email']}' as they already have a structure."
+        )
+        skipped_count += 1
+        continue
+
+      personal_structure_name = f"Practice of {user_row['name']}"
+
+      if app_tables.structures.get(name=personal_structure_name):
+        unique_id = user_row.get_id().split("-")[0]
+        personal_structure_name = f"Practice of {user_row['name']} ({unique_id})"
+
+      new_structure = app_tables.structures.add_row(
+        name=personal_structure_name,
+        owner=user_row,
+        join_code=structures._generate_unique_join_code(),
+      )
+
+      user_row["structure"] = new_structure
+
+      logger.info(
+        f"MIGRATION SCRIPT: Successfully migrated user '{user_row['email']}'. Created structure '{new_structure['name']}'."
+      )
+      migrated_count += 1
+
+    except Exception as e:
+      logger.error(
+        f"MIGRATION SCRIPT: FAILED to migrate user '{user_row['email']}'. Error: {e}",
+        exc_info=True,
+      )
+
+  summary = f"MIGRATION SCRIPT: Finished. Migrated: {migrated_count}, Skipped: {skipped_count}, Total Found: {total_users}."
+  logger.info(summary)
+  return summary

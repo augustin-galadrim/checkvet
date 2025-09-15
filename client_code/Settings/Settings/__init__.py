@@ -220,3 +220,16 @@ class Settings(SettingsTemplate):
   def openAdmin(self, **event_args):
     """Navigates to the Administration panel."""
     open_form("Settings.Admin")
+
+  def run_migration_script(self):
+    """
+    A temporary, admin-triggered function to call the server-side migration.
+    This method is intended to be called from the browser console for a one-time operation.
+    """
+    # Security check on the client side for immediate feedback
+    if not self.is_admin_user():
+      alert("You do not have permission to run this script.")
+      return "Permission denied on client."
+
+    print("Client: Triggering migration script from the Settings form...")
+    return anvil.server.call("migrate_independent_users_to_personal_structures")

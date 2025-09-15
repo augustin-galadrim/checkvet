@@ -28,6 +28,23 @@ db_schema:
     - admin_ui: {order: 1, width: 200}
       name: file
       type: media
+    - admin_ui: {order: 0.5, width: 200}
+      name: type
+      type: string
+    - admin_ui: {order: 2, width: 200}
+      name: owner_user
+      target: users
+      type: link_single
+    - admin_ui: {order: 3, width: 200}
+      name: owner_structure
+      target: structures
+      type: link_single
+    - admin_ui: {order: 4, width: 200}
+      name: is_default
+      type: bool
+    - admin_ui: {order: 5, width: 200}
+      name: created_date
+      type: datetime
     server: full
     title: Assets
   audio:

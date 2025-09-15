@@ -59,7 +59,6 @@ def generate_pdf_from_html(html_content):
       signature_html = f"""
             <div class="signature-section">
                 <img src="{signature_data_uri}" alt="Signature">
-                <p class="signature-line">Signature</p>
             </div>
             """
 
@@ -86,7 +85,7 @@ def generate_pdf_from_html(html_content):
             /* --- 1. PAGE SETUP & RUNNING ELEMENTS --- */
             @page {
                 size: A4;
-                margin: 3.5cm 2cm 3cm 2cm; /* Top, Right, Bottom, Left */
+                margin: 3.5cm 2cm 3.5cm 2cm; /* Increased bottom margin slightly for footer */
 
                 /* Place the captured 'header' and 'footer' elements into the margin boxes */
                 @top-center {
@@ -98,18 +97,25 @@ def generate_pdf_from_html(html_content):
             }
 
             /* --- 2. CAPTURE & STYLE HEADER/FOOTER --- */
-            #header {
-                position: running(header); /* Capture this div as a named element */
-            }
-            #footer {
-                position: running(footer); /* Capture this div as a named element */
+            
+            /* THIS IS THE FIX: Apply sizing and position directly to the captured element */
+            #header, #footer {
+                position: running(header); /* Use the same name 'header' for the running element concept */
+                height: 2.5cm; /* Give the container a fixed height */
+                width: 100%;    /* Make the container fill the available width */
+                text-align: center; /* Center the image within the container */
             }
 
-            /* THIS IS THE KEY: Style the images INSIDE the captured divs */
+            /* The footer needs its own running() name to be captured separately */
+            #footer {
+                position: running(footer);
+            }
+
+            /* Now, style the image to fit perfectly inside its sized container */
             #header img, #footer img {
-                max-height: 2.5cm; /* Set a maximum height to prevent overflow */
-                width: 100%;       /* Allow the width to fill the content area */
-                object-fit: contain; /* Scale the image to fit INSIDE the max-height, preserving aspect ratio */
+                max-height: 100%;   /* Can't be taller than its parent div */
+                max-width: 100%;    /* Can't be wider than its parent div */
+                object-fit: contain; /* Maintain aspect ratio within the box */
             }
 
             /* --- 3. BODY & CONTENT STYLING --- */
@@ -121,10 +127,8 @@ def generate_pdf_from_html(html_content):
             p { margin-top: 8px; margin-left: 10px; }
             .signature-section { margin-top: 50px; padding-top: 15px; page-break-inside: avoid; text-align: left; }
             .signature-section img { max-width: 200px; height: auto; }
-            .signature-section p.signature-line { margin-top: 5px; border-top: 1px solid #333; padding-top: 5px; font-size: 10pt; text-align: center; width: 200px; }
         """
     )
-
     # --- Step 5: Render and Return ---
     pdf_buffer = io.BytesIO()
     html = HTML(string=full_html_document)

@@ -7,6 +7,7 @@ import anvil.server
 import json
 import openai
 from ..logging_server import get_logger
+
 logger = get_logger(__name__)
 
 
@@ -38,248 +39,6 @@ def get_user_reports():
     valid_reports.append({"fileName": file_name, "Report": report_data})
 
   return valid_reports
-
-
-@anvil.server.callable
-def get_report_content(file_name):
-  print(f"Server: get_report_content called with file_name: {file_name}")
-  user = anvil.users.get_user()
-  if not user:
-    print("Server: User not logged in")
-    return None, "User not logged in"
-
-  # Safeguard: Ensure file_name is a string
-  if not isinstance(file_name, str):
-    print("Server: Invalid file_name format")
-    return None, "Invalid file name format"
-
-  # Query using the 'fileName' column and the current user
-  try:
-    report = app_tables.reportstable.get(
-      owner=user,
-      fileName=file_name,  # Query directly using the text column
-    )
-  except Exception as e:
-    print(f"Server: Error during query - {e}")
-    return None, "Error querying the database"
-
-  if report:
-    content = report.get("report", {}).get("content", "No content available")
-    print(f"Server: Report found, returning content: {content[:100]}...")
-    return content, None
-  else:
-    print(f"Server: No report found with fileName: {file_name}")
-    return None, f"No report found with fileName: {file_name}"
-
-
-# SELECTION
-
-
-@anvil.server.callable
-def get_horses_for_current_user():
-  current_user = anvil.users.get_user()
-  if current_user:
-    horses = [
-      (row["horseName"], row["horseName"])
-      for row in app_tables.horsestable.search(vet=current_user)
-    ]
-    # Add the default option and "All" option at the beginning of the list
-    return [("Select a horse", None), ("All", "All")] + horses
-  else:
-    return [("Select a horse", None), ("All", "All")]
-
-
-@anvil.server.callable
-def get_filtered_user_reports(horse_name=None):
-  current_user = anvil.users.get_user()
-
-  if not current_user:
-    raise Exception("User not authenticated")
-
-  if horse_name and horse_name != "Select a horse":
-    # First, get the horse Row object from HorsesTable
-    horse_row = app_tables.horsestable.get(horseName=horse_name)
-
-    if horse_row:
-      # Query reports for the current user and specific horse
-      reports = app_tables.reportstable.search(owner=current_user, horseName=horse_row)
-    else:
-      # If no matching horse is found, return an empty list
-      return []
-  else:
-    # Query all reports for the current user
-    reports = app_tables.reportstable.search(owner=current_user)
-
-  # Return the filtered reports as a list of dictionaries
-  return [
-    {
-      "Reports": r["reports"],
-      "horseName": r["horseName"]["horseName"] if r["horseName"] else "Unknown",
-    }
-    for r in reports
-  ]
-
-
-@anvil.server.callable
-def save_report_with_images(report_name, content, images):
-  print(f"DEBUG: report_name = {report_name}")
-  print(f"DEBUG: content received = {content}")
-  print(f"DEBUG: images received = {images}")
-
-  user = anvil.users.get_user()
-  if not user:
-    print("Server: User not logged in")
-    return False
-
-  try:
-    # Parse the content as JSON
-    rich_text_content = json.loads(content)
-    print(f"DEBUG: Parsed rich_text_content = {rich_text_content}")
-
-    # Get the report or create a new one if it doesn't exist
-    report = app_tables.reportstable.get(owner=user, fileName=report_name)
-    if not report:
-      report = app_tables.reportstable.add_row(owner=user, fileName=report_name)
-      print(f"Server: Created new report with name: {report_name}")
-
-    # Update the report content
-    report["report"] = rich_text_content
-    report.update()
-
-    # Handle embedded images if present
-    if images:
-      print(f"DEBUG: Processing images = {images}")
-      # First remove any existing images for this report
-      existing_images = app_tables.embeddedimagesreportstable.search(
-        owner=user, report_id=report
-      )
-      for img in existing_images:
-        img.delete()
-
-      # Add new images
-      for image in images:
-        print(f"DEBUG: Adding image = {image}")
-        app_tables.embeddedimagesreportstable.add_row(
-          owner=user,
-          media=image["media"],
-          report_id=report,
-          reference_id=image.get("reference_id", None),
-          position=image.get("position", None),
-        )
-
-    print("Server: Report and embedded images saved successfully")
-    return True
-  except json.JSONDecodeError as e:
-    print(f"Error decoding JSON content: {e}")
-    return False
-  except Exception as e:
-    print(f"Error saving report: {str(e)}")
-    return False
-
-
-@anvil.server.callable
-def save_report_with_images_and_meta_data(report_name, content, images, horse_row):
-  print("DEBUG: Entered save_report_with_images_and_meta_data")
-  print(f"DEBUG: report_name = {report_name}")
-  print(
-    f"DEBUG: Content type = {type(content)} | Content length = {len(content) if content else 'N/A'}"
-  )
-  print(f"DEBUG: Images count = {len(images) if images else 0}")
-  print(f"DEBUG: horse_row = {horse_row}")
-
-  user = anvil.users.get_user()
-  if not user:
-    print("ERROR: User not logged in")
-    return False
-
-  try:
-    # Parse content as JSON
-    try:
-      rich_text_content = json.loads(content)
-      print(f"DEBUG: Parsed rich_text_content keys = {list(rich_text_content.keys())}")
-    except json.JSONDecodeError as e:
-      print(f"ERROR: JSONDecodeError - Content is not valid JSON: {e}")
-      return False
-
-    # Fetch or create the report
-    report = app_tables.reportstable.get(owner=user, fileName=report_name)
-    if not report:
-      report = app_tables.reportstable.add_row(
-        owner=user,
-        fileName=report_name,
-        horseName=horse_row,  # Link the horse_row
-      )
-      print(f"DEBUG: Created new report: {report_name}")
-    else:
-      print(f"DEBUG: Existing report found: {report_name}")
-      report.update(horseName=horse_row)
-
-    # Update report content
-    report["report"] = rich_text_content
-    report.update()
-    print(f"DEBUG: Updated report content for: {report_name}")
-
-    # Process images
-    if images:
-      print(f"DEBUG: Processing {len(images)} images")
-      # Remove existing images
-      existing_images = app_tables.embeddedimagesreportstable.search(
-        owner=user, report_id=report
-      )
-      for img in existing_images:
-        print(f"DEBUG: Deleting existing image: {img['reference_id']}")
-        img.delete()
-
-      # Add new images
-      for idx, image in enumerate(images):
-        print(f"DEBUG: Adding image {idx + 1}: {image}")
-        app_tables.embeddedimagesreportstable.add_row(
-          owner=user,
-          media=image["media"],
-          report_id=report,
-          reference_id=image.get("reference_id", f"img_{idx}"),
-          position=image.get("position", None),
-        )
-
-    print("SUCCESS: Report and associated images saved successfully")
-    return True
-  except Exception as e:
-    print(f"ERROR: Exception occurred while saving report: {str(e)}")
-    return False
-
-
-@anvil.server.callable
-def load_report_content(clicked_value):
-  print(f"Server: load_report_content called with report_name: {clicked_value}")
-
-  # Validate input
-  if not isinstance(clicked_value, dict) or "fileName" not in clicked_value:
-    print("Server: Invalid clicked_value format")
-    return None, "Invalid report selection"
-
-  # Extract fileName
-  file_name = clicked_value["fileName"]
-
-  # Query the database
-  user = anvil.users.get_user()
-  if not user:
-    print("Server: User not logged in")
-    return None, "User not logged in"
-
-  try:
-    # Query ReportsTable by fileName
-    report_row = app_tables.reportstable.get(owner=user, fileName=file_name)
-  except Exception as e:
-    print(f"Server: Error during query - {e}")
-    return None, "Error querying the database"
-
-  if report_row:
-    report_content = report_row["report"].get("content", "No content available")
-    print(f"Server: Report found, returning content: {report_content[:100]}...")
-    return report_content, None
-  else:
-    print(f"Server: No report found with fileName: {file_name}")
-    return None, f"No report found with fileName: {file_name}"
 
 
 @anvil.server.callable
@@ -331,3 +90,107 @@ def get_reports_by_structure(structure_name):
   except Exception as e:
     print(f"ERROR: Unexpected error in get_reports_by_structure: {e}")
     return []
+
+
+@anvil.server.callable(require_user=True)
+def save_new_report_with_images(report_details, image_list):
+  user = anvil.users.get_user(allow_remembered=True)
+  logger.info(
+    f"User '{user['email']}' saving new report for animal ID '{report_details.get('animal_id')}' with {len(image_list)} images."
+  )
+
+  new_report_row = None
+  created_image_rows = []
+
+  try:
+    animal_row = app_tables.animals.get_by_id(report_details.get("animal_id"))
+    if not animal_row:
+      raise ValueError("Animal record not found.")
+
+    current_date_str = datetime.now().strftime("%Y%m%d")
+    file_name = f"{animal_row['name']}_{current_date_str}"
+
+    new_report_row = app_tables.reports.add_row(
+      file_name=file_name,
+      animal=animal_row,
+      vet=user,
+      last_modified=datetime.now().date(),
+      report_rich=report_details.get("html_content"),
+      statut=report_details.get("status", "not_specified"),
+      transcript=report_details.get("transcript"),
+      language=report_details.get("language"),
+    )
+    new_report_id = new_report_row.get_id()
+
+    for image_data in image_list:
+      img_row = app_tables.embedded_images.add_row(
+        owner=user,
+        report_id=new_report_row,
+        media=image_data.get("file"),
+        reference_id=image_data.get("reference_id"),
+        created_date=datetime.now(),
+      )
+      created_image_rows.append(img_row)
+
+    logger.info(f"Successfully saved new report ID '{new_report_id}'.")
+    return {"success": True, "report_id": new_report_id}
+
+  except Exception as e:
+    logger.error(
+      f"Failed to save new report for user '{user['email']}': {e}", exc_info=True
+    )
+    if new_report_row:
+      new_report_row.delete()
+    for img_row in created_image_rows:
+      img_row.delete()
+    return {"success": False, "error": str(e)}
+
+
+@anvil.server.callable(require_user=True)
+def update_report_with_images(report_id, report_details, new_image_list):
+  user = anvil.users.get_user(allow_remembered=True)
+  logger.info(
+    f"User '{user['email']}' updating report ID '{report_id}' with {len(new_image_list)} new images."
+  )
+
+  report_row = app_tables.reports.get_by_id(report_id)
+
+  if not report_row:
+    logger.error(f"Update failed: Report ID '{report_id}' not found.")
+    return {"success": False, "error": "Report not found."}
+
+  is_owner = report_row["vet"] == user
+  is_supervisor = (
+    user["supervisor"]
+    and user["structure"]
+    and user["structure"] == report_row["vet"]["structure"]
+  )
+
+  if not (is_owner or is_supervisor):
+    logger.error(
+      f"SECURITY: User '{user['email']}' permission denied to edit report ID '{report_id}'."
+    )
+    return {"success": False, "error": "Permission denied."}
+
+  try:
+    report_row.update(
+      report_rich=report_details.get("html_content"),
+      statut=report_details.get("status"),
+      last_modified=datetime.now().date(),
+    )
+
+    for image_data in new_image_list:
+      app_tables.embedded_images.add_row(
+        owner=user,
+        report_id=report_row,
+        media=image_data.get("file"),
+        reference_id=image_data.get("reference_id"),
+        created_date=datetime.now(),
+      )
+
+    logger.info(f"Successfully updated report ID '{report_id}'.")
+    return {"success": True}
+
+  except Exception as e:
+    logger.error(f"Failed to update report ID '{report_id}': {e}", exc_info=True)
+    return {"success": False, "error": str(e)}

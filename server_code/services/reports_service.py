@@ -273,10 +273,11 @@ def get_report_for_editing(report_id):
 
   image_list = []
   for img_row in images:
-    image_list.append({
-      "reference_id": img_row["reference_id"],
-      "file": img_row["media"],
-    })
+    if img_row["media"]:
+      image_list.append({
+        "reference_id": img_row["reference_id"],
+        "url": img_row["media"].get_url(False),  # Generate a temporary, public URL
+      })
 
   report_data = {
     "id": report_row.get_id(),

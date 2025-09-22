@@ -446,21 +446,24 @@ window.gatherStagedImages = async function(htmlContent) {
 };
 
 /**
- * Hydrates the local IndexedDB with server images and then renders the editor.
+ * Hydrates the local IndexedDB by fetching images from server URLs and then renders the editor.
  * @param {string} htmlContent - The raw HTML from the server.
- * @param {Array<{reference_id: string, file: AnvilMediaObjectProxy}>} serverImages - The list of images from the server.
+ * @param {Array<{reference_id: string, url: string}>} serverImages - The list of image metadata from the server.
  */
 window.hydrateAndRenderEditor = async function(htmlContent, serverImages) {
   const logger = window.createLogger('EditorHydration');
-  logger.log(`Starting hydration with ${serverImages.length} image(s) from server.`);
+  logger.log(`Starting hydration by fetching ${serverImages.length} image(s) from server URLs.`);
 
   for (const image of serverImages) {
     try {
-      // anvil.js.to_blob() is the key function to convert the media proxy
-      const blob = await anvil.js.to_blob(image.file);
+      const response = await fetch(image.url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const blob = await response.blob();
       await window.ImageStaging.stageImage(image.reference_id, blob, Date.now());
     } catch (error) {
-      logger.error(`Failed to stage server image ${image.reference_id}:`, error);
+      logger.error(`Failed to fetch and stage server image ${image.reference_id}:`, error);
     }
   }
 
@@ -471,14 +474,14 @@ window.hydrateAndRenderEditor = async function(htmlContent, serverImages) {
 
     for (const img of imageElements) {
       const refId = img.getAttribute('data-ref-id');
-      if (refId && !img.src.startsWith('blob:')) {
+      if (refId) {
         try {
           const blob = await window.ImageStaging.getStagedImageBlob(refId);
           if (blob) {
             img.src = URL.createObjectURL(blob);
           } else {
             logger.warn(`Could not find local image for refId ${refId}. It might be a broken link.`);
-            img.style.border = '2px dashed red'; // Visual indicator for broken image
+            img.style.border = '2px dashed red';
           }
         } catch (error) {
           logger.error(`Error loading image ${refId} into editor:`, error);

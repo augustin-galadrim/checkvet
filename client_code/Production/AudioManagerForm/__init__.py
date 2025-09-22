@@ -36,6 +36,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
     self.raw_transcription = None
     self.selected_template = None
     self.selected_status = None
+    self.is_saved = False
     events.subscribe("language_changed", self.update_ui_texts)
     self.add_event_handler("show", self.form_show)
     self.audio_playback_1.visible = False
@@ -207,6 +208,22 @@ class AudioManagerForm(AudioManagerFormTemplate):
 
     self.queue_manager_1.refresh_badge()
     self.logger.info("Form setup complete.")
+
+  def form_hide(self, **event_args):
+    if not self.is_saved:
+      self.logger.warning(
+        "Form hidden without saving. Cleaning up any staged images for this session."
+      )
+      try:
+        html_content = self.text_editor_1.get_content()
+        js_image_list = anvil.js.await_promise(
+          self.call_js("gatherStagedImages", html_content)
+        )
+        staged_image_refs = [img["reference_id"] for img in js_image_list]
+        if staged_image_refs:
+          self.call_js("ImageStaging.clearStagedImages", staged_image_refs)
+      except Exception as e:
+        self.logger.error(f"Error during form_hide cleanup: {e}")
 
   def set_selected_template(self, template_data, **event_args):
     """Callback depuis JS pour stocker l'objet du modèle sélectionné."""
@@ -468,6 +485,7 @@ class AudioManagerForm(AudioManagerFormTemplate):
       result = anvil.server.call("save_report", report_details, image_list_for_server)
 
       if result and result.get("success"):
+        self.is_saved = True
         self.logger.info("Report and images saved successfully on the server.")
         reports_cache_manager.invalidate()
 

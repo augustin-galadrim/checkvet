@@ -28,10 +28,10 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.report = report if report is not None else {}
     self.selected_statut = self.report.get("statut")
     self.current_audio_mime_type = None
+    self.existing_image_refs = set()
     self.logger.debug("Initialization complete.")
 
   def update_ui_texts(self, **event_args):
-    """Sets all translatable text on the form."""
     self.call_js(
       "setElementText",
       "audioManagerEdit-button-discard",
@@ -92,6 +92,9 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       html_content = self.report.get("report_rich", "")
       server_images = self.report.get("images", [])
 
+      self.existing_image_refs = {img["reference_id"] for img in server_images}
+      self.logger.debug(f"Tracking {len(self.existing_image_refs)} existing images.")
+
       anvil.js.await_promise(
         self.call_js("hydrateAndRenderEditor", html_content, server_images)
       )
@@ -106,20 +109,17 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       open_form("Archives.ArchivesForm")
 
   def handle_new_recording(self, audio_blob, mime_type, **event_args):
-    """Event handler from RecordingWidget. Moves UI to the 'decision' state."""
     self.logger.info("New recording received from widget.")
     self.current_audio_mime_type = mime_type
     self.audio_playback_1.audio_blob = audio_blob
     self.call_js("setAudioWorkflowState", "decision")
 
   def reset_ui_to_input_state(self, **event_args):
-    """Resets the UI to its initial state, ready for a new recording."""
     self.logger.debug("Resetting UI to 'input' state.")
     self.audio_playback_1.call_js("resetAudioPlayback")
     self.call_js("setAudioWorkflowState", "input")
 
   def process_modification(self, **event_args):
-    """Orchestrates the modification process using a background task."""
     self.logger.info("Starting report modification process.")
     audio_proxy = self.audio_playback_1.audio_blob
     if not audio_proxy:
@@ -176,7 +176,6 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       self.reset_ui_to_input_state()
 
   def report_footer_1_status_clicked(self, status_key, **event_args):
-    """Handles the status change from the footer component."""
     self.logger.info(f"Report status changed to '{status_key}'.")
     self.selected_statut = status_key
     self.report_footer_1.update_status_display(status_key)
@@ -193,24 +192,49 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.logger.info(f"Save clicked for report ID '{self.report.get('id')}'.")
 
     try:
-      report_details = {
-        "html_content": self.text_editor_1.get_content(),
-        "status": self.selected_statut,
-      }
+      html_content = self.text_editor_1.get_content()
 
-      new_image_list = []
-
-      success_payload = anvil.server.call_s(
-        "update_report", self.report.get("id"), report_details, new_image_list
+      all_js_images = anvil.js.await_promise(
+        self.call_js("gatherStagedImages", html_content)
       )
 
-      if success_payload and success_payload.get("success"):
+      new_image_list_for_server = []
+      newly_staged_refs = []
+
+      for js_image in all_js_images:
+        ref_id = js_image["reference_id"]
+        if ref_id not in self.existing_image_refs:
+          anvil_media_obj = anvil.js.to_media(js_image["file"])
+          new_image_list_for_server.append({
+            "reference_id": ref_id,
+            "file": anvil_media_obj,
+          })
+          newly_staged_refs.append(ref_id)
+
+      self.logger.info(
+        f"Found {len(new_image_list_for_server)} new image(s) to upload."
+      )
+
+      report_details = {"html_content": html_content, "status": self.selected_statut}
+
+      result = anvil.server.call(
+        "update_report",
+        self.report.get("id"),
+        report_details,
+        new_image_list_for_server,
+      )
+
+      if result and result.get("success"):
         self.logger.info("Report updated successfully on the server.")
         reports_cache_manager.invalidate()
+
+        if newly_staged_refs:
+          self.call_js("ImageStaging.clearStagedImages", newly_staged_refs)
+
         alert(t.t("banner_reportUpdateSuccess"), title=t.t("title_success"))
         open_form("Archives.ArchivesForm")
       else:
-        error_msg = success_payload.get("error", "An unknown error occurred.")
+        error_msg = result.get("error", "An unknown error occurred.")
         self.logger.error(
           f"Server returned failure while updating the report: {error_msg}"
         )
@@ -219,6 +243,13 @@ class AudioManagerEdit(AudioManagerEditTemplate):
           title=t.t("title_updateFailed"),
         )
 
+    except anvil.server.AppOfflineError:
+      self.logger.warning(
+        "Update failed due to network error. User's work is preserved locally."
+      )
+      alert(
+        "Update failed: No network connection. Your work is safe, please try again later."
+      )
     except Exception as e:
       self.logger.error("An exception occurred while saving the report.", e)
       alert(f"{t.t('error_reportSaveFailed')}: {e}")

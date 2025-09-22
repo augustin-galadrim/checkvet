@@ -62,27 +62,48 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     self.logger.info("Form showing...")
     self.update_ui_texts()
 
-    if not self.report.get("id"):
+    if not self.report or not self.report.get("id"):
       self.logger.error("Navigation error: Form shown without a valid report object.")
       alert(
         t.t("audioManagerEdit_alert_noReportError"),
         title=t.t("audioManagerEdit_alert_navErrorTitle"),
-        large=True,
       )
       open_form("Archives.ArchivesForm")
       return
 
-    self.logger.debug(
-      f"Editing report ID: {self.report.get('id')}, Name: '{self.report.get('name')}'."
-    )
+    try:
+      report_id = self.report.get("id")
+      self.logger.debug(f"Fetching report data for editing, ID: {report_id}")
 
-    self.header_return_1.title = self.report.get(
-      "name", t.t("audioManagerEdit_default_headerTitle")
-    )
-    self.text_editor_1.html_content = self.report.get("report_rich", "")
-    self.report_footer_1.update_status_display(self.selected_statut)
-    self.reset_ui_to_input_state()
-    self.logger.info("Form setup complete.")
+      report_data = anvil.server.call("get_report_for_editing", report_id)
+
+      if not report_data:
+        alert("Could not load the report data from the server.")
+        open_form("Archives.ArchivesForm")
+        return
+
+      self.report = report_data
+      self.selected_statut = self.report.get("statut")
+
+      self.header_return_1.title = self.report.get(
+        "name", t.t("audioManagerEdit_default_headerTitle")
+      )
+
+      html_content = self.report.get("report_rich", "")
+      server_images = self.report.get("images", [])
+
+      anvil.js.await_promise(
+        self.call_js("hydrateAndRenderEditor", html_content, server_images)
+      )
+
+      self.report_footer_1.update_status_display(self.selected_statut)
+      self.reset_ui_to_input_state()
+      self.logger.info("Form setup and hydration complete.")
+
+    except Exception as e:
+      self.logger.error(f"Failed to load report for editing: {e}", exc_info=True)
+      alert(f"An error occurred while loading the report: {e}")
+      open_form("Archives.ArchivesForm")
 
   def handle_new_recording(self, audio_blob, mime_type, **event_args):
     """Event handler from RecordingWidget. Moves UI to the 'decision' state."""

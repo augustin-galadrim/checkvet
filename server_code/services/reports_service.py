@@ -241,3 +241,49 @@ def delete_report(report_id):
       f"An error occurred while deleting report ID '{report_id}': {e}", exc_info=True
     )
     return False
+
+
+@anvil.server.callable(require_user=True)
+def get_report_for_editing(report_id):
+  user = anvil.users.get_user(allow_remembered=True)
+  logger.info(f"User '{user['email']}' requesting report ID '{report_id}' for editing.")
+
+  report_row = app_tables.reports.get_by_id(report_id)
+
+  if not report_row:
+    logger.error(f"get_report_for_editing failed: Report ID '{report_id}' not found.")
+    return None
+
+  is_owner = report_row["vet"] == user
+  is_supervisor = (
+    user["supervisor"]
+    and user["structure"]
+    and user["structure"] == report_row["vet"]["structure"]
+  )
+
+  if not (is_owner or is_supervisor):
+    logger.error(
+      f"SECURITY: User '{user['email']}' permission denied to access report ID '{report_id}'."
+    )
+    raise anvil.server.PermissionDenied(
+      "You do not have permission to edit this report."
+    )
+
+  images = app_tables.embedded_images.search(report_id=report_row)
+
+  image_list = []
+  for img_row in images:
+    image_list.append({
+      "reference_id": img_row["reference_id"],
+      "file": img_row["media"],
+    })
+
+  report_data = {
+    "id": report_row.get_id(),
+    "name": report_row["animal"]["name"] if report_row["animal"] else "No Patient",
+    "report_rich": report_row["report_rich"],
+    "statut": report_row["statut"],
+    "images": image_list,
+  }
+
+  return report_data

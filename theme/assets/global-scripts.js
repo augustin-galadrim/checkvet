@@ -444,3 +444,49 @@ window.gatherStagedImages = async function(htmlContent) {
   logger.log(`Successfully gathered ${imageList.length} blob(s) from IndexedDB.`);
   return imageList;
 };
+
+/**
+ * Hydrates the local IndexedDB with server images and then renders the editor.
+ * @param {string} htmlContent - The raw HTML from the server.
+ * @param {Array<{reference_id: string, file: AnvilMediaObjectProxy}>} serverImages - The list of images from the server.
+ */
+window.hydrateAndRenderEditor = async function(htmlContent, serverImages) {
+  const logger = window.createLogger('EditorHydration');
+  logger.log(`Starting hydration with ${serverImages.length} image(s) from server.`);
+
+  for (const image of serverImages) {
+    try {
+      // anvil.js.to_blob() is the key function to convert the media proxy
+      const blob = await anvil.js.to_blob(image.file);
+      await window.ImageStaging.stageImage(image.reference_id, blob, Date.now());
+    } catch (error) {
+      logger.error(`Failed to stage server image ${image.reference_id}:`, error);
+    }
+  }
+
+  const editor = document.getElementById("editor");
+  if (editor) {
+    editor.innerHTML = htmlContent || "";
+    const imageElements = editor.querySelectorAll('img[data-ref-id]');
+
+    for (const img of imageElements) {
+      const refId = img.getAttribute('data-ref-id');
+      if (refId && !img.src.startsWith('blob:')) {
+        try {
+          const blob = await window.ImageStaging.getStagedImageBlob(refId);
+          if (blob) {
+            img.src = URL.createObjectURL(blob);
+          } else {
+            logger.warn(`Could not find local image for refId ${refId}. It might be a broken link.`);
+            img.style.border = '2px dashed red'; // Visual indicator for broken image
+          }
+        } catch (error) {
+          logger.error(`Error loading image ${refId} into editor:`, error);
+        }
+      }
+    }
+    logger.log('Editor content rendered and images re-linked.');
+  } else {
+    logger.error('Could not find editor element to render content.');
+  }
+};

@@ -164,18 +164,14 @@ class ArchivesForm(ArchivesFormTemplate):
     self.update_ui_texts()
     self.call_js("resetActiveTabState")
 
-    # ======================= MODIFIED LOGIC =======================
-    # Fetch the comprehensive user data dictionary once.
     user_data = anvil.server.call_s("read_user")
     if not user_data:
       alert("Could not load your user profile. Please try again.")
-      open_form("StartupForm")  # Or another appropriate fallback
+      open_form("StartupForm")
       return
 
-    # Use the data from the dictionary instead of making separate calls.
     self.is_supervisor = user_data.get("supervisor", False)
     self.structure_name = user_data.get("structure")
-    # =============================================================
 
     self.logger.debug(f"User is supervisor: {self.is_supervisor}")
 
@@ -278,13 +274,12 @@ class ArchivesForm(ArchivesFormTemplate):
           anvil.server.call_s("get_reports_by_structure", self.structure_name) or []
         )
 
-      # FIX: Pass all required arguments to the cache manager
       reports_cache_manager.set(
         my_reports=self.my_reports,
         structure_reports=self.structure_reports,
-        has_structure=self.has_structure,  # Add this
-        structure_name=self.structure_name,  # Add this
-        affiliated_vets=self.affiliated_vets,  # Add this
+        has_structure=self.has_structure,
+        structure_name=self.structure_name,
+        affiliated_vets=self.affiliated_vets,
       )
 
       self.logger.info("Successfully refreshed and cached report data.")

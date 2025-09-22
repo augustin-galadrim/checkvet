@@ -11,7 +11,7 @@ from ..auth import admin_required
 logger = get_logger(__name__)
 
 
-def _generate_unique_join_code(length=6):
+def generate_unique_join_code(length=6):
   """Generates a unique, random alphanumeric code to join a structure."""
   chars = string.ascii_uppercase + string.digits
   while True:
@@ -86,7 +86,7 @@ def admin_write_structure(structure_data):
         phone=structure_data.get("phone"),
         email=structure_data.get("email"),
         address=structure_data.get("address"),
-        join_code=_generate_unique_join_code(),
+        join_code=generate_unique_join_code(),
       )
     logger.info(f"Successfully wrote structure '{name}'.")
     return True
@@ -119,7 +119,7 @@ def create_and_join_new_structure(structure_details):
     }
 
   try:
-    new_join_code = _generate_unique_join_code()
+    new_join_code = generate_unique_join_code()
     new_structure = app_tables.structures.add_row(
       name=structure_name,
       phone=structure_details.get("phone"),

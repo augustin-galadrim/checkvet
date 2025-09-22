@@ -120,21 +120,6 @@ db_schema:
       type: string
     server: full
     title: Embedded_images
-  microphone_tests:
-    client: none
-    columns:
-    - admin_ui: {order: 0, width: 200}
-      name: user
-      target: users
-      type: link_single
-    - admin_ui: {order: 1, width: 200}
-      name: test
-      type: string
-    - admin_ui: {order: 2, width: 200}
-      name: date
-      type: datetime
-    server: full
-    title: microphone_tests
   prompts:
     client: none
     columns:

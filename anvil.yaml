@@ -111,13 +111,16 @@ db_schema:
     - admin_ui: {order: 1, width: 200}
       name: media
       type: media
-    - admin_ui: {order: 2, width: 200}
+    - admin_ui: {order: 0.5, width: 200}
       name: report_id
       target: reports
       type: link_single
     - admin_ui: {order: 3, width: 200}
       name: reference_id
       type: string
+    - admin_ui: {order: 4, width: 200}
+      name: created_date
+      type: datetime
     server: full
     title: Embedded_images
   prompts:
@@ -137,20 +140,14 @@ db_schema:
   reports:
     client: none
     columns:
-    - admin_ui: {order: 0, width: 200}
-      name: file_name
-      type: string
-    - admin_ui: {order: 1, width: 200}
+    - admin_ui: {order: 1, width: 163}
       name: animal
       target: animals
       type: link_single
-    - admin_ui: {order: 2, width: 200}
+    - admin_ui: {order: 2, width: 212}
       name: vet
       target: users
       type: link_single
-    - admin_ui: {order: 3, width: 200}
-      name: last_modified
-      type: date
     - admin_ui: {order: 4, width: 200}
       name: report_rich
       type: simpleObject
@@ -163,6 +160,12 @@ db_schema:
     - admin_ui: {order: 7, width: 200}
       name: language
       type: string
+    - admin_ui: {order: 8, width: 200}
+      name: last_updated_at
+      type: datetime
+    - admin_ui: {order: 9, width: 200}
+      name: created_at
+      type: datetime
     server: full
     title: Reports
   structures:

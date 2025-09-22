@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 
 
 @anvil.server.callable
-def read_reports():
+def leg_read_reports():
   current_user = anvil.users.get_user()
   reports = app_tables.reports.search(
     tables.order_by("last_modified", ascending=False), vet=current_user
@@ -47,7 +47,7 @@ def read_reports():
 
 
 @anvil.server.callable
-def write_report(
+def leg_write_report(
   file_name,
   animal_name=None,
   vet=None,
@@ -113,7 +113,7 @@ def write_report(
 
 
 @anvil.server.callable
-def write_report_first_time(
+def leg_write_report_first_time(
   animal_name=None,
   vet=None,
   last_modified=None,
@@ -193,51 +193,20 @@ def write_report_first_time(
 
 
 @anvil.server.callable
-def pick_report(file_name, header):
-  print(f"Picking '{header}' from report '{file_name}'")
-
-  report = app_tables.reports.get(file_name=file_name)
-  print(f"Report found: {report is not None}")
-
-  if report is None:
-    print("No report found")
-    return None
-
-  if header in report:
-    if header == "animal":
-      # Return the 'nom' value of the animal row
-      animal_row = report["animal"]
-      print(f"Animal row exists: {animal_row is not None}")
-      value = animal_row["nom"] if animal_row else None
-      print(f"Returning animal name: {value}")
-      return value
-
-    value = report[header]
-    print(f"Returning value: {value}")
-    return value
-  else:
-    print(f"Header '{header}' not found")
-    return None
-
-
-@anvil.server.callable
-def delete_report(
+def leg_delete_report(
   report_id,
-):  # --- MODIFIED: Parameter changed from report_rich to report_id
+):
   print(f"[DEBUG] Starting delete_report with report_id={report_id}")
   current_user = anvil.users.get_user()
 
-  # --- MODIFIED: Find the report by its unique ID for reliability and performance
   report_row = app_tables.reports.get_by_id(report_id)
 
-  # --- MODIFIED: Security check to ensure report exists and user owns it
   if report_row is None or report_row["vet"] != current_user:
     print(
       f"[ERROR] No report found with id '{report_id}' for user {current_user['email']}"
     )
     return False
 
-  # Delete the report
   report_row.delete()
   print(f"[DEBUG] Successfully deleted report with id '{report_id}'")
 
@@ -245,7 +214,7 @@ def delete_report(
 
 
 @anvil.server.callable(require_user=True)
-def update_report(report_id, new_html_content, new_status):
+def leg_update_report(report_id, new_html_content, new_status):
   """
   Updates the content and status of a specific, existing report.
   This is the dedicated function for saving edits from AudioManagerEdit.

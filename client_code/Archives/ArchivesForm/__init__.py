@@ -7,6 +7,7 @@ from ... import TranslationService as t
 from ...LoggingClient import ClientLogger
 from ...AppEvents import events
 from ...AuthHelpers import setup_auth_handlers
+from datetime import datetime
 
 
 def safe_value(data_dict, key, default_value):
@@ -40,7 +41,6 @@ class ArchivesForm(ArchivesFormTemplate):
     self.logger.debug("Initialization complete.")
 
   def update_ui_texts(self, **event_args):
-    """Sets all translatable text on the component."""
     self.call_js(
       "setElementText", "archivesForm-button-create", t.t("archivesForm_button_create")
     )
@@ -133,7 +133,6 @@ class ArchivesForm(ArchivesFormTemplate):
       t.t("archivesForm_button_filterApply"),
     )
 
-    # Pass dynamic and renderer texts to JavaScript
     locale_texts = {
       "monthNames": [
         t.t("month_jan"),
@@ -164,18 +163,14 @@ class ArchivesForm(ArchivesFormTemplate):
     self.update_ui_texts()
     self.call_js("resetActiveTabState")
 
-    # ======================= MODIFIED LOGIC =======================
-    # Fetch the comprehensive user data dictionary once.
     user_data = anvil.server.call_s("read_user")
     if not user_data:
       alert("Could not load your user profile. Please try again.")
-      open_form("StartupForm")  # Or another appropriate fallback
+      open_form("StartupForm")
       return
 
-    # Use the data from the dictionary instead of making separate calls.
     self.is_supervisor = user_data.get("supervisor", False)
     self.structure_name = user_data.get("structure")
-    # =============================================================
 
     self.logger.debug(f"User is supervisor: {self.is_supervisor}")
 
@@ -213,8 +208,6 @@ class ArchivesForm(ArchivesFormTemplate):
       try:
         fresh_my_reports = anvil.server.call_s("read_reports") or []
         fresh_structure_reports = []
-
-        # This logic now uses the reliable 'is_independent' flag from our new model
         self.has_structure = not user_data.get("is_independent", True)
 
         if self.is_supervisor and self.has_structure:
@@ -278,15 +271,13 @@ class ArchivesForm(ArchivesFormTemplate):
           anvil.server.call_s("get_reports_by_structure", self.structure_name) or []
         )
 
-      # FIX: Pass all required arguments to the cache manager
       reports_cache_manager.set(
         my_reports=self.my_reports,
         structure_reports=self.structure_reports,
-        has_structure=self.has_structure,  # Add this
-        structure_name=self.structure_name,  # Add this
-        affiliated_vets=self.affiliated_vets,  # Add this
+        has_structure=self.has_structure,
+        structure_name=self.structure_name,
+        affiliated_vets=self.affiliated_vets,
       )
-
       self.logger.info("Successfully refreshed and cached report data.")
     except Exception as e:
       self.logger.error("An error occurred while refreshing reports.", e)
@@ -314,15 +305,11 @@ class ArchivesForm(ArchivesFormTemplate):
           r
           for r in filtered_list
           if (search_term in (r.get("name") or "").lower())
-          or (search_term in (r.get("file_name") or "").lower())
           or (search_term in (r.get("vet_display_name") or "").lower())
         ]
       else:
         filtered_list = [
-          r
-          for r in filtered_list
-          if (search_term in (r.get("name") or "").lower())
-          or (search_term in (r.get("file_name") or "").lower())
+          r for r in filtered_list if (search_term in (r.get("name") or "").lower())
         ]
 
     if self.selected_statuses:
@@ -376,9 +363,6 @@ class ArchivesForm(ArchivesFormTemplate):
   def search_reports(self, query, active_tab, **event_args):
     self.logger.info(f"Searching reports on tab '{active_tab}' with query: '{query}'")
     self.current_search_query = query
-    self.selected_statuses = []
-    self.selected_patient_ids = []
-    self.selected_vets_emails = []
     self.apply_filters(active_tab)
 
   def delete_report(self, report_id, active_tab, **event_args):
@@ -406,16 +390,15 @@ class ArchivesForm(ArchivesFormTemplate):
     try:
       safe_report = {
         "id": report_id,
-        "file_name": report.get("file_name"),
+        "name": report.get("name"),
         "report_rich": report.get("report_rich"),
         "statut": report.get("statut"),
-        "name": report.get("name"),
       }
       open_form("Archives.AudioManagerEdit", report=safe_report)
     except Exception as e:
       self.logger.error(f"Error opening report editor for report ID: {report_id}", e)
       alert(f"Error opening report editor: {e}")
-      open_form("ArchivesForm")
+      open_form("Archives.ArchivesForm")
 
   def create_new_report(self, **event_args):
     self.logger.info(

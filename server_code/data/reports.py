@@ -6,7 +6,9 @@ from anvil.tables import app_tables
 import anvil.server
 from datetime import datetime
 from ..logging_server import get_logger
+
 logger = get_logger(__name__)
+
 
 @anvil.server.callable
 def read_reports():
@@ -32,7 +34,7 @@ def read_reports():
       "id": report.get_id(),
       "file_name": report["file_name"],
       "name": animal_name,
-      "animal_id": animal_id, # <-- ADDED
+      "animal_id": animal_id,  # <-- ADDED
       "vet": report["vet"],
       "last_modified": dt_str,
       "report_rich": report["report_rich"],
@@ -119,7 +121,7 @@ def write_report_first_time(
   statut=None,
   animal_id=None,
   transcript=None,
-  language=None
+  language=None,
 ):
   # Get the current date string for file name generation
   current_date_str = datetime.now().strftime("%Y%m%d")
@@ -152,9 +154,7 @@ def write_report_first_time(
 
     animal_row = app_tables.animals.get_by_id(animal_id)
     if animal_row is None:
-      print(
-        f"[ERROR] No animal found with id '{animal_id}'"
-      )
+      print(f"[ERROR] No animal found with id '{animal_id}'")
       raise ValueError(f"No animal found with id '{animal_id}'")
     print(f"[DEBUG] Found animal_row: {animal_row}")
     report_row["animal"] = animal_row
@@ -255,9 +255,21 @@ def update_report(report_id, new_html_content, new_status):
 
   report_row = app_tables.reports.get_by_id(report_id)
 
-  # Security Check: Ensure the report exists and the user has permission to edit it
-  if not report_row or report_row["vet"] != current_user:
-    print(
+  if not report_row:
+    logger.warning(f"[SECURITY] Edit failed. Report ID '{report_id}' not found.")
+    return False
+
+  report_owner = report_row["vet"]
+
+  is_author = report_owner == current_user
+
+  is_supervisor_in_structure = False
+  if current_user["supervisor"] and report_owner["structure"]:
+    if current_user["structure"] == report_owner["structure"]:
+      is_supervisor_in_structure = True
+
+  if not (is_author or is_supervisor_in_structure):
+    logger.error(
       f"[SECURITY] User '{current_user['email']}' attempted to edit report ID '{report_id}' without permission."
     )
     return False

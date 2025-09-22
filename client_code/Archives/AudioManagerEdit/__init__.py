@@ -3,7 +3,7 @@ from anvil import *
 import anvil.server
 import anvil.users
 import anvil.js
-from ...Cache import reports_cache_manager
+from ...Cache import reports_cache_manager, user_settings_cache
 import time
 from ... import TranslationService as t
 from ...AppEvents import events
@@ -112,7 +112,11 @@ class AudioManagerEdit(AudioManagerEditTemplate):
 
     anvil_media_blob = anvil.js.to_media(audio_proxy)
     current_content = self.text_editor_1.get_content()
-    language = anvil.server.call_s("get_user_info", "favorite_language") or "en"
+    if user_settings_cache.get("language") is not None:
+      language = user_settings_cache["language"]
+    else:
+      user_data = anvil.server.call_s("read_user")
+      language = user_data.get("favorite_language", "en") if user_data else "en"
     self.logger.debug(f"Using language '{language}' for modification command.")
 
     try:

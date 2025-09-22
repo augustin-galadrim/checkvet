@@ -38,28 +38,24 @@ class StartupForm(StartupFormTemplate):
       if user:
         # --- User is logged in ---
         anvil.server.call_s("ensure_persistent_session")
+        user_data = anvil.server.call_s("read_user")
 
-        # 2. REGISTRATION CHECK (with Caching)
-        additional_info_complete = user_settings_cache.get("additional_info")
-        if additional_info_complete is None:
-          additional_info_complete = anvil.server.call_s(
-            "get_user_info", "additional_info"
-          )
-          user_settings_cache["additional_info"] = additional_info_complete
+        if not user_data:
+          alert("Could not load your user profile. Please contact support.")
+          anvil.users.logout()
+          open_form("StartupForm")
+          return
 
-        if not additional_info_complete:
+        user_settings_cache["user_data"] = user_data
+        user_settings_cache["additional_info"] = user_data.get("additional_info")
+        user_settings_cache["language"] = user_data.get("favorite_language")
+
+        if not user_data.get("additional_info"):
           open_form("RegistrationFlow")
           return
 
-        # 3. LOAD MAIN APP (with Caching)
-        lang_code = user_settings_cache.get("language")
-        if lang_code is None:
-          lang_code = anvil.server.call_s("get_user_info", "favorite_language") or "en"
-          user_settings_cache["language"] = lang_code
-
-        # Load the user's preferred language now that we know it
+        lang_code = user_data.get("favorite_language", "en")
         t.load_language(lang_code)
-
         open_form("Production.AudioManagerForm")
       else:
         # User cancelled login, proceed offline

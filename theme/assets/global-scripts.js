@@ -264,3 +264,183 @@ window.toggleStructureBrandingControls = function(canEdit) {
     disabledMsg.style.display = canEdit ? 'none' : 'block';
   }
 };
+
+/**
+ * =============================================================================
+ * ImageStaging Service for Offline-First Image Handling
+ * =============================================================================
+ * Manages storing and retrieving image blobs in the browser's IndexedDB.
+ */
+window.ImageStaging = (function() {
+  const DB_NAME = 'checkvet_staged_images';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'images';
+  const logger = window.createLogger('ImageStaging');
+  let dbPromise = null;
+
+  function init() {
+    if (dbPromise) {
+      return dbPromise;
+    }
+    dbPromise = new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onerror = (event) => {
+        logger.error('IndexedDB error:', event.target.error);
+        reject('IndexedDB error: ' + event.target.error);
+      };
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'reference_id' });
+          logger.log('Created IndexedDB object store:', STORE_NAME);
+        }
+      };
+
+      request.onsuccess = (event) => {
+        logger.log('IndexedDB initialized successfully.');
+        resolve(event.target.result);
+      };
+    });
+    return dbPromise;
+  }
+
+  async function stageImage(refId, blob, timestamp) {
+    const db = await init();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put({ reference_id: refId, blob: blob, timestamp: timestamp });
+      request.onsuccess = () => {
+        logger.log(`Successfully staged image with refId: ${refId}`);
+        resolve();
+      };
+      request.onerror = (event) => {
+        logger.error(`Failed to stage image ${refId}:`, event.target.error);
+        reject(event.target.error);
+      };
+    });
+  }
+
+  async function getStagedImageBlob(refId) {
+    const db = await init();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(refId);
+      request.onsuccess = (event) => {
+        if (event.target.result) {
+          resolve(event.target.result.blob);
+        } else {
+          resolve(null);
+        }
+      };
+      request.onerror = (event) => {
+        logger.error(`Failed to retrieve image ${refId}:`, event.target.error);
+        reject(event.target.error);
+      };
+    });
+  }
+
+  async function clearStagedImages(refIdArray) {
+    if (!refIdArray || refIdArray.length === 0) {
+      return;
+    }
+    const db = await init();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      let deleteCount = 0;
+      refIdArray.forEach(refId => {
+        const request = store.delete(refId);
+        request.onsuccess = () => {
+          deleteCount++;
+          if (deleteCount === refIdArray.length) {
+            logger.log(`Successfully cleared ${deleteCount} staged image(s).`);
+            resolve();
+          }
+        };
+      });
+      transaction.onerror = (event) => {
+        logger.error('Error during batch delete of staged images:', event.target.error);
+        reject(event.target.error);
+      };
+    });
+  }
+
+  async function cleanupOldImages() {
+    const db = await init();
+    const threshold = Date.now() - (48 * 60 * 60 * 1000); 
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const cursorRequest = store.openCursor();
+      let deleteCount = 0;
+
+      cursorRequest.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          if (cursor.value.timestamp < threshold) {
+            cursor.delete();
+            deleteCount++;
+          }
+          cursor.continue();
+        } else {
+          if (deleteCount > 0) {
+            logger.log(`Periodic cleanup: Removed ${deleteCount} old staged image(s).`);
+          }
+          resolve();
+        }
+      };
+
+      cursorRequest.onerror = (event) => {
+        logger.error('Error during periodic cleanup of staged images:', event.target.error);
+        reject(event.target.error);
+      };
+    });
+  }
+
+  init();
+
+  return {
+    stageImage: stageImage,
+    getStagedImageBlob: getStagedImageBlob,
+    clearStagedImages: clearStagedImages,
+    cleanupOldImages: cleanupOldImages
+  };
+})();
+
+/**
+ * Gathers all staged images referenced in an HTML string.
+ * @param {string} htmlContent - The HTML content of the editor.
+ * @returns {Promise<Array<{reference_id: string, file: Blob}>>} - A promise that resolves to an array of image data objects.
+ */
+window.gatherStagedImages = async function(htmlContent) {
+  const logger = window.createLogger('ImageGatherer');
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const imageElements = doc.querySelectorAll('img[data-ref-id]');
+  const imageList = [];
+
+  logger.log(`Found ${imageElements.length} image(s) with data-ref-id in the document.`);
+
+  for (const img of imageElements) {
+    const refId = img.getAttribute('data-ref-id');
+    if (refId) {
+      try {
+        const blob = await window.ImageStaging.getStagedImageBlob(refId);
+        if (blob) {
+          imageList.push({ reference_id: refId, file: blob });
+        } else {
+          logger.warn(`Could not find staged image in IndexedDB for refId: ${refId}. It may have already been uploaded or is a server image.`);
+        }
+      } catch (error) {
+        logger.error(`Error retrieving staged image for refId ${refId}:`, error);
+      }
+    }
+  }
+
+  logger.log(`Successfully gathered ${imageList.length} blob(s) from IndexedDB.`);
+  return imageList;
+};

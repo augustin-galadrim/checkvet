@@ -417,11 +417,11 @@ class AudioManagerForm(AudioManagerFormTemplate):
         self.logger.error(
           f"Save failed: Invalid patient data provided. Data: {selected_patient}"
         )
-        return alert(t.t("audioManager_alert_invalidPatient"))
+        alert(t.t("audioManager_alert_invalidPatient"))
+        return False
 
       animal_name = selected_patient.get("name")
       animal_id = selected_patient.get("id")
-      self.logger.debug(f"Saving report for patient: '{animal_name}' (ID: {animal_id})")
 
       if animal_id is None:
         details = selected_patient.get("details", {})
@@ -432,52 +432,72 @@ class AudioManagerForm(AudioManagerFormTemplate):
           type=details.get("type"),
           proprietaire=details.get("proprietaire"),
         )
-        self.logger.info(f"New animal record created with ID: {animal_id}")
-        if animal_id:
-          new_patient_obj = {"id": animal_id, "name": animal_name}
-
-          # 1. Mettre à jour la liste Python
-          self.all_patients.append(new_patient_obj)
-          self.all_patients.sort(key=lambda x: x["name"])  # Garder la liste triée
-
-          # 2. Appeler le JS pour mettre à jour sa liste
-          self.call_js("addPatientToLocalList", new_patient_obj)
-          self.logger.info(
-            f"Locally updated patient list with new patient: {animal_name}"
-          )
-        else:
-          # Gérer le cas où la création de l'animal échoue
+        if not animal_id:
           self.logger.error(
             "Failed to get a valid ID for the new animal. Aborting save."
           )
           alert("There was a problem creating the new patient record on the server.")
           return False
 
-      html_content = self.text_editor_1.get_content()
-      statut = self.selected_status or "not_specified"
+        new_patient_obj = {"id": animal_id, "name": animal_name}
+        self.all_patients.append(new_patient_obj)
+        self.all_patients.sort(key=lambda x: x["name"])
+        self.call_js("addPatientToLocalList", new_patient_obj)
 
-      result = anvil.server.call_s(
-        "write_report_first_time",
-        animal_name=animal_name,
-        report_rich=html_content,
-        statut=statut,
-        animal_id=animal_id,
-        transcript=self.raw_transcription,
-        language=self.selected_template_language,
+      html_content = self.text_editor_1.get_content()
+      js_image_list = anvil.js.await_promise(
+        self.call_js("gatherStagedImages", html_content)
       )
 
-      if result:
-        self.logger.info("Report saved successfully on the server.")
+      image_list_for_server = []
+      for js_image in js_image_list:
+        anvil_media_obj = anvil.js.to_media(js_image["file"])
+        image_list_for_server.append({
+          "reference_id": js_image["reference_id"],
+          "file": anvil_media_obj,
+        })
+
+      report_details = {
+        "animal_id": animal_id,
+        "html_content": html_content,
+        "status": self.selected_status or "not_specified",
+        "transcript": self.raw_transcription,
+        "language": self.selected_template_language,
+      }
+
+      result = anvil.server.call("save_report", report_details, image_list_for_server)
+
+      if result and result.get("success"):
+        self.logger.info("Report and images saved successfully on the server.")
         reports_cache_manager.invalidate()
+
+        staged_image_refs = [img["reference_id"] for img in image_list_for_server]
+        if staged_image_refs:
+          self.call_js("ImageStaging.clearStagedImages", staged_image_refs)
+
         self.call_js("displayBanner", t.t("audioManager_banner_saveSuccess"), "success")
+        open_form("Archives.ArchivesForm")
         return True
       else:
-        self.logger.error("Server returned failure while saving the report.")
-        alert(t.t("audioManager_alert_saveFailed"))
+        error_msg = result.get("error", "An unknown error occurred.")
+        self.logger.error(
+          f"Server returned failure while saving the report: {error_msg}"
+        )
+        alert(f"{t.t('audioManager_alert_saveFailed')}: {error_msg}")
         return False
+
+    except anvil.server.AppOfflineError:
+      self.logger.warning(
+        "Save failed due to network error. User's work is preserved locally."
+      )
+      alert(
+        "Save failed: No network connection. Your work is safe, please try again later."
+      )
+      return False
     except Exception as e:
-      self.logger.error("An exception occurred during save_report.", e)
-      raise
+      self.logger.error(f"An exception occurred during save_report: {e}")
+      alert(f"An error occurred while saving the report: {e}")
+      return False
 
   def queue_manager_1_x_import_item(self, item_id, audio_blob, **event_args):
     self.logger.info(f"Importing item '{item_id}' from offline queue.")

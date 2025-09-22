@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 
 
 @anvil.server.callable
-def read_reports():
+def leg_read_reports():
   current_user = anvil.users.get_user()
   reports = app_tables.reports.search(
     tables.order_by("last_modified", ascending=False), vet=current_user
@@ -47,7 +47,7 @@ def read_reports():
 
 
 @anvil.server.callable
-def write_report(
+def leg_write_report(
   file_name,
   animal_name=None,
   vet=None,
@@ -113,7 +113,7 @@ def write_report(
 
 
 @anvil.server.callable
-def write_report_first_time(
+def leg_write_report_first_time(
   animal_name=None,
   vet=None,
   last_modified=None,
@@ -193,7 +193,7 @@ def write_report_first_time(
 
 
 @anvil.server.callable
-def delete_report(
+def leg_delete_report(
   report_id,
 ):
   print(f"[DEBUG] Starting delete_report with report_id={report_id}")
@@ -214,7 +214,7 @@ def delete_report(
 
 
 @anvil.server.callable(require_user=True)
-def update_report(report_id, new_html_content, new_status):
+def leg_update_report(report_id, new_html_content, new_status):
   """
   Updates the content and status of a specific, existing report.
   This is the dedicated function for saving edits from AudioManagerEdit.

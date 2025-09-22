@@ -59,7 +59,6 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     )
 
   def form_show(self, **event_args):
-    """Called when the form is shown. Sets up the initial state."""
     self.logger.info("Form showing...")
     self.update_ui_texts()
 
@@ -74,11 +73,11 @@ class AudioManagerEdit(AudioManagerEditTemplate):
       return
 
     self.logger.debug(
-      f"Editing report ID: {self.report.get('id')}, Name: '{self.report.get('file_name')}'."
+      f"Editing report ID: {self.report.get('id')}, Name: '{self.report.get('name')}'."
     )
 
     self.header_return_1.title = self.report.get(
-      "file_name", t.t("audioManagerEdit_default_headerTitle")
+      "name", t.t("audioManagerEdit_default_headerTitle")
     )
     self.text_editor_1.html_content = self.report.get("report_rich", "")
     self.report_footer_1.update_status_display(self.selected_statut)
@@ -170,23 +169,35 @@ class AudioManagerEdit(AudioManagerEditTemplate):
     )
 
   def report_footer_1_save_clicked(self, **event_args):
-    """Handles the save button click from the footer component."""
     self.logger.info(f"Save clicked for report ID '{self.report.get('id')}'.")
+
     try:
-      report_id = self.report.get("id")
-      new_html_content = self.text_editor_1.get_content()
-      new_status = self.selected_statut
-      success = anvil.server.call_s(
-        "update_report", report_id, new_html_content, new_status
+      report_details = {
+        "html_content": self.text_editor_1.get_content(),
+        "status": self.selected_statut,
+      }
+
+      new_image_list = []
+
+      success_payload = anvil.server.call_s(
+        "update_report", self.report.get("id"), report_details, new_image_list
       )
-      if success:
+
+      if success_payload and success_payload.get("success"):
         self.logger.info("Report updated successfully on the server.")
         reports_cache_manager.invalidate()
         alert(t.t("banner_reportUpdateSuccess"), title=t.t("title_success"))
         open_form("Archives.ArchivesForm")
       else:
-        self.logger.error("Server returned failure while updating the report.")
-        alert(t.t("error_reportUpdateFailed"), title=t.t("title_updateFailed"))
+        error_msg = success_payload.get("error", "An unknown error occurred.")
+        self.logger.error(
+          f"Server returned failure while updating the report: {error_msg}"
+        )
+        alert(
+          f"{t.t('error_reportUpdateFailed')}: {error_msg}",
+          title=t.t("title_updateFailed"),
+        )
+
     except Exception as e:
       self.logger.error("An exception occurred while saving the report.", e)
       alert(f"{t.t('error_reportSaveFailed')}: {e}")

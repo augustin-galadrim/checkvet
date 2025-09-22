@@ -1,11 +1,9 @@
-import anvil.secrets
 import anvil.users
 import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables
 import anvil.server
-import json
-import openai
+from datetime import datetime
 from ..logging_server import get_logger
 
 logger = get_logger(__name__)
@@ -13,39 +11,44 @@ logger = get_logger(__name__)
 
 @anvil.server.callable
 def get_status_options():
-  """
-  Returns the list of valid, English-keyed report statuses.
-  This acts as a single source of truth for the application.
-  """
   return ["pending_correction", "validated", "sent", "not_specified"]
 
 
-@anvil.server.callable
-def get_user_reports():
-  current_user = anvil.users.get_user()
-  if not current_user:
-    raise Exception("User not authenticated")
-
-  reports = app_tables.reports.search(owner=current_user)
-
-  # Log each row's fileName and report values
-  for row in reports:
-    print(f"DEBUG: Row: {row}, fileName: {row['fileName']}, report: {row['report']}")
-
-  valid_reports = []
-  for row in reports:
-    file_name = row["fileName"] if row["fileName"] else "Unnamed Report"
-    report_data = row["report"] if row["report"] else {}
-    valid_reports.append({"fileName": file_name, "Report": report_data})
-
-  return valid_reports
-
-
-@anvil.server.callable
-def get_reports_by_structure(structure_name):
-  print(
-    f"DEBUG: Entering get_reports_by_structure with structure_name='{structure_name}'"
+@anvil.server.callable(require_user=True)
+def read_reports():
+  current_user = anvil.users.get_user(allow_remembered=True)
+  reports = app_tables.reports.search(
+    tables.order_by("last_updated_at", ascending=False), vet=current_user
   )
+
+  result = []
+  for report in reports:
+    animal_row = report["animal"]
+    animal_name = animal_row["name"] if animal_row else "No Patient"
+    animal_id = animal_row.get_id() if animal_row else None
+
+    report_dict = {
+      "id": report.get_id(),
+      "name": animal_name,
+      "animal_id": animal_id,
+      "vet": report["vet"],
+      "created_at": report["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+      if report["created_at"]
+      else None,
+      "last_updated_at": report["last_updated_at"].strftime("%Y-%m-%d %H:%M:%S")
+      if report["last_updated_at"]
+      else None,
+      "report_rich": report["report_rich"],
+      "statut": report["statut"],
+      "transcript": report["transcript"],
+    }
+    result.append(report_dict)
+
+  return result
+
+
+@anvil.server.callable(require_user=True)
+def get_reports_by_structure(structure_name):
   try:
     structure_row = app_tables.structures.get(name=structure_name)
     if not structure_row:
@@ -57,43 +60,41 @@ def get_reports_by_structure(structure_name):
       return []
 
     reports_query = app_tables.reports.search(
-      tables.order_by("last_modified", ascending=False), vet=q.any_of(*user_rows)
+      tables.order_by("last_updated_at", ascending=False), vet=q.any_of(*user_rows)
     )
 
     results = []
     for report_row in reports_query:
       animal_row = report_row["animal"]
-      animal_name = animal_row["name"] if animal_row else None
-      dt_str = (
-        report_row["last_modified"].strftime("%Y-%m-%d %H:%M:%S")
-        if report_row["last_modified"]
-        else None
-      )
+      animal_name = animal_row["name"] if animal_row else "No Patient"
       vet_display_name = "Unknown Vet"
       vet_row = report_row["vet"]
       if vet_row:
         vet_display_name = vet_row["name"] or vet_row["email"]
 
       results.append({
-        "id": report_row.get_id(),  # --- MODIFIED: Return Anvil's unique Row ID
-        "file_name": report_row["file_name"],
+        "id": report_row.get_id(),
         "name": animal_name,
-        "last_modified": dt_str,
+        "created_at": report_row["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+        if report_row["created_at"]
+        else None,
+        "last_updated_at": report_row["last_updated_at"].strftime("%Y-%m-%d %H:%M:%S")
+        if report_row["last_updated_at"]
+        else None,
         "owner_email": report_row["vet"]["email"] if report_row["vet"] else None,
         "report_rich": report_row["report_rich"],
         "statut": report_row["statut"],
         "vet_display_name": vet_display_name,
       })
 
-    print(f"DEBUG: Returning {len(results)} report(s) for structure '{structure_name}'")
     return results
   except Exception as e:
-    print(f"ERROR: Unexpected error in get_reports_by_structure: {e}")
+    logger.error(f"Unexpected error in get_reports_by_structure: {e}")
     return []
 
 
 @anvil.server.callable(require_user=True)
-def save_new_report_with_images(report_details, image_list):
+def save_report(report_details, image_list):
   user = anvil.users.get_user(allow_remembered=True)
   logger.info(
     f"User '{user['email']}' saving new report for animal ID '{report_details.get('animal_id')}' with {len(image_list)} images."
@@ -107,14 +108,13 @@ def save_new_report_with_images(report_details, image_list):
     if not animal_row:
       raise ValueError("Animal record not found.")
 
-    current_date_str = datetime.now().strftime("%Y%m%d")
-    file_name = f"{animal_row['name']}_{current_date_str}"
+    now = datetime.now()
 
     new_report_row = app_tables.reports.add_row(
-      file_name=file_name,
       animal=animal_row,
       vet=user,
-      last_modified=datetime.now().date(),
+      created_at=now,
+      last_updated_at=now,
       report_rich=report_details.get("html_content"),
       statut=report_details.get("status", "not_specified"),
       transcript=report_details.get("transcript"),
@@ -128,7 +128,7 @@ def save_new_report_with_images(report_details, image_list):
         report_id=new_report_row,
         media=image_data.get("file"),
         reference_id=image_data.get("reference_id"),
-        created_date=datetime.now(),
+        created_date=now,
       )
       created_image_rows.append(img_row)
 
@@ -147,7 +147,7 @@ def save_new_report_with_images(report_details, image_list):
 
 
 @anvil.server.callable(require_user=True)
-def update_report_with_images(report_id, report_details, new_image_list):
+def update_report(report_id, report_details, new_image_list):
   user = anvil.users.get_user(allow_remembered=True)
   logger.info(
     f"User '{user['email']}' updating report ID '{report_id}' with {len(new_image_list)} new images."
@@ -176,7 +176,7 @@ def update_report_with_images(report_id, report_details, new_image_list):
     report_row.update(
       report_rich=report_details.get("html_content"),
       statut=report_details.get("status"),
-      last_modified=datetime.now().date(),
+      last_updated_at=datetime.now(),
     )
 
     for image_data in new_image_list:
@@ -194,3 +194,50 @@ def update_report_with_images(report_id, report_details, new_image_list):
   except Exception as e:
     logger.error(f"Failed to update report ID '{report_id}': {e}", exc_info=True)
     return {"success": False, "error": str(e)}
+
+
+@anvil.server.callable(require_user=True)
+def delete_report(report_id):
+  user = anvil.users.get_user(allow_remembered=True)
+  report_row = app_tables.reports.get_by_id(report_id)
+
+  if report_row is None:
+    logger.warning(f"Delete failed: Report ID '{report_id}' not found.")
+    return False
+
+  is_owner = report_row["vet"] == user
+  is_supervisor = (
+    user["supervisor"]
+    and user["structure"]
+    and user["structure"] == report_row["vet"]["structure"]
+  )
+
+  if not (is_owner or is_supervisor):
+    logger.error(
+      f"SECURITY: User '{user['email']}' permission denied to delete report ID '{report_id}'."
+    )
+    return False
+
+  try:
+    associated_images = app_tables.embedded_images.search(report_id=report_row)
+
+    image_count = 0
+    for image_row in associated_images:
+      image_row.delete()
+      image_count += 1
+
+    if image_count > 0:
+      logger.info(
+        f"Deleted {image_count} associated image(s) for report ID '{report_id}'."
+      )
+
+    report_row.delete()
+    logger.info(f"Successfully deleted report ID '{report_id}'.")
+
+    return True
+
+  except Exception as e:
+    logger.error(
+      f"An error occurred while deleting report ID '{report_id}': {e}", exc_info=True
+    )
+    return False

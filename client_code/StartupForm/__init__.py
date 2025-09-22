@@ -39,6 +39,7 @@ class StartupForm(StartupFormTemplate):
         # --- User is logged in ---
         anvil.server.call_s("ensure_persistent_session")
         user_data = anvil.server.call_s("read_user")
+        self.call_js("ImageStaging.cleanupOldImages")
 
         if not user_data:
           alert("Could not load your user profile. Please contact support.")

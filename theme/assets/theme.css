@@ -1,93 +1,948 @@
-/* First, hide the default spinner image */
-.anvil-spinner-image {
-  display: none !important;
+/* ==========================================================================
+ABSTRACTS - Design Tokens, Variables
+========================================================================== */
+
+:root {
+  /* Primary Colors */
+  --color-primary: #3974cb;
+  --color-primary-dark: #2c5da4;
+  --color-primary-light: #bdd2ec;
+  --color-primary-alt: #1a73e8;
+  --color-primary-focus: #d0ebff;
+  --color-primary-focus-border: #66b0ff;
+  --color-primary-text-on-dark: #ffffff;
+
+  /* Accent & Status Colors */
+  --color-success: #4caf50;
+  --color-success-dark: #45a049;
+  --color-danger: #f44336;
+  --color-danger-dark: #dc3545;
+  --color-admin: #007bff;
+  --color-admin-dark: #0056b3;
+
+  /* Grayscale Palette */
+  --color-white: #ffffff;
+  --color-gray-100: #f9f9f9;
+  --color-gray-200: #f8f8f8;
+  --color-gray-300: #f5f5f5;
+  --color-gray-400: #f0f0f0;
+  --color-gray-500: #e5e5e5;
+  --color-gray-600: #e0e0e0;
+  --color-gray-700: #ddd;
+  --color-gray-800: #ccc;
+  --color-gray-900: #aaa;
+  --color-black: #000000;
+
+  /* Text Colors */
+  --color-text-base: #333333;
+  --color-text-secondary: #555555;
+  --color-text-muted: #666666;
+  --color-text-subtle: #888888;
+
+  /* Overlays */
+  --color-overlay-dark: rgba(0, 0, 0, 0.5);
+  --color-overlay-light: rgba(0, 0, 0, 0.4);
+  --color-overlay-spinner: rgba(255, 255, 255, 0.8);
+
+  /* Spacing Units */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-7: 40px;
+
+  /* Font Properties */
+  --font-family-base: Arial, sans-serif;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-xxl: 24px;
+
+  /* Border Properties */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 25px;
+  --border-radius-circle: 50%;
+  --border-width-base: 1px;
+  --border-color-base: var(--color-gray-700);
+
+  /* Sizing */
+  --footer-height: 75px;
+  --max-width-form: 500px;
+  --max-width-modal: 400px;
+  --max-width-container: 800px;
 }
 
-/* Then, style the container to use your GIF as the background */
-.anvil-spinner {
-  background-image: url('_/theme/berautiful-running-horse-sprite-animation.gif') !important; /* Make sure the filename matches what you uploaded */
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  background-color: transparent !important; /* Make sure there is no white box behind it */
+/* ==========================================================================
+BASE - Global Styles & Anvil Overrides
+========================================================================== */
 
-  width: 100px;  /* Set this to your GIF's width */
-  height: 100px; /* Set this to your GIF's height */
-
-  /* Remove default Anvil border and shadow */
-  border: none !important;
-  box-shadow: none !important;
+* {
+  box-sizing: border-box;
+  font-family: var(--font-family-base);
+  margin: 0;
+  padding: 0;
 }
 
+body {
+  background-color: var(--color-gray-300);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Base container for consistent layout */
 .responsive-container {
-  width: 100%;
-  max-width: 800px; 
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-@media (max-width: 768px) {
-  .scrollable-content {
-    padding: 15px;
-  }
-  /* Increase default font size for better readability on mobile */
-  body {
-    font-size: 14px;
-  }
-  .custom-button, .bottom-button, .action-button {
-    /* Make buttons larger and easier to tap */
-    padding: 14px 20px;
-    font-size: 1rem;
-  }
+/* Anvil Spinner Override */
+.anvil-spinner-bar {
+  background-color: var(--color-primary) !important;
 }
 
+/* ==========================================================================
+COMPONENTS - Shared, Reusable Component Styles
+========================================================================== */
+
+/* --- Banners --- */
 #global-banner-container {
   position: fixed;
-  top: 20px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 9999;
+  padding: var(--spacing-2);
+}
+.global-banner {
+  padding: var(--spacing-4);
+  color: var(--color-primary-text-on-dark);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: var(--spacing-2);
+  transform: translateY(-100%);
+  opacity: 0;
+  transition:
+    transform 0.3s ease-out,
+    opacity 0.3s ease-out;
+}
+.global-banner.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+.global-banner.banner-success {
+  background-color: var(--color-success);
+}
+.global-banner.banner-error {
+  background-color: var(--color-danger);
+}
+.global-banner.banner-info {
+  background-color: var(--color-primary);
+}
+
+/* --- Spinners --- */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid var(--color-gray-400);
+  border-top-color: var(--color-success);
+  border-radius: var(--border-radius-circle);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+PAGE-SPECIFIC STYLES - Styles scoped to individual components/forms
+========================================================================== */
+
+/* --- Component: HeaderNav --- */
+.header-nav-component .fixed-section {
+  padding: var(--spacing-2) var(--spacing-5);
+  border-bottom: var(--border-width-base) solid var(--border-color-base);
+}
+.header-nav-component .nav-tabs {
+  display: flex;
+  width: 100%;
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+.header-nav-component .nav-tab {
+  flex: 1 1 0;
+  padding: 10px var(--spacing-4);
+  cursor: pointer;
+  background: var(--color-gray-200);
+  font-size: var(--font-size-base);
+  text-align: center;
+  border: none;
+  border-right: var(--border-width-base) solid var(--border-color-base);
+  transition: background-color 0.2s;
+  color: var(--color-text-base);
+}
+.header-nav-component .nav-tab:last-child {
+  border-right: none;
+}
+.header-nav-component .nav-tab:hover {
+  background-color: var(--color-gray-400);
+}
+.header-nav-component .nav-tab.active {
+  background: var(--color-white);
+  color: var(--color-primary-alt);
+  font-weight: bold;
+  box-shadow: inset 0 -2px 0 var(--color-primary-alt);
+}
+
+/* --- Component: HeaderReturn --- */
+.header-return-component .modal-header-bar {
+  background: var(--color-gray-500);
+  padding: 15px var(--spacing-5);
+  font-size: var(--font-size-md);
+  text-align: center;
+  border-bottom: var(--border-width-base) solid var(--border-color-base);
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header-return-component .return-button {
+  background: none;
+  border: none;
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  color: var(--color-text-base);
+}
+.header-return-component .return-button:hover {
+  text-decoration: underline;
+}
+.header-return-component .header-title {
+  font-weight: bold;
+  font-size: var(--font-size-lg);
+}
+.header-return-component .placeholder {
+  width: 60px;
+}
+
+/* --- Component: ReportFooter --- */
+.report-footer-component .bottom-buttons {
+  position: fixed;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999; /* Ensure it's on top of other elements */
-  width: auto;
-  max-width: 90%;
+  width: var(--max-width-container);
+  max-width: 100%;
+  background: var(--color-white);
+  padding: 15px var(--spacing-5);
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-5);
+  border-top: var(--border-width-base) solid var(--border-color-base);
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+.report-footer-component .bottom-button {
+  padding: 10px 30px;
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-white);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  transition: all 0.2s ease;
+}
+.report-footer-component .bottom-button:hover {
+  background: var(--color-gray-300);
+  border-color: var(--color-gray-900);
 }
 
-.global-banner {
-  padding: 12px 24px;
-  color: white;
+/* --- Component: RecordingWidget --- */
+.recording-widget-component .audio-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-5) 0;
+  width: 100%;
+}
+.recording-widget-component #recordingWidget-button-toggle {
+  width: 90px;
+  height: 90px;
+  border-radius: var(--border-radius-circle);
+  border: none;
+  cursor: pointer;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+.recording-widget-component #recordingWidget-button-toggle:hover {
+  background-color: #4b9ae9;
+  transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+.recording-widget-component #recordingWidget-button-toggle.is-recording {
+  background-color: var(--color-danger);
+  animation: pulse-animation 1.5s infinite;
+}
+@keyframes pulse-animation {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 25px rgba(244, 67, 54, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+  }
+}
+
+/* --- Component: AudioPlayback --- */
+.audio-playback-component #audioBar {
+  width: 100%;
+  height: 50px;
+  background-color: var(--color-gray-200);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  margin-bottom: var(--spacing-5);
+  border: var(--border-width-base) solid var(--border-color-base);
+  position: relative;
+}
+.audio-playback-component #audioPlayback-button-control {
+  width: 30px;
+  height: 30px;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--border-radius-circle);
+  color: var(--color-white);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  margin-right: 10px;
+}
+.audio-playback-component #audioPlayback-div-progress {
+  flex-grow: 1;
+  height: 10px;
+  background-color: var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  margin-right: 10px;
+  touch-action: none;
+}
+.audio-playback-component #audioPlayback-div-progressBar {
+  width: 0;
+  height: 100%;
+  background-color: var(--color-primary);
+  transition: width 0.1s linear;
+}
+.audio-playback-component #audioPlayback-span-duration {
+  font-size: var(--font-size-base);
+}
+.audio-playback-component #audioPlayback-button-clear {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  margin-left: 10px;
+}
+
+/* --- Component: TextEditor --- */
+.text-editor-component .editor-section {
+  background: var(--color-white);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  border: var(--border-width-base) solid var(--border-color-base);
+}
+.text-editor-component #toolbar {
+  padding: 10px;
+  background: var(--color-gray-200);
+  border-bottom: var(--border-width-base) solid var(--border-color-base);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.text-editor-component .toolbar-button {
+  padding: 6px var(--spacing-3);
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-white);
+  cursor: pointer;
+}
+.text-editor-component .toolbar-button:hover {
+  background: var(--color-gray-300);
+}
+.text-editor-component .toolbar-button.active {
+  background-color: var(--color-primary-focus);
+  border-color: var(--color-primary-focus-border);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.text-editor-component #editor {
+  min-height: 300px;
+  padding: var(--spacing-5);
+  overflow-y: auto;
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+}
+.text-editor-component .toolbar-button.disabled {
+  background-color: var(--color-gray-800);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  border-color: #bbbbbb;
+}
+
+/* --- Component: QueueManager --- */
+.queue-manager-component .queue-button {
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-gray-400);
+  border: var(--border-width-base) solid var(--color-gray-800);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.queue-manager-component .queue-button:hover {
+  background: var(--color-gray-600);
+}
+.queue-manager-component .queue-badge {
+  background-color: var(--color-danger);
+  color: var(--color-white);
+  border-radius: var(--border-radius-circle);
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  min-width: 18px;
+  text-align: center;
+  display: none;
+}
+.queue-manager-component .queue-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.queue-manager-component .queue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: var(--border-width-base) solid #eee;
+}
+
+/* --- Component: UserFeedback --- */
+.user-feedback-component .user-feedback-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-7) var(--spacing-5);
+  gap: 15px;
+}
+.user-feedback-component .status-text {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* --- Page: StartupForm --- */
+.startup-form-component .startup-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.startup-form-component .startup-logo {
+  width: 450px;
+  height: auto;
+  animation: startup-move-up 0.5s ease-out 1.5s forwards;
+}
+.startup-form-component .spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: var(--color-white);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  animation:
+    startup-fade-in 0.5s ease-out 2.5s forwards,
+    spin 1s linear 1.75s infinite;
+}
+@keyframes startup-move-up {
+  100% {
+    transform: translateY(-120px);
+  }
+}
+@keyframes startup-fade-in {
+  100% {
+    opacity: 1;
+  }
+}
+
+/* --- Page: Archives Form --- */
+.archives-form-component .actions-row {
+  padding: 15px var(--spacing-5);
+}
+.archives-form-component .create-button,
+.archives-form-component .filter-button {
+  padding: var(--spacing-2) var(--spacing-4);
+  background: var(--color-white);
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+}
+.archives-form-component .refresh-button {
+  padding: 6px 6px 1px 6px;
+  background: #fff;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  margin-bottom: 10px;
-  opacity: 0; /* Start invisible for fade-in */
-  transform: translateY(-20px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  cursor: pointer;
 }
-
-.global-banner.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.global-banner.banner-success {
-  background-color: #4CAF50; /* Green */
-}
-
-.global-banner.banner-error {
-  background-color: #f44336; /* Red */
-}
-
-.global-banner.banner-info {
-  background-color: #2196F3; /* Blue */
-}
-
-.modal.active {
-  display: flex !important;
+.archives-form-component #archives-spinner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-overlay-spinner);
+  z-index: 100;
+  display: none;
   align-items: center;
   justify-content: center;
 }
 
-body {
-  background-color: #3974CB; 
+/* --- Page: Audio Manager Edit Form --- */
+.audio-manager-edit-component .scrollable-content {
+  padding-bottom: calc(var(--footer-height) + 20px);
+}
+.audio-manager-edit-component .edit-audio-section {
+  padding: 15px;
+  margin-bottom: var(--spacing-5);
+  text-align: center;
+}
+.audio-manager-edit-component .edit-instructions {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin-bottom: 10px;
+  border: var(--border-width-base) solid var(--border-color-base);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  background: var(--color-gray-200);
+  padding: 15px;
+  border-radius: var(--border-radius-md);
+}
+.audio-manager-edit-component #audioDecisionContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.audio-manager-edit-component .decision-button {
+  padding: 10px 20px;
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width-base) solid var(--border-color-base);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-weight: bold;
+}
+.audio-manager-edit-component .decision-button.process {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+}
+.audio-manager-edit-component .decision-button.discard {
+  background-color: var(--color-danger);
+  color: var(--color-white);
+  border-color: var(--color-danger);
+}
+
+/* --- Page: Audio Manager Form (Production) --- */
+.audio-manager-form-component .scrollable-content {
+  padding-bottom: var(--footer-height);
+}
+.audio-manager-form-component .slide-toggle-container {
+  display: flex;
+  position: relative;
+  width: 320px;
+  margin: 10px auto;
+  background-color: var(--color-gray-400);
+  border-radius: var(--border-radius-lg);
+  padding: 5px;
+  border: var(--border-width-base) solid var(--border-color-base);
+}
+.audio-manager-form-component .toggle-option {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  z-index: 2;
+  user-select: none;
+}
+.audio-manager-form-component .toggle-option.active {
+  color: var(--color-white);
+}
+.audio-manager-form-component .toggle-slider {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  height: calc(100% - 10px);
+  width: calc(50% - 5px);
+  background-color: var(--color-primary);
+  border-radius: var(--border-radius-lg);
+  transition: transform 0.3s ease-in-out;
+  z-index: 1;
+}
+.audio-manager-form-component
+  .slide-toggle-container.upload-active
+  .toggle-slider {
+  transform: translateX(100%);
+}
+.audio-manager-form-component .upload-container {
+  width: 100%;
+  border: 2px dashed var(--color-gray-900);
+  border-radius: 10px;
+  padding: var(--spacing-5);
+  text-align: center;
+  background-color: var(--color-gray-200);
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+.audio-manager-form-component .upload-container:hover,
+.audio-manager-form-component .upload-container.dragover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+.audio-manager-form-component .upload-button {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+}
+.audio-manager-form-component .parameters-section {
+  background: var(--color-white);
+  padding: var(--spacing-5);
+  border-radius: var(--border-radius-md);
+}
+.audio-manager-form-component .search-container {
+  position: relative;
+  margin-bottom: var(--spacing-5);
+}
+.audio-manager-form-component .search-input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: 6px;
+  font-size: var(--font-size-base);
+}
+.audio-manager-form-component .new-patient-btn {
+  font-weight: bold;
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+  border: var(--border-width-base) solid var(--color-primary);
+}
+
+/* --- Page: Offline Audio Manager Form --- */
+.offline-audio-manager-form .actions-row {
+  justify-content: space-between;
+}
+.offline-audio-manager-form .instructions {
+  margin: var(--spacing-5) 0;
+  color: var(--color-text-secondary);
+}
+.offline-audio-manager-form #audioDecisionContainer {
+  display: none;
+  padding: 10px 0;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
+  align-items: center;
+  flex-direction: column;
+}
+.offline-audio-manager-form .decision-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+}
+.offline-audio-manager-form .decision-button {
+  padding: 10px 20px;
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width-base) solid var(--border-color-base);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-weight: bold;
+}
+.offline-audio-manager-form .btn-discard {
+  background-color: var(--color-danger);
+  color: var(--color-white);
+  border-color: var(--color-danger);
+}
+.offline-audio-manager-form .btn-queue {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+}
+
+/* --- Page: Registration Flow --- */
+.registration-flow-component .modal-content {
+  max-width: var(--max-width-modal);
+}
+.registration-flow-component .form-group {
+  margin-bottom: 15px;
+}
+.registration-flow-component .form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+.registration-flow-component .form-group input {
+  width: 100%;
+  padding: 10px;
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+}
+.registration-flow-component .radio-group label {
+  display: block;
+  padding: var(--spacing-3);
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.registration-flow-component .radio-group label:hover {
+  border-color: var(--color-success);
+}
+.registration-flow-component .radio-group input[type="radio"]:checked + span {
+  font-weight: bold;
+}
+
+/* --- Page: Settings Form --- */
+.settings-form-component .actions-row {
+  justify-content: flex-end;
+}
+.settings-form-component .settings-section {
+  background-color: var(--color-gray-100);
+  border: var(--border-width-base) solid var(--color-gray-600);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-5);
+  margin-bottom: 25px;
+}
+.settings-form-component .section-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-base);
+  margin-bottom: var(--spacing-5);
+  border-bottom: var(--border-width-base) solid var(--color-gray-600);
+  padding-bottom: 10px;
+}
+.settings-form-component #settings-button-joinStructure {
+  background-color: var(--color-admin);
+}
+.settings-form-component .asset-preview {
+  flex: 0 0 200px;
+  height: 100px;
+  background-color: var(--color-white);
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.settings-form-component .upload-button {
+  background-color: var(--color-admin) !important;
+  color: var(--color-white) !important;
+}
+.settings-form-component .delete-button {
+  background-color: var(--color-danger-dark);
+}
+.settings-form-component #settings-button-logout {
+  background-color: var(--color-danger);
+}
+.settings-form-component #settings-button-admin {
+  background-color: var(--color-admin);
+  border: 2px solid var(--color-admin-dark);
+}
+
+/* --- Page: Template Editor --- */
+.template-editor-component .template-name {
+  padding: 15px var(--spacing-5);
+  border-bottom: var(--border-width-base) solid var(--border-color-base);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.template-editor-component .template-name input {
+  flex-grow: 1;
+  padding: 10px;
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-md);
+}
+.template-editor-component .bottom-buttons .primary-button {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* --- Page: Templates List --- */
+.templates-list-component .actions-row {
+  padding: 15px var(--spacing-5);
+}
+.templates-list-component .create-button {
+  padding: var(--spacing-2) var(--spacing-4);
+  background: var(--color-white);
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+}
+.templates-list-component .search-bar {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 0 var(--spacing-5) 15px;
+}
+.templates-list-component .templates-section {
+  margin-bottom: 10px;
+  background-color: var(--color-white);
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+.templates-list-component .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  cursor: pointer;
+  background-color: var(--color-gray-100);
+}
+.templates-list-component .template-item .template-name {
+  flex-grow: 1;
+  margin-right: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.templates-list-component .kebab-menu-container {
+  position: relative;
+}
+.templates-list-component .icon-button:hover {
+  background-color: var(--color-gray-600);
+}
+.templates-list-component .actions-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background-color: var(--color-white);
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  min-width: 150px;
+}
+.templates-list-component .actions-menu.visible {
+  display: block;
+}
+
+/* --- Page: Admin Panel --- */
+.admin-panel-component .header {
+  padding: var(--spacing-5);
+  border-bottom: var(--border-width-base) solid var(--border-color-base);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.admin-panel-component .back-button {
+  background-color: var(--color-gray-400);
+  border: var(--border-width-base) solid var(--border-color-base);
+}
+.admin-panel-component .tabs {
+  display: flex;
+  background-color: var(--color-gray-200);
+  border-bottom: var(--border-width-base) solid var(--border-color-base);
+}
+.admin-panel-component .tab-btn {
+  padding: var(--spacing-3) var(--spacing-6);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: var(--font-size-md);
+}
+.admin-panel-component .tab-btn.active {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.admin-panel-component .action-button {
+  background-color: var(--color-primary);
+}
+.admin-panel-component .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--spacing-5);
+}
+.admin-panel-component .data-table th {
+  background-color: var(--color-gray-200);
+}
+.admin-panel-component .form-container {
+  background-color: var(--color-white);
+  border: var(--border-width-base) solid var(--border-color-base);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-5);
+}
+
+/* --- Page: Mobile Installation Flow --- */
+.mobile-install-component .modal {
+  overflow-y: auto;
+  padding: var(--spacing-5) 0;
+}
+.mobile-install-component .modal.active {
+  display: block;
+} /* Override default flex for scrolling */
+.mobile-install-component .modal-content {
+  margin: auto;
+}
+.mobile-install-component .modal img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width-base) solid #eee;
+  margin-bottom: 15px;
+}
+.mobile-install-component .button-group {
+  border-top: var(--border-width-base) solid #eee;
+}
+
+/* --- Page: Microphone Test --- */
+.mic-test-component .content {
+  text-align: center;
+}
+.mic-test-component .instructions h1 {
+  font-size: var(--font-size-xl);
+  margin-bottom: 10px;
+}
+.mic-test-component .instructions p {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
 }

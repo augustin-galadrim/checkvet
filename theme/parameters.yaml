@@ -1,1 +1,6 @@
-roles: []
+color_scheme:
+  colors: []
+  preset_groups: []
+roles:
+- components: [TextEditor]
+  name: prime

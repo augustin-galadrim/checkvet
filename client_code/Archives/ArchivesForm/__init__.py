@@ -64,11 +64,6 @@ class ArchivesForm(ArchivesFormTemplate):
     )
     self.call_js(
       "setElementText",
-      "archivesForm-button-myReportsFilter",
-      t.t("archivesForm_button_filter"),
-    )
-    self.call_js(
-      "setElementText",
       "archivesForm-h2-structureTitle",
       t.t("archivesForm_h2_structureTitle"),
     )
@@ -76,11 +71,6 @@ class ArchivesForm(ArchivesFormTemplate):
       "setElementTitle",
       "archivesForm-button-refresh",
       t.t("archivesForm_button_refresh_tooltip"),
-    )
-    self.call_js(
-      "setElementText",
-      "archivesForm-button-structureFilter",
-      t.t("archivesForm_button_filter"),
     )
     self.call_js(
       "setElementText",

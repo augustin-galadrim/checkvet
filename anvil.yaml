@@ -650,6 +650,7 @@ runtime_options:
   server_spec: {base: python310-minimal}
   server_version: python3-sandbox
   version: 2
+scheduled_tasks: []
 secrets:
   OPENAI_API_KEY:
     type: secret

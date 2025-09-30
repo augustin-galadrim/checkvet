@@ -51,14 +51,6 @@ class TextEditor(TextEditorTemplate):
       "textEditor-button-alignRight",
       t.t("textEditor_button_alignRight_tooltip"),
     )
-    self.call_js(
-      "setElementText",
-      "textEditor-button-insertImage",
-      t.t("textEditor_button_insertImage"),
-    )
-    self.call_js(
-      "setElementText", "textEditor-button-copy", t.t("textEditor_button_copy")
-    )
 
   def get_content(self):
     """Returns the current HTML content from the editor."""

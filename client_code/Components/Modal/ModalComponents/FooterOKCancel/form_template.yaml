@@ -1,0 +1,80 @@
+components: []
+container:
+  properties:
+    html: |-
+      <!-- In FooterOKCancel/form_template.yaml -->
+
+      <!-- The root element is a simple div to hold the buttons -->
+      <div class="footer-button-group" id="footer-ok-cancel-container">
+        <button class="custom-button btn-default" id="footer-cancel-btn">Cancel</button>
+        <button class="custom-button btn-primary" id="footer-ok-btn">OK</button>
+      </div>
+
+      <style>
+        /* These styles are scoped to this component */
+        .footer-button-group {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          width: 100%;
+        }
+
+        .custom-button {
+          padding: 10px 20px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+          transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+          background-color: #4CAF50; /* A common 'OK' color from your codebase */
+          color: white;
+        }
+        .btn-primary:hover {
+          background-color: #45a049;
+        }
+
+        .btn-default {
+          background-color: #f0f0f0;
+          color: #333;
+          border: 1px solid #ddd;
+        }
+        .btn-default:hover {
+          background-color: #e1e1e1;
+        }
+      </style>
+
+      <script>
+        if (!window.footerOKCancelGlobals) {
+          window.footerOKCancelGlobals = true;
+          const logger = window.createLogger('FooterOKCancel');
+
+          // This function will be called by the component's Python code
+          window.footerOKCancel_init = function(componentElement) {
+            const okBtn = componentElement.querySelector('#footer-ok-btn');
+            const cancelBtn = componentElement.querySelector('#footer-cancel-btn');
+
+            if (okBtn && !okBtn.handlerAttached) {
+              okBtn.addEventListener('click', () => {
+                logger.log("OK button clicked, raising 'x_ok_clicked'.");
+                anvil.call(componentElement, 'raise_event', 'x_ok_clicked');
+              });
+              okBtn.handlerAttached = true;
+            }
+
+            if (cancelBtn && !cancelBtn.handlerAttached) {
+              cancelBtn.addEventListener('click', () => {
+                logger.log("Cancel button clicked, raising 'x_cancel_clicked'.");
+                anvil.call(componentElement, 'raise_event', 'x_cancel_clicked');
+              });
+              cancelBtn.handlerAttached = true;
+            }
+          };
+        }
+      </script>
+  type: HtmlTemplate
+custom_component: true
+is_package: true

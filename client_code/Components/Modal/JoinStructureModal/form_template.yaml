@@ -1,0 +1,17 @@
+components:
+- components:
+  - layout_properties: {slot: footer_slot}
+    name: footer_okcancel_1
+    properties: {}
+    type: form:Components.Modal.ModalComponents.FooterOKCancel
+  layout_properties: {slot: default}
+  name: base_modal_1
+  properties: {}
+  type: form:Components.Modal.ModalComponents.BaseModal
+container:
+  properties: {html: <div anvil-slot="default"></div>}
+  type: HtmlTemplate
+custom_component: true
+custom_component_container: true
+is_package: true
+slots: {}

@@ -11,9 +11,6 @@ from ..data.structures import generate_unique_join_code
 
 logger = get_logger(__name__)
 
-#################### CONFIRMATION EMAIL SECTION #################
-
-
 @anvil.server.callable
 def custom_confirm_email(email, confirmation_key):
   user = app_tables.users.get(email=email, confirmation_key=confirmation_key)

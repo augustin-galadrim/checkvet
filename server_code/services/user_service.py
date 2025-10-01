@@ -30,9 +30,6 @@ def mark_additional_info_completed(user):
   user["additional_info_completed"] = True
 
 
-#################### CUSTOM PDF SECTION #################
-
-
 @admin_required
 @anvil.server.callable
 def admin_make_user_independent(user_id):

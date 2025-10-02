@@ -44,12 +44,15 @@ def transcribe_audio(audio_blob, language, mime_type):
 
     in_memory_file = io.BytesIO(audio_bytes)
     if mime_type and "/" in mime_type:
-      extension = mime_type.split("/")[-1]
+      # First, strip any parameters like ';codecs=opus'
+      main_mime_type = mime_type.split(";")[0]
+      extension = main_mime_type.split("/")[-1]
+
       # Handle non-standard prefixes like 'x-m4a' -> 'm4a'
       if "x-" in extension:
         extension = extension.split("x-")[-1]
-    else:
-      extension = "mp4"
+      else:
+        extension = "mp4"  # Fallback
     filename = f"audio.{extension}"
     in_memory_file.name = filename
 

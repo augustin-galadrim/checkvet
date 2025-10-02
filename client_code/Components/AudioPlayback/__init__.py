@@ -18,7 +18,8 @@ class AudioPlayback(AudioPlaybackTemplate):
   def form_show(self, **event_args):
     """This method is called when the component is shown on the screen."""
     self.update_ui_texts()
-    anvil.js.call_js("initializeAudioPlayer")
+    # This call now safely re-attaches event listeners every time the form is shown.
+    anvil.js.call_js("attachPlaybackEventListeners")
 
   def update_ui_texts(self, **event_args):
     """Sets all translatable text on the component."""

@@ -1,7 +1,199 @@
 components: []
 container:
   properties:
-    html: "<html>\n  <head>\n    <meta charset=\"UTF-8\">\n    <style>\n      .audio-section {\n        display: flex;\n        justify-content: center;\n        align-items: center;\n        padding: 20px 0;\n        width: 100%;\n      }\n      .recording-controls {\n        display: flex;\n        justify-content: center;\n        align-items: center;\n      }\n      #recordingWidget-button-toggle {\n        width: 90px;\n        height: 90px;\n        border-radius: 50%;\n        border: none;\n        cursor: pointer;\n        background-color: #3974CB; \n        color: white;\n        display: flex;\n        align-items: center;\n        justify-content: center;\n        font-size: 38px; \n        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);\n        box-shadow: 0 4px 10px rgba(0,0,0,0.25);\n      }\n      #recordingWidget-button-toggle:hover {\n        background-color: #4B9AE9;\n        transform: scale(1.05);\n        box-shadow: 0 6px 12px rgba(0,0,0,0.3);\n      }\n      #recordingWidget-button-toggle.is-recording {\n        background-color: #f44336; /* Red for stop */\n        animation: pulse-animation 1.5s infinite;\n      }\n      #recordingWidget-button-toggle svg {\n        pointer-events: none;\n        transition: transform 0.3s ease-in-out;\n      }\n      @keyframes pulse-animation {\n        0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }\n        70% { box-shadow: 0 0 0 25px rgba(244, 67, 54, 0); }\n        100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"audio-section\">\n      <div class=\"recording-controls\" id=\"recordingMode\">\n        <button id=\"recordingWidget-button-toggle\" title=\"Start Recording\">\n          <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" fill=\"currentColor\" viewBox=\"0 0 16 16\">\n            <path d=\"M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z\"/>\n            <path d=\"M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z\"/>\n          </svg>\n        </button>\n      </div>\n    </div>\n\n    <script>\n      if (!window.__recording_widget_globals) {\n        window.__recording_widget_globals = true;\n\n        const logger = window.createLogger('RecordingWidget');\n\n        // The NoSleep object will be safely handled by the wakeLockManager in global-scripts.js\n\n        let recordingState = {\n          mediaRecorder: null,\n          recordedChunks: [],\n          stream: null,\n          isRecording: false,\n          healthCheckTimer: null\n        };\n\n        const stopIconHTML = `<svg xmlns=\\\"http://www.w3.org/2000/svg\\\" width=\\\"24\\\" height=\\\"24\\\" fill=\\\"currentColor\\\" viewBox=\\\"0 0 16 16\\\"><path d=\\\"M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5z\\\"/></svg>`;\n        const micIconHTML = `<svg xmlns=\\\"http://www.w3.org/2000/svg\\\" width=\\\"32\\\" height=\\\"32\\\" fill=\\\"currentColor\\\" viewBox=\\\"0 0 16 16\\\"><path d=\\\"M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z\\\"/><path d=\\\"M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z\\\"/></svg>`;\n\n        const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);\n\n        function cleanupAndReset(options = {}) {\n          const { showError, errorMessage } = options;\n          logger.log('Performing full cleanup and reset.');\n          const recordButton = document.getElementById(\"recordingWidget-button-toggle\");\n\n          if (window.wakeLockManager) {\n            window.wakeLockManager.disable();\n          }\n\n          clearTimeout(recordingState.healthCheckTimer);\n\n          if (recordingState.mediaRecorder && recordingState.mediaRecorder.state === \"recording\") {\n            recordingState.mediaRecorder.stop();\n          }\n\n          if (recordingState.stream) {\n            recordingState.stream.getTracks().forEach(track => track.stop());\n          }\n\n          recordingState.stream = null;\n          recordingState.mediaRecorder = null;\n          recordingState.recordedChunks = [];\n          recordingState.isRecording = false;\n\n          if (recordButton) {\n            recordButton.innerHTML = micIconHTML;\n            recordButton.classList.remove(\"is-recording\");\n          }\n\n          if (showError && recordButton) {\n            anvil.call(recordButton, 'show_error', errorMessage || \"An unknown error occurred.\");\n          }\n        }\n\n\n        window.attachRecordingEvents = function() {\n          const recordButton = document.getElementById(\"recordingWidget-button-toggle\");\n\n          if (recordButton) {\n            const newRecordButton = recordButton.cloneNode(true);\n            recordButton.parentNode.replaceChild(newRecordButton, recordButton);\n\n            newRecordButton.addEventListener(\"click\", async (evt) => {\n              if (!recordingState.isRecording) {\n                try {\n                  if (window.wakeLockManager) {\n                    await window.wakeLockManager.enable();\n                  }\n\n                  recordingState.stream = await navigator.mediaDevices.getUserMedia({ audio: true });\n\n                  // --- NEW: Stabilization delay for PWA environment ---\n                  await new Promise(resolve => setTimeout(resolve, 100));\n\n                  const audioTrack = recordingState.stream.getAudioTracks()[0];\n                  if (!audioTrack) {\n                    throw new Error(\"No audio track found in the stream.\");\n                  }\n\n                  audioTrack.onended = () => {\n                    if (isRecording) {\n                      cleanupAndReset({ showError: true, errorMessage: \"Recording was interrupted. Please try again.\" });\n                    }\n                  };\n\n                  const mimeTypes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];\n                  const supportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));\n\n                  if (!supportedMimeType) {\n                    cleanupAndReset({ showError: true, errorMessage: \"Your browser does not support audio recording.\" });\n                    return;\n                  }\n\n                  logger.log(`Using supported MIME type: ${supportedMimeType}`);\n\n                  let dataReceived = false;\n                  recordingState.mediaRecorder = new MediaRecorder(recordingState.stream, { mimeType: supportedMimeType });\n                  recordingState.recordedChunks = [];\n\n                  recordingState.mediaRecorder.ondataavailable = e => {\n                    if (e.data.size > 0) {\n                      dataReceived = true;\n                      recordingState.recordedChunks.push(e.data);\n                    }\n                  };\n\n                  recordingState.mediaRecorder.onstop = () => {\n                    const audioBlob = new Blob(recordingState.recordedChunks, { type: supportedMimeType });\n\n                    if (audioBlob.size === 0) {\n                      logger.warn(\"onstop: An empty audio blob was created. Aborting Python call.\");\n                      return;\n                    }\n\n                    logger.log('onstop: Recording finished successfully, calling python `handle_js_recording_complete`.');\n                    anvil.call(newRecordButton, \"handle_js_recording_complete\", audioBlob, supportedMimeType);\n                  };\n\n                  if (isIOS()) {\n                    logger.log(\"iOS detected. Enabling health check.\");\n                    recordingState.mediaRecorder.start(250); \n\n                    recordingState.healthCheckTimer = setTimeout(() => {\n                      if (!dataReceived) {\n                        logger.error(\"iOS Health Check Failed: No audio data received.\");\n                        cleanupAndReset({ showError: true, errorMessage: \"Recording failed to start. Please check permissions and try again.\" });\n                      } else {\n                        logger.log(\"iOS Health Check Passed.\");\n                      }\n                    }, 500);\n                  } else {\n                    logger.log(\"Non-iOS platform detected. Starting standard recording.\");\n                    recordingState.mediaRecorder.start();\n                  }\n\n                  recordingState.isRecording = true;\n                  newRecordButton.innerHTML = stopIconHTML;\n                  newRecordButton.classList.add(\"is-recording\");\n                  anvil.call(newRecordButton, 'start_recording');\n                  logger.log('Recording started.');\n\n                } catch (err) {\n                  logger.error(\"Microphone access error:\", err);\n                  cleanupAndReset({ showError: true, errorMessage: \"Microphone access denied. Please check your browser and system settings.\" });\n                }\n              } else {\n                logger.log('User initiated stop.');\n                cleanupAndReset();\n                anvil.call(newRecordButton, 'stop_recording');\n              }\n            });\n            logger.log('Event listener attached to record button.');\n          } else {\n            logger.warn('Could not attach listener to record button as it was not found.');\n          }\n        };\n      }\n      attachRecordingEvents();\n    </script>\n  </body>\n</html>"
+    html: |-
+      <div class="audio-section">
+        <div class="recording-controls" id="recordingMode">
+          <button id="recordingWidget-button-toggle" title="Start Recording">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/>
+              <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <style>
+        .audio-section { display: flex; justify-content: center; align-items: center; padding: 20px 0; width: 100%; }
+        .recording-controls { display: flex; justify-content: center; align-items: center; }
+        #recordingWidget-button-toggle {
+          width: 90px; height: 90px; border-radius: 50%; border: none; cursor: pointer;
+          background-color: #3974CB; color: white; display: flex; align-items: center; justify-content: center; font-size: 38px;
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+        }
+        #recordingWidget-button-toggle:hover { background-color: #4B9AE9; transform: scale(1.05); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+        #recordingWidget-button-toggle.is-recording { background-color: #f44336; animation: pulse-animation 1.5s infinite; }
+        #recordingWidget-button-toggle svg { pointer-events: none; transition: transform 0.3s ease-in-out; }
+        @keyframes pulse-animation {
+          0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
+          70% { box-shadow: 0 0 0 25px rgba(244, 67, 54, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+        }
+      </style>
+
+      <script>
+        if (!window.recordingWidgetGlobals) {
+          window.recordingWidgetGlobals = true;
+
+          const logger = window.createLogger('RecordingWidget');
+
+          // --- FACT-BASED WORKAROUND FOR iOS PWA STALE PERMISSIONS BUG ---
+          // This logic detects if this is a subsequent launch of the PWA and forces a reload
+          // to fix the broken media stream state in WebKit. This is the current industry
+          // standard solution for this specific, well-documented iOS bug.
+          const hasInitializedKey = 'hasInitializedAudioSession';
+          if (sessionStorage.getItem(hasInitializedKey)) {
+            // This is a subsequent launch (e.g., re-opening the PWA). The media state is likely stale.
+            logger.warn("Subsequent PWA launch detected. Forcing a one-time reload to fix potential stale media permissions on iOS.");
+            // We remove the key BEFORE reloading, so the reloaded session is treated as the "first" one.
+            sessionStorage.removeItem(hasInitializedKey);
+            window.location.reload();
+          } else {
+            // This is the first launch of the session. Set the flag.
+            logger.log("First launch of the session. Setting initialization flag.");
+            sessionStorage.setItem(hasInitializedKey, 'true');
+          }
+          // --- END OF WORKAROUND ---
+
+          let stream;
+          let audioContext;
+          let workletNode;
+          let isRecording = false;
+          let audioBuffer = [];
+          let bufferLength = 0;
+
+          const toggleButton = document.getElementById('recordingWidget-button-toggle');
+          if (!toggleButton) {
+            logger.error("Critical: Toggle button not found. Widget will not function.");
+          } else {
+            logger.log("Recording widget initialized.");
+
+            const checkmarkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-check" viewBox="0 0 16 16"><path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/></svg>`;
+            const micIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16"><path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/><path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/></svg>`;
+            const workletProcessorString = `
+                class RecorderProcessor extends AudioWorkletProcessor {
+                  process(inputs) {
+                    if (inputs[0][0]) this.port.postMessage(inputs[0][0].slice(0));
+                    return true;
+                  }
+                }
+                registerProcessor('recorder-processor', RecorderProcessor);
+              `;
+
+            const initializeAndResumeAudioContext = async () => {
+              if (audioContext && audioContext.state === 'running') return true;
+              try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioContext.state === 'suspended') {
+                  await audioContext.resume();
+                }
+                return audioContext.state === 'running';
+              } catch (error) {
+                logger.error("Failed to initialize or resume AudioContext:", error);
+                return false;
+              }
+            };
+
+            const cleanup = () => {
+              isRecording = false;
+              if (workletNode) workletNode.disconnect();
+              if (stream) stream.getTracks().forEach(track => track.stop());
+              resetButtonUI();
+              logger.log("Recording resources cleaned up.");
+            };
+
+            const startRecording = async () => {
+              if (isRecording) return;
+              logger.log("Attempting to start recording...");
+
+              if (!(await initializeAndResumeAudioContext())) {
+                logger.error("Could not start recording: AudioContext is not running.");
+                return;
+              }
+
+              try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                logger.log("Microphone stream acquired.");
+
+                const blob = new Blob([workletProcessorString], { type: 'application/javascript' });
+                await audioContext.audioWorklet.addModule(URL.createObjectURL(blob));
+
+                const source = audioContext.createMediaStreamSource(stream);
+                workletNode = new AudioWorkletNode(audioContext, 'recorder-processor');
+
+                audioBuffer = [];
+                bufferLength = 0;
+
+                workletNode.port.onmessage = (event) => {
+                  if (isRecording) {
+                    audioBuffer.push(event.data);
+                    bufferLength += event.data.length;
+                  }
+                };
+                source.connect(workletNode).connect(audioContext.destination);
+
+                isRecording = true;
+                toggleButton.innerHTML = checkmarkIcon;
+                toggleButton.classList.add('is-recording');
+                logger.log("Recording is now active.");
+
+              } catch (error) {
+                logger.error("Error during startRecording (after context activation):", error);
+                anvil.call(toggleButton, 'show_error', `Microphone access error: ${error.name} - ${error.message}`);
+                cleanup();
+              }
+            };
+
+            const stopRecording = () => {
+              if (!isRecording) return;
+              logger.log("Stopping recording...");
+
+              const finalBuffer = new Float32Array(bufferLength);
+              let offset = 0;
+              for (const buffer of audioBuffer) {
+                finalBuffer.set(buffer, offset);
+                offset += buffer.length;
+              }
+
+              const wavBlob = encodeWAV(finalBuffer, audioContext.sampleRate);
+              if (wavBlob.size > 44) {
+                anvil.call(toggleButton, 'handle_js_recording_complete', wavBlob, 'audio/wav');
+              } else {
+                logger.warn("Recording stopped with an empty audio buffer.");
+              }
+              cleanup();
+            };
+
+            const resetButtonUI = () => {
+              toggleButton.innerHTML = micIcon;
+              toggleButton.classList.remove('is-recording');
+            };
+
+            toggleButton.addEventListener('click', () => {
+              if (isRecording) {
+                stopRecording();
+              } else {
+                startRecording();
+              }
+            });
+
+            function encodeWAV(samples, sampleRate) {
+              const buffer = new ArrayBuffer(44 + samples.length * 2);
+              const view = new DataView(buffer);
+              const writeString = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+              const floatTo16BitPCM = (out, off, inp) => { for (let i = 0; i < inp.length; i++, off+=2) { const s = Math.max(-1, Math.min(1, inp[i])); out.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true); } };
+                                                                                                                                                                    writeString(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true);
+                                                                                                                                                                    writeString(8, 'WAVE'); writeString(12, 'fmt '); view.setUint32(16, 16, true);
+                                                                                                                                                                    view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+                                                                                                                                                                    view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+                                                                                                                                                                    view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+                                                                                                                                                                    writeString(36, 'data'); view.setUint32(40, samples.length * 2, true);
+                                                                                                                                                                    floatTo16BitPCM(view, 44, samples);
+                                                                                                                                                                    return new Blob([view], { type: 'audio/wav' });
+                                                                                                                                                                    }
+                                                                                                                                                                    }
+                                                                                                                                                                    }
+                                                                                                                                                                    </script>
   type: HtmlTemplate
 custom_component: true
 events:

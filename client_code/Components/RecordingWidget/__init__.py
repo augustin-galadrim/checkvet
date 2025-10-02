@@ -19,7 +19,7 @@ class RecordingWidget(RecordingWidgetTemplate):
   def update_ui_texts(self, **event_args):
     """Sets all translatable text on the component."""
     tooltip = t.t("recordingWidget_button_toggle_tooltip")
-    self.call_js("setElementTitle", "recordingWidget-button-toggle", tooltip)
+    # self.call_js("setElementTitle", "recordingWidget-button-toggle", tooltip)
 
   # Methods called by JavaScript within this component
   def start_recording(self, **event_args):

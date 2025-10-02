@@ -266,38 +266,49 @@ window.toggleStructureBrandingControls = function(canEdit) {
   }
 };
 
+/**
+ * Manages the NoSleep.js wake lock instance for the entire application.
+ * This prevents multiple components from creating conflicting wake locks and
+ * safely handles the library loading.
+ */
 window.wakeLockManager = {
   noSleepInstance: null,
+  isInitialized: false,
 
+  // This function will be called ONLY after the page is fully loaded.
   _initialize: function() {
+    const logger = window.createLogger('WakeLockManager');
+    if (this.isInitialized) return;
+
     // Check if the NoSleep library is available on the window object
     if (typeof NoSleep !== 'undefined') {
-      if (!this.noSleepInstance) {
-        window.createLogger('WakeLockManager').log('Initializing NoSleep.js instance.');
-        this.noSleepInstance = new NoSleep();
-      }
-      return true;
+      logger.log('Initializing NoSleep.js instance.');
+      this.noSleepInstance = new NoSleep();
+      this.isInitialized = true;
+    } else {
+      logger.error('CRITICAL: NoSleep.js library failed to load from CDN.');
     }
-    window.createLogger('WakeLockManager').error('NoSleep.js library has not loaded yet.');
-    return false;
   },
 
   enable: async function() {
-    if (this._initialize()) {
-      try {
-        await this.noSleepInstance.enable();
-        window.createLogger('WakeLockManager').log('Wake Lock enabled.');
-        return true;
-      } catch (e) {
-        window.createLogger('WakeLockManager').error('Failed to enable Wake Lock:', e);
-        return false;
-      }
+    // If it hasn't been initialized yet, do nothing. This shouldn't happen with the new listener, but it's a good safeguard.
+    if (!this.isInitialized || !this.noSleepInstance) {
+      window.createLogger('WakeLockManager').warn('Cannot enable: Wake Lock not initialized.');
+      return false;
     }
-    return false;
+
+    try {
+      await this.noSleepInstance.enable();
+      window.createLogger('WakeLockManager').log('Wake Lock enabled.');
+      return true;
+    } catch (e) {
+      window.createLogger('WakeLockManager').error('Failed to enable Wake Lock:', e);
+      return false;
+    }
   },
 
   disable: function() {
-    if (this.noSleepInstance) {
+    if (this.isInitialized && this.noSleepInstance) {
       try {
         this.noSleepInstance.disable();
         window.createLogger('WakeLockManager').log('Wake Lock disabled.');
@@ -307,3 +318,10 @@ window.wakeLockManager = {
     }
   }
 };
+
+// --- THIS IS THE CRITICAL FIX ---
+// We add an event listener that waits for the entire page to be ready.
+// Only then do we try to initialize the manager.
+document.addEventListener('DOMContentLoaded', () => {
+  window.wakeLockManager._initialize();
+});

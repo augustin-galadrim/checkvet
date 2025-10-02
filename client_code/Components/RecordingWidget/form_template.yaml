@@ -22,6 +22,7 @@ container:
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: 0 4px 10px rgba(0,0,0,0.25);
         }
         #recordingWidget-button-toggle:hover { background-color: #4B9AE9; transform: scale(1.05); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+        #recordingWidget-button-toggle.is-ready { background-color: #4CAF50; /* Green to indicate ready */ }
         #recordingWidget-button-toggle.is-recording { background-color: #f44336; animation: pulse-animation 1.5s infinite; }
         #recordingWidget-button-toggle svg { pointer-events: none; transition: transform 0.3s ease-in-out; }
         @keyframes pulse-animation {
@@ -36,35 +37,17 @@ container:
           window.recordingWidgetGlobals = true;
 
           const logger = window.createLogger('RecordingWidget');
-
-          // --- FACT-BASED WORKAROUND FOR iOS PWA STALE PERMISSIONS BUG ---
-          // This logic detects if this is a subsequent launch of the PWA and forces a reload
-          // to fix the broken media stream state in WebKit. This is the current industry
-          // standard solution for this specific, well-documented iOS bug.
-          const hasInitializedKey = 'hasInitializedAudioSession';
-          if (sessionStorage.getItem(hasInitializedKey)) {
-            // This is a subsequent launch (e.g., re-opening the PWA). The media state is likely stale.
-            logger.warn("Subsequent PWA launch detected. Forcing a one-time reload to fix potential stale media permissions on iOS.");
-            // We remove the key BEFORE reloading, so the reloaded session is treated as the "first" one.
-            sessionStorage.removeItem(hasInitializedKey);
-            window.location.reload();
-          } else {
-            // This is the first launch of the session. Set the flag.
-            logger.log("First launch of the session. Setting initialization flag.");
-            sessionStorage.setItem(hasInitializedKey, 'true');
-          }
-          // --- END OF WORKAROUND ---
-
           let stream;
           let audioContext;
           let workletNode;
           let isRecording = false;
+          let isAudioSystemReady = false; // NEW state flag
           let audioBuffer = [];
           let bufferLength = 0;
 
           const toggleButton = document.getElementById('recordingWidget-button-toggle');
           if (!toggleButton) {
-            logger.error("Critical: Toggle button not found. Widget will not function.");
+            logger.error("Critical: Toggle button not found.");
           } else {
             logger.log("Recording widget initialized.");
 
@@ -72,24 +55,30 @@ container:
             const micIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16"><path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/><path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/></svg>`;
             const workletProcessorString = `
                 class RecorderProcessor extends AudioWorkletProcessor {
-                  process(inputs) {
-                    if (inputs[0][0]) this.port.postMessage(inputs[0][0].slice(0));
-                    return true;
-                  }
+                  process(inputs) { if (inputs[0][0]) this.port.postMessage(inputs[0][0].slice(0)); return true; }
                 }
                 registerProcessor('recorder-processor', RecorderProcessor);
               `;
 
-            const initializeAndResumeAudioContext = async () => {
-              if (audioContext && audioContext.state === 'running') return true;
+            const initializeAudioSystem = async () => {
+              if (isAudioSystemReady) return true;
+              logger.log("PRIMING STAGE: Initializing audio system for the first time...");
               try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioContext.state === 'suspended') {
+                  logger.log("PRIMING STAGE: AudioContext is suspended. Resuming now...");
                   await audioContext.resume();
                 }
-                return audioContext.state === 'running';
+                isAudioSystemReady = (audioContext.state === 'running');
+                if (isAudioSystemReady) {
+                  logger.log("PRIMING STAGE: SUCCESS. AudioContext is now running. System is ready.");
+                  toggleButton.classList.add('is-ready');
+                  toggleButton.title = "Ready. Click to start recording.";
+                }
+                return isAudioSystemReady;
               } catch (error) {
-                logger.error("Failed to initialize or resume AudioContext:", error);
+                logger.error("PRIMING STAGE: FAILED to initialize AudioContext:", error);
+                anvil.call(toggleButton, 'show_error', `Audio system failed: ${error.message}`);
                 return false;
               }
             };
@@ -99,21 +88,15 @@ container:
               if (workletNode) workletNode.disconnect();
               if (stream) stream.getTracks().forEach(track => track.stop());
               resetButtonUI();
-              logger.log("Recording resources cleaned up.");
             };
 
             const startRecording = async () => {
-              if (isRecording) return;
-              logger.log("Attempting to start recording...");
-
-              if (!(await initializeAndResumeAudioContext())) {
-                logger.error("Could not start recording: AudioContext is not running.");
-                return;
-              }
+              if (isRecording || !isAudioSystemReady) return;
+              logger.log("RECORDING STAGE: Attempting to start recording...");
 
               try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                logger.log("Microphone stream acquired.");
+                logger.log("RECORDING STAGE: Microphone stream acquired.");
 
                 const blob = new Blob([workletProcessorString], { type: 'application/javascript' });
                 await audioContext.audioWorklet.addModule(URL.createObjectURL(blob));
@@ -123,7 +106,6 @@ container:
 
                 audioBuffer = [];
                 bufferLength = 0;
-
                 workletNode.port.onmessage = (event) => {
                   if (isRecording) {
                     audioBuffer.push(event.data);
@@ -133,13 +115,15 @@ container:
                 source.connect(workletNode).connect(audioContext.destination);
 
                 isRecording = true;
-                toggleButton.innerHTML = checkmarkIcon;
+                toggleButton.classList.remove('is-ready');
                 toggleButton.classList.add('is-recording');
-                logger.log("Recording is now active.");
+                toggleButton.title = "Stop recording";
+                toggleButton.innerHTML = checkmarkIcon;
+                logger.log("RECORDING STAGE: SUCCESS. Recording is now active.");
 
               } catch (error) {
-                logger.error("Error during startRecording (after context activation):", error);
-                anvil.call(toggleButton, 'show_error', `Microphone access error: ${error.name} - ${error.message}`);
+                logger.error("RECORDING STAGE: FAILED during media setup:", error);
+                anvil.call(toggleButton, 'show_error', `Microphone access error: ${error.name}`);
                 cleanup();
               }
             };
@@ -150,16 +134,13 @@ container:
 
               const finalBuffer = new Float32Array(bufferLength);
               let offset = 0;
-              for (const buffer of audioBuffer) {
-                finalBuffer.set(buffer, offset);
-                offset += buffer.length;
-              }
+              for (const buffer of audioBuffer) finalBuffer.set(buffer, offset), offset += buffer.length;
 
               const wavBlob = encodeWAV(finalBuffer, audioContext.sampleRate);
               if (wavBlob.size > 44) {
                 anvil.call(toggleButton, 'handle_js_recording_complete', wavBlob, 'audio/wav');
               } else {
-                logger.warn("Recording stopped with an empty audio buffer.");
+                logger.warn("Stopped with an empty audio buffer.");
               }
               cleanup();
             };
@@ -167,10 +148,15 @@ container:
             const resetButtonUI = () => {
               toggleButton.innerHTML = micIcon;
               toggleButton.classList.remove('is-recording');
+              toggleButton.classList.remove('is-ready');
+              toggleButton.title = "Start Recording";
             };
 
-            toggleButton.addEventListener('click', () => {
-              if (isRecording) {
+            toggleButton.addEventListener('click', async () => {
+              logger.log("Button clicked.");
+              if (!isAudioSystemReady) {
+                await initializeAudioSystem();
+              } else if (isRecording) {
                 stopRecording();
               } else {
                 startRecording();
@@ -182,18 +168,18 @@ container:
               const view = new DataView(buffer);
               const writeString = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
               const floatTo16BitPCM = (out, off, inp) => { for (let i = 0; i < inp.length; i++, off+=2) { const s = Math.max(-1, Math.min(1, inp[i])); out.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true); } };
-                                                                                                                                                                    writeString(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true);
-                                                                                                                                                                    writeString(8, 'WAVE'); writeString(12, 'fmt '); view.setUint32(16, 16, true);
-                                                                                                                                                                    view.setUint16(20, 1, true); view.setUint16(22, 1, true);
-                                                                                                                                                                    view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
-                                                                                                                                                                    view.setUint16(32, 2, true); view.setUint16(34, 16, true);
-                                                                                                                                                                    writeString(36, 'data'); view.setUint32(40, samples.length * 2, true);
-                                                                                                                                                                    floatTo16BitPCM(view, 44, samples);
-                                                                                                                                                                    return new Blob([view], { type: 'audio/wav' });
-                                                                                                                                                                    }
-                                                                                                                                                                    }
-                                                                                                                                                                    }
-                                                                                                                                                                    </script>
+              writeString(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true);
+              writeString(8, 'WAVE'); writeString(12, 'fmt '); view.setUint32(16, 16, true);
+              view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+              view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+              view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+              writeString(36, 'data'); view.setUint32(40, samples.length * 2, true);
+              floatTo16BitPCM(view, 44, samples);
+              return new Blob([view], { type: 'audio/wav' });
+            }
+          }
+        }
+      </script>
   type: HtmlTemplate
 custom_component: true
 events:

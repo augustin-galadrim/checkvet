@@ -19,7 +19,13 @@ def admin_get_all_base_templates():
   all_base_templates = app_tables.base_templates.search()
 
   result = [
-    {"id": t.get_id(), "name": t["name"], "html": t["html"], "language": t["language"]}
+    {
+      "id": t.get_id(),
+      "name": t["name"],
+      "html": t["html"],
+      "language": t["language"],
+      "is_default": t["is_default"],
+    }
     for t in all_base_templates
   ]
 
@@ -29,7 +35,9 @@ def admin_get_all_base_templates():
 
 @admin_required
 @anvil.server.callable
-def admin_write_base_template(template_id=None, name=None, html=None, language=None):
+def admin_write_base_template(
+  template_id=None, name=None, html=None, language=None, is_default=None
+):
   """
   Admin function to create or update a base template.
   If template_id is provided, it updates; otherwise, it creates a new one.
@@ -45,12 +53,17 @@ def admin_write_base_template(template_id=None, name=None, html=None, language=N
         raise ValueError(f"Base template with ID '{template_id}' not found.")
 
       logger.debug(f"Updating base template ID: {template_id}")
-      template_row.update(name=name, html=html, language=language)
+      update_dict = {"name": name, "html": html, "language": language}
+      if is_default is not None:
+        update_dict["is_default"] = is_default
+      template_row.update(**update_dict)
 
     else:
       # Create new template
       logger.debug(f"Creating new base template with name: '{name}'")
-      app_tables.base_templates.add_row(name=name, html=html, language=language)
+      app_tables.base_templates.add_row(
+        name=name, html=html, language=language, is_default=bool(is_default)
+      )
 
     logger.info(f"Successfully wrote base template '{name}'.")
     return True
@@ -97,7 +110,8 @@ def admin_delete_base_template(template_id):
 @anvil.server.callable
 def assign_all_base_templates(user):
   """
-  Finds all base templates and assigns them to a new user.
+  Finds all default base templates and assigns them to a new user if the language
+  matches the user's language or is English.
 
   Args:
     user (Row): The user row from the 'users' table.
@@ -109,19 +123,27 @@ def assign_all_base_templates(user):
     logger.error("assign_all_base_templates: Called with an invalid user.")
     return 0
 
-  logger.info(f"Starting template assignment for user '{user['email']}'.")
+  user_language = user["favorite_language"] or "en"
+  logger.info(
+    f"Starting template assignment for user '{user['email']}' with language '{user_language}'."
+  )
 
   try:
-    # Find all base templates.
-    all_base_templates = app_tables.base_templates.search()
+    # Find all base templates marked as default.
+    default_base_templates = app_tables.base_templates.search(is_default=True)
 
-    templates_to_assign = list(all_base_templates)
+    # Further filter them based on language criteria.
+    templates_to_assign = [
+      t
+      for t in default_base_templates
+      if t["language"] == user_language or t["language"] == "en"
+    ]
 
     if not templates_to_assign:
-      logger.warning("No base templates found in the database.")
+      logger.warning("No default base templates found matching language criteria.")
       return 0
 
-    logger.info(f"Found {len(templates_to_assign)} total base templates to assign.")
+    logger.info(f"Found {len(templates_to_assign)} default base templates to assign.")
 
     assigned_count = 0
     for base_template in templates_to_assign:

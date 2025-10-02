@@ -3,6 +3,7 @@
  * returns to the app. It calls the 'refresh_session_relay' method on the
  * Anvil form that called it.
  */
+
 window.setupSessionHandlers = function(formId) {
   const logger = window.createLogger('SessionManager');
 

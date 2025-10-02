@@ -265,3 +265,45 @@ window.toggleStructureBrandingControls = function(canEdit) {
     disabledMsg.style.display = canEdit ? 'none' : 'block';
   }
 };
+
+window.wakeLockManager = {
+  noSleepInstance: null,
+
+  _initialize: function() {
+    // Check if the NoSleep library is available on the window object
+    if (typeof NoSleep !== 'undefined') {
+      if (!this.noSleepInstance) {
+        window.createLogger('WakeLockManager').log('Initializing NoSleep.js instance.');
+        this.noSleepInstance = new NoSleep();
+      }
+      return true;
+    }
+    window.createLogger('WakeLockManager').error('NoSleep.js library has not loaded yet.');
+    return false;
+  },
+
+  enable: async function() {
+    if (this._initialize()) {
+      try {
+        await this.noSleepInstance.enable();
+        window.createLogger('WakeLockManager').log('Wake Lock enabled.');
+        return true;
+      } catch (e) {
+        window.createLogger('WakeLockManager').error('Failed to enable Wake Lock:', e);
+        return false;
+      }
+    }
+    return false;
+  },
+
+  disable: function() {
+    if (this.noSleepInstance) {
+      try {
+        this.noSleepInstance.disable();
+        window.createLogger('WakeLockManager').log('Wake Lock disabled.');
+      } catch (e) {
+        window.createLogger('WakeLockManager').warn('Could not disable Wake Lock:', e);
+      }
+    }
+  }
+};

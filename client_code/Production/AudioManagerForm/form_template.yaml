@@ -32,8 +32,7 @@ components:
   name: user_feedback_1
   properties: {}
   type: form:Components.UserFeedback
-- data_bindings: []
-  event_bindings: {x_import_item: queue_manager_1_x_import_item}
+- event_bindings: {x_import_item: queue_manager_1_x_import_item}
   layout_properties: {slot: queue}
   name: queue_manager_1
   properties: {disable_import: false}

@@ -100,7 +100,10 @@ class QueueManager(QueueManagerTemplate):
   # --- Internal Relay Methods (Called from JavaScript) ---
   def handle_import_click(self, item_id, audio_blob, **event_args):
     """Relay from JS: raises the x_import_item event for the parent."""
-    self.raise_event("x_import_item", item_id=item_id, audio_blob=audio_blob)
+    mime_type = audio_blob.type
+    self.raise_event(
+      "x_import_item", item_id=item_id, audio_blob=audio_blob, mime_type=mime_type
+    )
     self.delete_item_from_queue(item_id=item_id)
 
   def handle_confirm_save(self, title, **event_args):

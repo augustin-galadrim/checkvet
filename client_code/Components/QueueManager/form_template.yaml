@@ -218,7 +218,7 @@ container:
                 const item = queue.find(i => i.id === id);
                 if (item) {
                   const blob = new Blob([item.audioData], { type: item.mimeType });
-                  anvil.call(anvilContext, 'handle_import_click', item.id, blob);
+                  anvil.call(anvilContext, 'handle_import_click', item.id, blob, );
                   window.closeModal('qm-queueModal');
                 }
               } else if (target.classList.contains('delete-btn')) {

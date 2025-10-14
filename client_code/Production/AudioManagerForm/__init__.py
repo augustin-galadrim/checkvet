@@ -517,8 +517,9 @@ class AudioManagerForm(AudioManagerFormTemplate):
       alert(f"An error occurred while saving the report: {e}")
       return False
 
-  def queue_manager_1_x_import_item(self, item_id, audio_blob, **event_args):
+  def queue_manager_1_x_import_item(self, item_id, audio_blob, mime_type, **event_args):
     self.logger.info(f"Importing item '{item_id}' from offline queue.")
+    self.current_audio_mime_type = mime_type
     self.audio_playback_1.audio_blob = audio_blob
     self.audio_playback_1.visible = True
     self.recording_widget.visible = False
